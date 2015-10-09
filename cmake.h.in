@@ -48,6 +48,7 @@
 #cmakedefine KFREEBSD
 #cmakedefine GNUHURD
 #cmakedefine UNKNOWN
+#cmakedefine WINDOWS
 
 /* Found the GnuTLS library */
 #cmakedefine HAVE_LIBGNUTLS
@@ -72,4 +73,3 @@
 
 /* Undefine this to eliminate the execute command */
 #define HAVE_EXECUTE 1
-

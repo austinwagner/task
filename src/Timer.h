@@ -30,7 +30,7 @@
 #include <string>
 #include <sys/time.h>
 
-// Timer is a scope-activated timer that dumps to std::cout at end of scope.
+// Timer is a scope-activated timer that dumps to nowide::cout at end of scope.
 class Timer
 {
 public:

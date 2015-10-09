@@ -33,6 +33,7 @@
 #include <i18n.h>
 #include <main.h>
 #include <CmdDone.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -107,7 +108,7 @@ int CmdDone::execute (std::string& output)
       }
       else
       {
-        std::cout << STRING_CMD_DONE_NO << "\n";
+        nowide::cout << STRING_CMD_DONE_NO << "\n";
         rc = 1;
         if (_permission_quit)
           break;
@@ -115,7 +116,7 @@ int CmdDone::execute (std::string& output)
     }
     else
     {
-      std::cout << format (STRING_CMD_DONE_NOTPEND,
+      nowide::cout << format (STRING_CMD_DONE_NOTPEND,
                            task->id,
                            task->get ("description"))
                 << "\n";

@@ -30,6 +30,7 @@
 #include <cstring>
 #include <i18n.h>
 #include <Context.h>
+#include <nowide/iostream.hpp>
 
 Context context;
 
@@ -41,7 +42,7 @@ int main (int argc, const char** argv)
   // Lightweight version checking that doesn't require initialization or any I/O.
   if (argc == 2 && !strcmp (argv[1], "--version"))
   {
-    std::cout << VERSION << "\n";
+    nowide::cout << VERSION << "\n";
   }
   else
   {
@@ -54,23 +55,25 @@ int main (int argc, const char** argv)
 
     catch (const std::string& error)
     {
-      std::cerr << error << "\n";
+      nowide::cerr << error << "\n";
       status = -1;
     }
 
     catch (std::bad_alloc& error)
     {
-      std::cerr << "Error: Memory allocation failed: " << error.what () << "\n";
+      nowide::cerr << "Error: Memory allocation failed: " << error.what () << "\n";
       status = -3;
     }
 
     catch (...)
     {
-      std::cerr << STRING_UNKNOWN_ERROR << "\n";
+      nowide::cerr << STRING_UNKNOWN_ERROR << "\n";
       status = -2;
     }
   }
 
+  nowide::cout.flush();
+  nowide::cerr.flush();
   return status;
 }
 

@@ -33,6 +33,7 @@
 #include <i18n.h>
 #include <main.h>
 #include <CmdDelete.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -161,7 +162,7 @@ int CmdDelete::execute (std::string& output)
       }
       else
       {
-        std::cout << STRING_CMD_DELETE_NO << "\n";
+        nowide::cout << STRING_CMD_DELETE_NO << "\n";
         rc = 1;
         if (_permission_quit)
           break;
@@ -169,7 +170,7 @@ int CmdDelete::execute (std::string& output)
     }
     else
     {
-      std::cout << format (STRING_CMD_DELETE_NOT_DEL,
+      nowide::cout << format (STRING_CMD_DELETE_NOT_DEL,
                            task->id,
                            task->get ("description"))
           << "\n";

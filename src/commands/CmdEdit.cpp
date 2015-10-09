@@ -40,6 +40,7 @@
 #include <i18n.h>
 #include <main.h>
 #include <CmdEdit.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -757,7 +758,7 @@ bool CmdEdit::editFile (Task& task)
 
   // Change directory for the editor
   std::string current_dir = Directory::cwd ();
-  int ignored = chdir (location._data.c_str ());
+  int ignored = chdir (location.to_string().c_str ());
   ++ignored; // Keep compiler quiet.
 
   // Format the contents, T -> text, write to a file.
@@ -781,11 +782,11 @@ ARE_THESE_REALLY_HARMFUL:
   bool changes = false; // No changes made.
 
   // Launch the editor.
-  std::cout << format (STRING_EDIT_LAUNCHING, editor) << "\n";
+  nowide::cout << format (STRING_EDIT_LAUNCHING, editor) << "\n";
   if (-1 == system (editor.c_str ()))
-    std::cout << STRING_EDIT_NO_EDITS << "\n";
+    nowide::cout << STRING_EDIT_NO_EDITS << "\n";
   else
-    std::cout << STRING_EDIT_COMPLETE << "\n";
+    nowide::cout << STRING_EDIT_COMPLETE << "\n";
 
   // Slurp file.
   std::string after;
@@ -795,7 +796,7 @@ ARE_THESE_REALLY_HARMFUL:
   // if changes were made.
   if (before_orig != after)
   {
-    std::cout << STRING_EDIT_CHANGES << "\n";
+    nowide::cout << STRING_EDIT_CHANGES << "\n";
     std::string problem = "";
     bool oops = false;
 
@@ -812,7 +813,7 @@ ARE_THESE_REALLY_HARMFUL:
 
     if (oops)
     {
-      std::cerr << STRING_ERROR_PREFIX << problem << "\n";
+      nowide::cerr << STRING_ERROR_PREFIX << problem << "\n";
 
       // Preserve the edits.
       before = after;
@@ -826,7 +827,7 @@ ARE_THESE_REALLY_HARMFUL:
   }
   else
   {
-    std::cout << STRING_EDIT_NO_CHANGES << "\n";
+    nowide::cout << STRING_EDIT_NO_CHANGES << "\n";
     changes = false;
   }
 

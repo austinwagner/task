@@ -34,7 +34,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <pwd.h>
 #include <time.h>
 
 #include <Context.h>
@@ -46,6 +45,10 @@
 #include <util.h>
 #include <i18n.h>
 #include <main.h>
+
+#ifndef WINDOWS
+#include <pwd.h>
+#endif
 
 // Global context for use by all.
 extern Context context;

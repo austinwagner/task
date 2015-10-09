@@ -27,6 +27,7 @@
 #include <cmake.h>
 #include <Lexer.h>
 #include <ISO8601.h>
+#include <util.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 ISO8601d::ISO8601d ()

@@ -42,6 +42,8 @@
 #include <util.h>
 #include <main.h>
 #include <i18n.h>
+#include <nowide/iostream.hpp>
+
 #ifdef HAVE_COMMIT
 #include <commit.h>
 #endif
@@ -118,7 +120,7 @@ int Context::initialize (int argc, const char** argv)
     if (override)
     {
       rc_file = File (override);
-      header (format (STRING_CONTEXT_RC_OVERRIDE, rc_file._data));
+      header (format (STRING_CONTEXT_RC_OVERRIDE, rc_file.to_string()));
     }
 
     config.clear ();
@@ -142,8 +144,8 @@ int Context::initialize (int argc, const char** argv)
     if (override)
     {
       data_dir = Directory (override);
-      config.set ("data.location", data_dir._data);
-      header (format (STRING_CONTEXT_DATA_OVERRIDE, data_dir._data));
+      config.set ("data.location", data_dir.to_string());
+      header (format (STRING_CONTEXT_DATA_OVERRIDE, data_dir.to_string()));
     }
 
     tdb2.set_location (data_dir);
@@ -283,9 +285,9 @@ int Context::initialize (int argc, const char** argv)
       std::vector <std::string>::iterator d;
       for (d = debugMessages.begin (); d != debugMessages.end (); ++d)
         if (color ())
-          std::cerr << colorizeDebug (*d) << "\n";
+          nowide::cerr << colorizeDebug (*d) << "\n";
         else
-          std::cerr << *d << "\n";
+          nowide::cerr << *d << "\n";
     }
 
     // Dump all headers, controlled by 'header' verbosity token.
@@ -294,9 +296,9 @@ int Context::initialize (int argc, const char** argv)
       std::vector <std::string>::iterator h;
       for (h = headers.begin (); h != headers.end (); ++h)
         if (color ())
-          std::cerr << colorizeHeader (*h) << "\n";
+          nowide::cerr << colorizeHeader (*h) << "\n";
         else
-          std::cerr << *h << "\n";
+          nowide::cerr << *h << "\n";
     }
 
     // Dump all footnotes, controlled by 'footnote' verbosity token.
@@ -305,9 +307,9 @@ int Context::initialize (int argc, const char** argv)
       std::vector <std::string>::iterator f;
       for (f = footnotes.begin (); f != footnotes.end (); ++f)
         if (color ())
-          std::cerr << colorizeFootnote (*f) << "\n";
+          nowide::cerr << colorizeFootnote (*f) << "\n";
         else
-          std::cerr << *f << "\n";
+          nowide::cerr << *f << "\n";
     }
 
     // Dump all errors, non-maskable.
@@ -315,9 +317,9 @@ int Context::initialize (int argc, const char** argv)
     std::vector <std::string>::iterator e;
     for (e = errors.begin (); e != errors.end (); ++e)
       if (color ())
-        std::cerr << colorizeFootnote (*e) << "\n";
+        nowide::cerr << colorizeFootnote (*e) << "\n";
       else
-        std::cerr << *e << "\n";
+        nowide::cerr << *e << "\n";
   }
 
   timer_init.stop ();
@@ -393,9 +395,9 @@ int Context::run ()
     std::vector <std::string>::iterator d;
     for (d = debugMessages.begin (); d != debugMessages.end (); ++d)
       if (color ())
-        std::cerr << colorizeDebug (*d) << "\n";
+        nowide::cerr << colorizeDebug (*d) << "\n";
       else
-        std::cerr << *d << "\n";
+        nowide::cerr << *d << "\n";
   }
 
   // Dump all headers, controlled by 'header' verbosity token.
@@ -404,13 +406,13 @@ int Context::run ()
     std::vector <std::string>::iterator h;
     for (h = headers.begin (); h != headers.end (); ++h)
       if (color ())
-        std::cerr << colorizeHeader (*h) << "\n";
+        nowide::cerr << colorizeHeader (*h) << "\n";
       else
-        std::cerr << *h << "\n";
+        nowide::cerr << *h << "\n";
   }
 
   // Dump the report output.
-  std::cout << output;
+  nowide::cout << output;
 
   // Dump all footnotes, controlled by 'footnote' verbosity token.
   if (verbose ("footnote"))
@@ -418,9 +420,9 @@ int Context::run ()
     std::vector <std::string>::iterator f;
     for (f = footnotes.begin (); f != footnotes.end (); ++f)
       if (color ())
-        std::cerr << colorizeFootnote (*f) << "\n";
+        nowide::cerr << colorizeFootnote (*f) << "\n";
       else
-        std::cerr << *f << "\n";
+        nowide::cerr << *f << "\n";
   }
 
   // Dump all errors, non-maskable.
@@ -428,9 +430,9 @@ int Context::run ()
   std::vector <std::string>::iterator e;
   for (e = errors.begin (); e != errors.end (); ++e)
     if (color ())
-      std::cerr << colorizeError (*e) << "\n";
+      nowide::cerr << colorizeError (*e) << "\n";
     else
-      std::cerr << *e << "\n";
+      nowide::cerr << *e << "\n";
 
   return rc;
 }
@@ -690,10 +692,10 @@ void Context::createDefaultConfig ()
   if (! rc_file.exists ())
   {
     if (config.getBoolean ("confirmation") &&
-        !confirm (format (STRING_CONTEXT_CREATE_RC, home_dir, rc_file._data)))
+        !confirm (format (STRING_CONTEXT_CREATE_RC, home_dir, rc_file.to_string())))
       throw std::string (STRING_CONTEXT_NEED_RC);
 
-    config.createDefaultRC (rc_file, data_dir._original);
+    config.createDefaultRC (rc_file, data_dir.original());
   }
 
   // Create data location, if necessary.
@@ -779,7 +781,7 @@ void Context::updateXtermTitle ()
       title += a->attribute ("raw");
     }
 
-    std::cout << "]0;task " << command << " " << title << "";
+    nowide::cout << "]0;task " << command << " " << title << "";
   }
 }
 

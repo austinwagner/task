@@ -26,16 +26,12 @@
 
 #include <cmake.h>
 #include <fstream>
-#include <glob.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <pwd.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <limits.h>
 #include <Directory.h>
+#include <sstream>
 #include <Path.h>
+#include <util.h>
+#include <Shlobj.h>
+#include <nowide/convert.hpp>
 
 // Fixes build with musl libc.
 #ifndef GLOB_TILDE
@@ -49,7 +45,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 std::ostream& operator<< (std::ostream& out, const Path& path)
 {
-  out << path._data;
+  out << path._path;
   return out;
 }
 
@@ -63,16 +59,14 @@ Path::Path (const Path& other)
 {
   if (this != &other)
   {
-    _original = other._original;
-    _data     = other._data;
+    _path = other._path;
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Path::Path (const std::string& in)
 {
-  _original = in;
-  _data = expand (in);
+  _path = boost::filesystem::path(expand(in));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,8 +79,7 @@ Path& Path::operator= (const Path& other)
 {
   if (this != &other)
   {
-    this->_original = other._original;
-    this->_data     = other._data;
+    this->_path = other._path;
   }
 
   return *this;
@@ -95,189 +88,106 @@ Path& Path::operator= (const Path& other)
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::operator== (const Path& other)
 {
-  return _data == other._data;
+  return _path == other._path;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Path& Path::operator+= (const std::string& dir)
 {
-  _data += "/" + dir;
+  _path = _path / dir;
   return *this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 Path::operator std::string () const
 {
-  return _data;
+  return _path.string();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string Path::name () const
 {
-  if (_data.length ())
-  {
-    std::string::size_type slash = _data.rfind ('/');
-    if (slash != std::string::npos)
-      return _data.substr (slash + 1, std::string::npos);
-  }
-
- return _data;
+  return _path.filename().string();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string Path::parent () const
 {
-  if (_data.length ())
-  {
-    std::string::size_type slash = _data.rfind ('/');
-    if (slash != std::string::npos)
-      return _data.substr (0, slash);
-  }
-
-  return "";
+  return _path.parent_path().string();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string Path::extension () const
 {
-  if (_data.length ())
-  {
-    std::string::size_type dot = _data.rfind ('.');
-    if (dot != std::string::npos)
-      return _data.substr (dot + 1, std::string::npos);
-  }
-
-  return "";
+  return _path.string();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::exists () const
 {
-  return access (_data.c_str (), F_OK) ? false : true;
+  return boost::filesystem::exists(_path);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::is_directory () const
 {
-  struct stat s = {0};
-  if (! stat (_data.c_str (), &s) &&
-      S_ISDIR (s.st_mode))
-    return true;
-
-  return false;
+  return boost::filesystem::is_directory(_path);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::is_absolute () const
 {
-  if (_data.length () && _data[0] == '/')
-    return true;
-
-  return false;
+  return _path.is_absolute();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::is_link () const
 {
-  struct stat s = {0};
-  if (! lstat (_data.c_str (), &s) &&
-      S_ISLNK (s.st_mode))
-    return true;
-
-  return false;
+  return boost::filesystem::is_symlink(_path);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::readable () const
 {
-  return access (_data.c_str (), R_OK) ? false : true;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::writable () const
 {
-  return access (_data.c_str (), W_OK) ? false : true;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::executable () const
 {
-  return access (_data.c_str (), X_OK) ? false : true;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::rename (const std::string& new_name)
 {
-  std::string expanded = expand (new_name);
-  if (_data != expanded)
-  {
-    if (::rename (_data.c_str (), expanded.c_str ()) == 0)
-    {
-      _data = expanded;
-      return true;
-    }
-  }
-
-  return false;
+  boost::filesystem::path new_path(new_name);
+  boost::filesystem::rename(_path, new_path);
+  _path = new_path;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// ~      --> /home/user
-// ~foo/x --> /home/foo/s
-// ~/x    --> /home/foo/x
-// ./x    --> $PWD/x
-// x      --> $PWD/x
+// Only expand tilde on Windows
 std::string Path::expand (const std::string& in)
 {
-  std::string copy = in;
-
-  std::string::size_type tilde = copy.find ("~");
-  std::string::size_type slash;
-
-  if (tilde != std::string::npos)
-  {
-    const char *home = getenv("HOME");
-    if (home == NULL)
-    {
-      struct passwd* pw = getpwuid (getuid ());
-      home = pw->pw_dir;
+  if (in.size() >= 2 && in[0] == '~' && (in[1] == '\\' || in[1] == '/')) {
+    wchar_t home[MAX_PATH];
+    if (SHGetFolderPathW(nullptr, CSIDL_PROFILE, nullptr, SHGFP_TYPE_CURRENT, home) != S_OK) {
+      throw "Could not get home path.";
     }
 
-    // Convert: ~ --> /home/user
-    if (copy.length () == 1)
-      copy = home;
-
-    // Convert: ~/x --> /home/user/x
-    else if (copy.length () > tilde + 1 &&
-             copy[tilde + 1] == '/')
-    {
-      copy.replace (tilde, 1, home);
-    }
-
-    // Convert: ~foo/x --> /home/foo/x
-    else if ((slash = copy.find  ("/", tilde)) != std::string::npos)
-    {
-      std::string name = copy.substr (tilde + 1, slash - tilde - 1);
-      struct passwd* pw = getpwnam (name.c_str ());
-      if (pw)
-        copy.replace (tilde, slash - tilde, pw->pw_dir);
-    }
+    std::string home_str = nowide::narrow(home);
+    return home_str + in.substr(1, std::string::npos);
   }
 
-  // Relative paths
-  else if (in.length () > 2 &&
-           in.substr (0, 2) == "./")
-  {
-    copy = Directory::cwd () + "/" + in.substr (2);
-  }
-  else if (in.length () > 1 &&
-           in[0] != '.' &&
-           in[0] != '/')
-  {
-    copy = Directory::cwd () + "/" + in;
-  }
-
-  return copy;
+  return in;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -285,17 +195,32 @@ std::vector <std::string> Path::glob (const std::string& pattern)
 {
   std::vector <std::string> results;
 
-  glob_t g;
-#ifdef SOLARIS
-  if (!::glob (pattern.c_str (), GLOB_ERR, NULL, &g))
-#else
-  if (!::glob (pattern.c_str (), GLOB_ERR | GLOB_BRACE | GLOB_TILDE, NULL, &g))
-#endif
-    for (int i = 0; i < (int) g.gl_pathc; ++i)
-      results.push_back (g.gl_pathv[i]);
+  WIN32_FIND_DATAW findData;
+  FindHandle handle(FindFirstFileW(nowide::widen(pattern).c_str(), &findData));
+  if (!handle.valid())
+  {
+    return results;
+  }
 
-  globfree (&g);
+  do
+  {
+    if (findData.cFileName[0] == L'.' && (findData.cFileName[1] == L'\0' ||
+      (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
+    {
+      continue;
+    }
+
+    results.push_back(nowide::narrow(findData.cFileName));
+  } while (FindNextFileW(handle.get(), &findData) == TRUE);
+
   return results;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+std::string Path::to_string() const {
+  return _path.string();
+}
+
+std::string Path::original() const {
+  return _path.string();
+}

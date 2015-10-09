@@ -13,6 +13,7 @@ project (task)
 set (PROJECT_VERSION "2.4.4")
 
 OPTION(USE_GNUTLS "Build gnutls support." ON)
+set(USE_GNUTLS false)
 
 message ("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
@@ -62,6 +63,8 @@ elseif (${CMAKE_SYSTEM_NAME} STREQUAL "CYGWIN")
   #       GCC 4.8.3, and debugging those leads to insanity. Adding this
   #       workaround instead of fixing Cygwin.
   set (_CXX11_FLAGS "-std=gnu++0x")
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+  set (WINDOWS true)
 else (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set (UNKNOWN true)
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -124,9 +127,12 @@ check_struct_has_member ("struct tm" tm_gmtoff time.h HAVE_TM_GMTOFF)
 check_struct_has_member ("struct stat" st_birthtime "sys/types.h;sys/stat.h" HAVE_ST_BIRTHTIME)
 
 message ("-- Looking for libuuid")
+
 if (DARWIN OR FREEBSD)
   # Apple and FreeBSD include the uuid functions in their libc, rather than libuuid
   check_function_exists (uuid_unparse_lower HAVE_UUID_UNPARSE_LOWER)
+elseif (WINDOWS)
+  # Use an internal implementation
 else (DARWIN OR FREEBSD)
   find_path    (UUID_INCLUDE_DIR   uuid/uuid.h)
   find_library (UUID_LIBRARY NAMES uuid)
@@ -147,6 +153,21 @@ if (HAVE_UUID_UNPARSE_LOWER)
 else (HAVE_UUID_UNPARSE_LOWER)
   message ("-- Found libuuid, using internal uuid_unparse_lower")
 endif (HAVE_UUID_UNPARSE_LOWER)
+
+if (WINDOWS)
+  set (Boost_USE_STATIC_LIBS ON)
+  find_package (Boost COMPONENTS filesystem system regex)
+  if (Boost_FOUND)
+    set (TASK_INCLUDE_DIRS ${TASK_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+    set (TASK_LIBRARIES ${TASK_LIBRARIES} ${Boost_LIBRARIES})
+  else (Boost_FOUND)
+    message (FATAL_ERROR "required boost components not found")
+  endif (Boost_FOUND)
+
+  include_directories (${CMAKE_SOURCE_DIR}/src/windows)
+else (WINDOWS)
+  include_directories (${CMAKE_SOURCE_DIR}/src/posix)
+endif (WINDOWS)
 
 # Set the package language.
 if (LANGUAGE)

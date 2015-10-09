@@ -33,6 +33,7 @@
 #include <i18n.h>
 #include <main.h>
 #include <CmdDuplicate.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -83,7 +84,7 @@ int CmdDuplicate::execute (std::string& output)
       dup.remove ("recur");
       dup.remove ("until");
       dup.remove ("imask");
-      std::cout << format (STRING_CMD_DUPLICATE_NON_REC, task->id)
+      nowide::cout << format (STRING_CMD_DUPLICATE_NON_REC, task->id)
           << "\n";
     }
 
@@ -91,7 +92,7 @@ int CmdDuplicate::execute (std::string& output)
     else if (dup.getStatus () == Task::recurring)
     {
       dup.remove ("mask");
-      std::cout << format (STRING_CMD_DUPLICATE_REC, task->id)
+      nowide::cout << format (STRING_CMD_DUPLICATE_REC, task->id)
           << "\n";
     }
 
@@ -111,16 +112,16 @@ int CmdDuplicate::execute (std::string& output)
       feedback_affected (STRING_CMD_DUPLICATE_TASK, *task);
 
       if (context.verbose ("new-id"))
-        std::cout << format (STRING_CMD_ADD_FEEDBACK, dup.id) + "\n";
+        nowide::cout << format (STRING_CMD_ADD_FEEDBACK, dup.id) + "\n";
       else if (context.verbose ("new-uuid"))
-        std::cout << format (STRING_CMD_ADD_FEEDBACK, dup.get ("uuid")) + "\n";
+        nowide::cout << format (STRING_CMD_ADD_FEEDBACK, dup.get ("uuid")) + "\n";
 
       if (context.verbose ("project"))
         projectChanges[task->get ("project")] = onProjectChange (*task);
     }
     else
     {
-      std::cout << STRING_CMD_DUPLICATE_NO << "\n";
+      nowide::cout << STRING_CMD_DUPLICATE_NO << "\n";
       rc = 1;
       if (_permission_quit)
         break;

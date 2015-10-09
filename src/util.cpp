@@ -30,6 +30,16 @@
 #ifdef FREEBSD
 #define _WITH_GETLINE
 #endif
+
+#ifdef WINDOWS
+#include <chrono>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
+#include <nowide/convert.hpp>
+#endif
+
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
@@ -41,27 +51,31 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pwd.h>
 #include <errno.h>
 #include <signal.h>
-#include <sys/select.h>
 
 #include <Date.h>
 #include <text.h>
 #include <main.h>
 #include <i18n.h>
 #include <util.h>
+#include <nowide/iostream.hpp>
+
+#ifndef WINDOWS
+#include <sys/wait.h>
+#include <pwd.h>
+#include <sys/select.h>
+#endif
 
 extern Context context;
 
 ////////////////////////////////////////////////////////////////////////////////
-// Uses std::getline, because std::cin eats leading whitespace, and that means
-// that if a newline is entered, std::cin eats it and never returns from the
-// "std::cin >> answer;" line, but it does display the newline.  This way, with
+// Uses std::getline, because nowide::cin eats leading whitespace, and that means
+// that if a newline is entered, nowide::cin eats it and never returns from the
+// "nowide::cin >> answer;" line, but it does display the newline.  This way, with
 // std::getline, the newline can be detected, and the prompt re-written.
 bool confirm (const std::string& question)
 {
@@ -74,11 +88,11 @@ bool confirm (const std::string& question)
 
   do
   {
-    std::cout << question
+    nowide::cout << question
               << STRING_UTIL_CONFIRM_YN;
 
-    std::getline (std::cin, answer);
-    answer = std::cin.eof() ? STRING_UTIL_CONFIRM_NO : lowerCase (trim (answer));
+    std::getline (nowide::cin, answer);
+    answer = nowide::cin.eof() ? STRING_UTIL_CONFIRM_NO : lowerCase (trim (answer));
 
     autoComplete (answer, options, matches, 1); // Hard-coded 1.
   }
@@ -107,7 +121,7 @@ int confirm4 (const std::string& question)
 
   do
   {
-    std::cout << question
+    nowide::cout << question
               << " ("
               << options[1] << "/"
               << options[2] << "/"
@@ -115,7 +129,7 @@ int confirm4 (const std::string& question)
               << options[5]
               << ") ";
 
-    std::getline (std::cin, answer);
+    std::getline (nowide::cin, answer);
     answer = trim (answer);
     autoComplete (answer, options, matches, 1); // Hard-coded 1.
   }
@@ -199,6 +213,17 @@ const std::string uuid ()
 
   return res;
 }
+
+#elif defined(WINDOWS)
+
+const std::string uuid ()
+{
+  static boost::uuids::random_generator generator;
+
+  boost::uuids::uuid uuid = generator();
+  return boost::lexical_cast<std::string>(uuid);
+}
+
 #else
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -227,6 +252,7 @@ const std::string uuid ()
 }
 #endif
 
+#ifndef WINDOWS
 ////////////////////////////////////////////////////////////////////////////////
 // Run a binary with args, capturing output.
 int execute (
@@ -369,6 +395,7 @@ int execute (
 
   return status;
 }
+#endif
 
 // Collides with std::numeric_limits methods
 #undef max
@@ -460,3 +487,236 @@ time_t timegm (struct tm *tm)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef WINDOWS
+
+std::string getErrorString(DWORD errCode) {
+  std::string res;
+
+  LPWSTR wErrorText = nullptr;
+  FormatMessageW(
+          FORMAT_MESSAGE_FROM_SYSTEM |
+          FORMAT_MESSAGE_ALLOCATE_BUFFER |
+          FORMAT_MESSAGE_IGNORE_INSERTS,
+          NULL,
+          errCode,
+          LANG_USER_DEFAULT,
+          (LPWSTR)&wErrorText,
+          0,
+          nullptr);
+
+  if (wErrorText != nullptr) {
+    res = nowide::narrow(wErrorText);
+    LocalFree(wErrorText);
+    wErrorText = nullptr;
+  }
+  else {
+    std::ostringstream oss;
+    oss << "Unknown Windows error " << errCode;
+    res = oss.str();
+  }
+
+  return res;
+}
+
+int setenv(const char *name, const char* value, int overwrite) {
+  if (overwrite == 0) {
+    wchar_t temp[2];
+    if (GetEnvironmentVariableW(nowide::widen(name).c_str(), temp, 2) == 0) {
+      DWORD errCode = GetLastError();
+      if (errCode != ERROR_ENVVAR_NOT_FOUND) {
+        throw getErrorString(errCode);
+      }
+    }
+  }
+
+  if (SetEnvironmentVariableW(nowide::widen(name).c_str(), nowide::widen(value).c_str()) == 0) {
+    throw getErrorString(GetLastError());
+  }
+
+  return 0;
+}
+
+int unsetenv(const char *name) {
+  if (SetEnvironmentVariableW(nowide::widen(name).c_str(), nullptr) == 0) {
+    throw getErrorString(GetLastError());
+  }
+
+  return 0;
+}
+
+time_t filetime_to_timet(const FILETIME& ft) {
+  ULARGE_INTEGER ull;
+  ull.LowPart = ft.dwLowDateTime;
+  ull.HighPart = ft.dwHighDateTime;
+  return ull.QuadPart / 10000000ULL - 11644473600ULL;
+}
+
+// From http://blogs.msdn.com/b/twistylittlepassagesallalike/archive/2011/04/23/everyone-quotes-arguments-the-wrong-way.aspx
+std::string quote_arg(const std::string& arg) {
+  if (!arg.empty() && arg.find_first_of(" \t\n\v\"") == arg.npos) {
+    return arg;
+  }
+
+  std::string res;
+  res.push_back (L'"');
+
+  for (std::string::const_iterator it = arg.begin(); ; ++it) {
+    unsigned numBackslashes = 0;
+
+    while (it != arg.end () && *it == '\\') {
+      ++it;
+      ++numBackslashes;
+    }
+
+    if (it == arg.end ()) {
+
+      res.append (numBackslashes * 2, '\\');
+      break;
+    }
+    else if (*it == L'"') {
+      res.append (numBackslashes * 2 + 1, '\\');
+      res.push_back (*it);
+    }
+    else {
+      res.append (numBackslashes, '\\');
+      res.push_back (*it);
+    }
+  }
+
+  res.push_back ('"');
+  return res;
+}
+
+std::string arg_list_to_command_line(const std::vector<std::string>& args) {
+  std::string res;
+
+  for (auto& arg : args) {
+    res.append(quote_arg(arg));
+    res.push_back(' ');
+  }
+
+  return res;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Run a binary with args, capturing output.
+int execute (
+  const std::string& executable,
+  const std::vector <std::string>& args,
+  const std::string& input,
+  std::string& output)
+{
+  SECURITY_ATTRIBUTES secAttr;
+  secAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+  secAttr.bInheritHandle = TRUE;
+  secAttr.lpSecurityDescriptor = nullptr;
+
+  SafeHandle stdInRead;
+  SafeHandle stdInWrite;
+  SafeHandle stdOutRead;
+  SafeHandle stdOutWrite;
+
+  if (!CreatePipe(stdOutRead.ptr(), stdOutWrite.ptr(), &secAttr, 0)) {
+    throw getErrorString(GetLastError());
+  }
+
+  if (!SetHandleInformation(stdOutRead.get(), HANDLE_FLAG_INHERIT, 0)) {
+    throw getErrorString(GetLastError());
+  }
+
+  if (!CreatePipe(stdInRead.ptr(), stdInWrite.ptr(), &secAttr, 0)) {
+    throw getErrorString(GetLastError());
+  }
+
+  if (!SetHandleInformation(stdInRead.get(), HANDLE_FLAG_INHERIT, 0)) {
+    throw getErrorString(GetLastError());
+  }
+
+  STARTUPINFOW startInfo;
+  ZeroMemory(&startInfo, sizeof(STARTUPINFOW));
+  startInfo.cb = sizeof(STARTUPINFOW);
+  startInfo.hStdError = stdOutWrite.get();
+  startInfo.hStdOutput = stdOutWrite.get();
+  startInfo.hStdInput = stdInRead.get();
+  startInfo.dwFlags = STARTF_USESTDHANDLES;
+
+  PROCESS_INFORMATION procInfo;
+  ZeroMemory(&procInfo, sizeof(PROCESS_INFORMATION));
+
+  std::wstring argString = nowide::widen(arg_list_to_command_line(args));
+  wchar_t *argStringRaw = const_cast<wchar_t*>(argString.c_str());
+
+  BOOL procCreated =
+    CreateProcessW(
+      nowide::widen(executable).c_str(),
+      argStringRaw,
+      NULL,
+      NULL,
+      TRUE,
+      0,
+      NULL,
+      NULL,
+      &startInfo,
+      &procInfo);
+
+  if (!procCreated) {
+    throw getErrorString(GetLastError());
+  }
+
+  CloseHandle(procInfo.hThread);
+  SafeHandle procHandle(procInfo.hProcess);
+
+  DWORD inputSize = (DWORD)input.size();
+  if (inputSize < 0) {
+    throw "Input too long.";
+  }
+
+  DWORD written;
+  if (!WriteFile(stdInWrite.get(), input.c_str(), inputSize, &written, NULL)) {
+    throw getErrorString(GetLastError());
+  }
+
+  stdInWrite.reset();
+
+  DWORD read = 1;
+  char buffer[1024];
+
+  while (read > 0) {
+    if (!ReadFile(stdOutRead.get(), buffer, sizeof(buffer), &read, NULL)) {
+      throw getErrorString(GetLastError());
+    }
+
+    output.append(buffer);
+  }
+
+  if (!WaitForSingleObject(procHandle.get(), INFINITE)) {
+    throw getErrorString(GetLastError());
+  }
+
+  DWORD exitCode;
+  if (!GetExitCodeProcess(procHandle.get(), &exitCode)) {
+    throw getErrorString(GetLastError());
+  }
+
+  return exitCode;
+}
+
+bool supports_ansi_codes_;
+
+bool supports_ansi_codes() {
+  return supports_ansi_codes_;
+}
+
+namespace {
+  struct initialize {
+    initialize()
+    {
+      // Any other variables that need to be checked for?
+      // Does the value need validation or is existence enough?
+      supports_ansi_codes_ =
+        GetEnvironmentVariableW(L"ANSICON", nullptr, 0) > 0 ||
+        GetLastError() == ERROR_MORE_DATA;
+    }
+  } inst;
+}
+#endif

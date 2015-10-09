@@ -34,6 +34,10 @@
 #include <sys/types.h>
 #ifdef FREEBSD
 #include <uuid.h>
+#elif defined(WINDOWS)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <memory>
 #else
 #include <uuid/uuid.h>
 #endif
@@ -45,7 +49,7 @@ int confirm4 (const std::string&);
 std::string formatBytes (size_t);
 int autoComplete (const std::string&, const std::vector<std::string>&, std::vector<std::string>&, int minimum = 1);
 
-#ifndef HAVE_UUID_UNPARSE_LOWER
+#if !defined(HAVE_UUID_UNPARSE_LOWER) && !defined(WINDOWS)
 void uuid_unparse_lower (uuid_t uu, char *out);
 #endif
 const std::string uuid ();
@@ -63,6 +67,58 @@ const std::vector <std::string> extractParents (
 
 #ifndef HAVE_TIMEGM
   time_t timegm (struct tm *tm);
+#endif
+
+#ifdef WINDOWS
+std::string getErrorString(DWORD errCode);
+
+int setenv(const char *name, const char* value, int overwrite);
+int unsetenv(const char *name);
+
+struct CloseHandleCloser {
+    void operator()(HANDLE handle) { CloseHandle(handle); }
+};
+
+struct FindCloseCloser {
+    void operator()(HANDLE handle) { FindClose(handle); }
+};
+
+template <LONG_PTR NullValue, typename Closer>
+class SafeHandleBase
+{
+private:
+    HANDLE _handle;
+    Closer closer;
+
+public:
+    SafeHandleBase() : _handle((HANDLE)NullValue) { }
+    explicit SafeHandleBase(HANDLE handle) : _handle(handle) { }
+
+    void reset() {
+      reset((HANDLE)NullValue);
+    }
+
+    void reset(HANDLE handle) {
+      if (_handle != (HANDLE)NullValue) {
+        closer(_handle);
+      }
+
+      _handle = handle;
+    }
+    ~SafeHandleBase() { closer(_handle); }
+    HANDLE get() { return _handle; }
+    HANDLE* ptr() { return &_handle; }
+    bool valid() { return _handle == (HANDLE)NullValue; }
+};
+
+typedef SafeHandleBase<(LONG_PTR)INVALID_HANDLE_VALUE, CloseHandleCloser> SafeHandle;
+typedef SafeHandleBase<(LONG_PTR)NULL, CloseHandleCloser> SafeHandle2;
+typedef SafeHandleBase<(LONG_PTR)INVALID_HANDLE_VALUE, FindCloseCloser> FindHandle;
+
+time_t filetime_to_timet(const FILETIME& ft);
+
+bool supports_ansi_codes();
+
 #endif
 
 #endif

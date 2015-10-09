@@ -33,6 +33,7 @@
 #include <i18n.h>
 #include <main.h>
 #include <CmdPrepend.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -114,7 +115,7 @@ int CmdPrepend::execute (std::string& output)
     }
     else
     {
-      std::cout << STRING_CMD_PREPEND_NO << "\n";
+      nowide::cout << STRING_CMD_PREPEND_NO << "\n";
       rc = 1;
       if (_permission_quit)
         break;

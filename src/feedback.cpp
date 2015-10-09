@@ -38,6 +38,7 @@
 #include <text.h>
 #include <util.h>
 #include <i18n.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -320,7 +321,7 @@ std::string renderAttribute (const std::string& name, const std::string& value, 
 void feedback_affected (const std::string& effect)
 {
   if (context.verbose ("affected"))
-    std::cout << effect << "\n";
+    nowide::cout << effect << "\n";
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -332,7 +333,7 @@ void feedback_affected (const std::string& effect)
 void feedback_affected (const std::string& effect, int quantity)
 {
   if (context.verbose ("affected"))
-    std::cout << format (effect, quantity)
+    nowide::cout << format (effect, quantity)
               << "\n";
 }
 
@@ -348,10 +349,10 @@ void feedback_affected (const std::string& effect, const Task& task)
   if (context.verbose ("affected"))
   {
     if (task.id)
-      std::cout << format (effect, task.id, task.get ("description"))
+      nowide::cout << format (effect, task.id, task.get ("description"))
                 << "\n";
     else
-      std::cout << format (effect, task.get ("uuid"), task.get ("description"))
+      nowide::cout << format (effect, task.get ("uuid"), task.get ("description"))
                 << "\n";
   }
 }
@@ -372,10 +373,10 @@ void feedback_special_tags (const Task& task, const std::string& tag)
     if (msg.length ())
     {
       if (task.id)
-        std::cout << format (msg, task.id)
+        nowide::cout << format (msg, task.id)
                   << "\n";
       else
-        std::cout << format (msg, task.get ("uuid"))
+        nowide::cout << format (msg, task.get ("uuid"))
                   << "\n";
     }
   }
@@ -405,14 +406,14 @@ void feedback_unblocked (const Task& task)
       if (blocking.size () == 0)
       {
         if (i->id)
-          std::cout << format (STRING_FEEDBACK_UNBLOCKED,
+          nowide::cout << format (STRING_FEEDBACK_UNBLOCKED,
                                i->id,
                                i->get ("description"))
                     << "\n";
         else
         {
           std::string uuid = i->get ("uuid");
-          std::cout << format (STRING_FEEDBACK_UNBLOCKED,
+          nowide::cout << format (STRING_FEEDBACK_UNBLOCKED,
                                i->get ("uuid"),
                                i->get ("description"))
                     << "\n";

@@ -27,6 +27,7 @@
 #include <iostream>
 #include <Context.h>
 #include <CLI.h>
+#include <nowide/iostream.hpp>
 
 Context context;
 
@@ -205,7 +206,7 @@ int main (int argc, const char** argv)
 
     cli.analyze ();
 
-    std::cout << cli.dump ()
+    nowide::cout << cli.dump ()
               << "\n"
               << "  \033[1;37;42mFILTER\033[0m "
               << cli.getFilter ()
@@ -214,7 +215,7 @@ int main (int argc, const char** argv)
 
   catch (const std::string& error)
   {
-    std::cout << "Error: " << error << std::endl;
+    nowide::cout << "Error: " << error << std::endl;
   }
 
   return 0;

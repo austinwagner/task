@@ -34,6 +34,7 @@
 #include <Context.h>
 #include <text.h>
 #include <i18n.h>
+#include <nowide/iostream.hpp>
 
 Context context;
 
@@ -69,7 +70,7 @@ int main (int argc, char** argv)
     for (int i = 1; i < argc; i++)
       if (!strcmp (argv[i], "-h") || ! strcmp (argv[i], "--help"))
       {
-        std::cout << "\n"
+        nowide::cout << "\n"
                   << "Usage: " << argv[0] << " [options] '<expression>'\n"
                   << "\n"
                   << "Options:\n"
@@ -84,7 +85,7 @@ int main (int argc, char** argv)
       }
       else if (!strcmp (argv[i], "-v") || !strcmp (argv[i], "--version"))
       {
-        std::cout << "\n"
+        nowide::cout << "\n"
                   << format (STRING_CMD_VERSION_BUILT, "calc", VERSION)
 #if defined (DARWIN)
                   << "darwin"
@@ -143,22 +144,22 @@ int main (int argc, char** argv)
     // Show any debug output.
     std::vector <std::string>::iterator i;
     for (i = context.debugMessages.begin (); i != context.debugMessages.end (); ++i)
-      std::cout << *i << "\n";
+      nowide::cout << *i << "\n";
 
     // Show the result in string form.
-    std::cout << (std::string) result
+    nowide::cout << (std::string) result
               << "\n";
   }
 
   catch (const std::string& error)
   {
-    std::cerr << error << "\n";
+    nowide::cerr << error << "\n";
     status = -1;
   }
 
   catch (...)
   {
-    std::cerr << "Unknown error occured.  Oops.\n";
+    nowide::cerr << "Unknown error occured.  Oops.\n";
     status = -2;
   }
 

@@ -34,6 +34,7 @@
 #include <util.h>
 #include <i18n.h>
 #include <main.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -149,12 +150,12 @@ void dependencyChainOnComplete (Task& task)
     // Nag about broken chain.
     if (context.config.getBoolean ("dependency.reminder"))
     {
-      std::cout << format (STRING_DEPEND_BLOCKED, task.id)
+      nowide::cout << format (STRING_DEPEND_BLOCKED, task.id)
                 << "\n";
 
       std::vector <Task>::iterator b;
       for (b = blocking.begin (); b != blocking.end (); ++b)
-        std::cout << "  " << b->id << " " << b->get ("description") << "\n";
+        nowide::cout << "  " << b->id << " " << b->get ("description") << "\n";
     }
 
     // If there are both blocking and blocked tasks, the chain is broken.
@@ -162,12 +163,12 @@ void dependencyChainOnComplete (Task& task)
     {
       if (context.config.getBoolean ("dependency.reminder"))
       {
-        std::cout << STRING_DEPEND_BLOCKING
+        nowide::cout << STRING_DEPEND_BLOCKING
                   << "\n";
 
         std::vector <Task>::iterator b;
         for (b = blocked.begin (); b != blocked.end (); ++b)
-          std::cout << "  " << b->id << " " << b->get ("description") << "\n";
+          nowide::cout << "  " << b->id << " " << b->get ("description") << "\n";
       }
 
       if (!context.config.getBoolean ("dependency.confirmation") ||
@@ -208,12 +209,12 @@ void dependencyChainOnStart (Task& task)
     // broken chain.
     if (blocking.size ())
     {
-      std::cout << format (STRING_DEPEND_BLOCKED, task.id)
+      nowide::cout << format (STRING_DEPEND_BLOCKED, task.id)
                 << "\n";
 
       std::vector <Task>::iterator b;
       for (b = blocking.begin (); b != blocking.end (); ++b)
-        std::cout << "  " << b->id << " " << b->get ("description") << "\n";
+        nowide::cout << "  " << b->id << " " << b->get ("description") << "\n";
     }
   }
 }
@@ -228,13 +229,13 @@ void dependencyChainOnModify (Task& before, Task& after)
   std::string depends = before.get ("depends");
   std::vector <std::string> before_depends;
   split (before_depends, depends, ',');
-  std::cout << "# dependencyChainOnModify before has " << before_depends.size () << "\n";
+  nowide::cout << "# dependencyChainOnModify before has " << before_depends.size () << "\n";
 
   // Get the dependencies from after.
   depends = after.get ("depends");
   std::vector <std::string> after_depends;
   split (after_depends, depends, ',');
-  std::cout << "# dependencyChainOnModify after has " << after_depends.size () << "\n";
+  nowide::cout << "# dependencyChainOnModify after has " << after_depends.size () << "\n";
 
   // listDiff
   std::vector <std::string> before_only;
@@ -244,7 +245,7 @@ void dependencyChainOnModify (Task& before, Task& after)
   // Any dependencies in before_only indicates that a dependency was removed.
   if (before_only.size ())
   {
-    std::cout << "# dependencyChainOnModify detected a dependency removal\n";
+    nowide::cout << "# dependencyChainOnModify detected a dependency removal\n";
 
     // before   dep:2,3
     // after    dep:2
@@ -257,7 +258,7 @@ void dependencyChainOnModify (Task& before, Task& after)
     std::vector <Task>::iterator b;
     for (b = blocked.begin (); b != blocked.end (); ++b)
     {
-      std::cout << "# dependencyChainOnModify\n";
+      nowide::cout << "# dependencyChainOnModify\n";
     }
   }
 */

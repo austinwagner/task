@@ -48,6 +48,7 @@
 #include <gnutls/x509.h>
 #include <text.h>
 #include <i18n.h>
+#include <nowide/iostream.hpp>
 
 #define MAX_BUF 16384
 
@@ -56,7 +57,7 @@ static int verify_certificate_callback (gnutls_session_t);
 ////////////////////////////////////////////////////////////////////////////////
 static void gnutls_log_function (int level, const char* message)
 {
-  std::cout << "c: " << level << " " << message;
+  nowide::cout << "c: " << level << " " << message;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -103,7 +104,7 @@ void TLSClient::limit (int max)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Calling this method results in all subsequent socket traffic being sent to
-// std::cout, labelled with 'c: ...'.
+// nowide::cout, labelled with 'c: ...'.
 void TLSClient::debug (int level)
 {
   if (level)
@@ -120,11 +121,11 @@ void TLSClient::trust (const enum trust_level value)
   if (_debug)
   {
     if (_trust == allow_all)
-      std::cout << "c: INFO Server certificate will be trusted automatically.\n";
+      nowide::cout << "c: INFO Server certificate will be trusted automatically.\n";
     else if (_trust == ignore_hostname)
-      std::cout << "c: INFO Server certificate will be verified but hostname ignored.\n";
+      nowide::cout << "c: INFO Server certificate will be verified but hostname ignored.\n";
     else
-      std::cout << "c: INFO Server certificate will be verified.\n";
+      nowide::cout << "c: INFO Server certificate will be verified.\n";
   }
 }
 
@@ -181,7 +182,7 @@ void TLSClient::init (
   if (ret < 0)
   {
     if (_debug && ret == GNUTLS_E_INVALID_REQUEST)
-      std::cout << "c: ERROR Priority error at: " << err << "\n";
+      nowide::cout << "c: ERROR Priority error at: " << err << "\n";
 
     throw format (STRING_TLS_INIT_FAIL, gnutls_strerror (ret));
   }
@@ -266,7 +267,7 @@ void TLSClient::connect (const std::string& host, const std::string& port)
   if (ret < 0)
   {
     if (_debug)
-      std::cout << "c: ERROR Certificate verification failed.\n";
+      nowide::cout << "c: ERROR Certificate verification failed.\n";
     throw format (STRING_TLS_INIT_FAIL, gnutls_strerror (ret));
   }
 #endif
@@ -275,10 +276,10 @@ void TLSClient::connect (const std::string& host, const std::string& port)
   {
 #if GNUTLS_VERSION_NUMBER >= 0x03010a
     char* desc = gnutls_session_get_desc (_session);
-    std::cout << "c: INFO Handshake was completed: " << desc << "\n";
+    nowide::cout << "c: INFO Handshake was completed: " << desc << "\n";
     gnutls_free (desc);
 #else
-    std::cout << "c: INFO Handshake was completed.\n";
+    nowide::cout << "c: INFO Handshake was completed.\n";
 #endif
   }
 }
@@ -307,7 +308,7 @@ int TLSClient::verify_certificate () const
   if (ret < 0)
   {
     if (_debug)
-      std::cout << "c: ERROR Certificate verification peers3 failed. " << gnutls_strerror (ret) << "\n";
+      nowide::cout << "c: ERROR Certificate verification peers3 failed. " << gnutls_strerror (ret) << "\n";
     return GNUTLS_E_CERTIFICATE_ERROR;
   }
 #else
@@ -315,7 +316,7 @@ int TLSClient::verify_certificate () const
   if (ret < 0)
   {
     if (_debug)
-      std::cout << "c: ERROR Certificate verification peers2 failed. " << gnutls_strerror (ret) << "\n";
+      nowide::cout << "c: ERROR Certificate verification peers2 failed. " << gnutls_strerror (ret) << "\n";
     return GNUTLS_E_CERTIFICATE_ERROR;
   }
 
@@ -331,7 +332,7 @@ int TLSClient::verify_certificate () const
       if (cert_list_size == 0)
       {
         if (_debug)
-          std::cout << "c: ERROR Certificate get peers failed. " << gnutls_strerror (ret) << "\n";
+          nowide::cout << "c: ERROR Certificate get peers failed. " << gnutls_strerror (ret) << "\n";
         return GNUTLS_E_CERTIFICATE_ERROR;
       }
 
@@ -339,7 +340,7 @@ int TLSClient::verify_certificate () const
       if (ret < 0)
       {
         if (_debug)
-          std::cout << "c: ERROR x509 init failed. " << gnutls_strerror (ret) << "\n";
+          nowide::cout << "c: ERROR x509 init failed. " << gnutls_strerror (ret) << "\n";
         return GNUTLS_E_CERTIFICATE_ERROR;
       }
 
@@ -347,7 +348,7 @@ int TLSClient::verify_certificate () const
       if (ret < 0)
       {
         if (_debug)
-          std::cout << "c: ERROR x509 cert import. " << gnutls_strerror (ret) << "\n";
+          nowide::cout << "c: ERROR x509 cert import. " << gnutls_strerror (ret) << "\n";
         gnutls_x509_crt_deinit(cert);
         return GNUTLS_E_CERTIFICATE_ERROR;
       }
@@ -355,7 +356,7 @@ int TLSClient::verify_certificate () const
       if (gnutls_x509_crt_check_hostname (cert, hostname) == 0)
       {
         if (_debug)
-          std::cout << "c: ERROR x509 cert check hostname. " << gnutls_strerror (ret) << "\n";
+          nowide::cout << "c: ERROR x509 cert check hostname. " << gnutls_strerror (ret) << "\n";
         gnutls_x509_crt_deinit(cert);
         return GNUTLS_E_CERTIFICATE_ERROR;
       }
@@ -372,12 +373,12 @@ int TLSClient::verify_certificate () const
   if (ret < 0)
   {
     if (_debug)
-      std::cout << "c: ERROR certificate verification status. " << gnutls_strerror (ret) << "\n";
+      nowide::cout << "c: ERROR certificate verification status. " << gnutls_strerror (ret) << "\n";
     return GNUTLS_E_CERTIFICATE_ERROR;
   }
 
   if (_debug)
-    std::cout << "c: INFO " << out.data << "\n";
+    nowide::cout << "c: INFO " << out.data << "\n";
   gnutls_free (out.data);
 #endif
 
@@ -421,7 +422,7 @@ void TLSClient::send (const std::string& data)
   }
 
   if (_debug)
-    std::cout << "c: INFO Sending 'XXXX"
+    nowide::cout << "c: INFO Sending 'XXXX"
               << data.c_str ()
               << "' (" << total << " bytes)"
               << std::endl;
@@ -451,7 +452,7 @@ void TLSClient::recv (std::string& data)
                            (header[2]<<8) |
                             header[3];
   if (_debug)
-    std::cout << "c: INFO expecting " << expected << " bytes.\n";
+    nowide::cout << "c: INFO expecting " << expected << " bytes.\n";
 
   // TODO This would be a good place to assert 'expected < _limit'.
 
@@ -475,7 +476,7 @@ void TLSClient::recv (std::string& data)
     if (received == 0)
     {
       if (_debug)
-        std::cout << "c: INFO Peer has closed the TLS connection\n";
+        nowide::cout << "c: INFO Peer has closed the TLS connection\n";
       break;
     }
 
@@ -483,7 +484,7 @@ void TLSClient::recv (std::string& data)
     if (received < 0 && gnutls_error_is_fatal (received) == 0)
     {
       if (_debug)
-        std::cout << "c: WARNING " << gnutls_strerror (received) << "\n";
+        nowide::cout << "c: WARNING " << gnutls_strerror (received) << "\n";
     }
     else if (received < 0)
       throw std::string (gnutls_strerror (received));
@@ -499,7 +500,7 @@ void TLSClient::recv (std::string& data)
   while (received > 0 && total < (int) expected);
 
   if (_debug)
-    std::cout << "c: INFO Receiving 'XXXX"
+    nowide::cout << "c: INFO Receiving 'XXXX"
               << data.c_str ()
               << "' (" << total << " bytes)"
               << std::endl;

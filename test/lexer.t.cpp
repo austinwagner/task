@@ -94,7 +94,7 @@ int main (int argc, char** argv)
   tokens.clear ();
   while (l2.token (token, type))
   {
-    std::cout << "# «" << token << "» " << Lexer::typeName (type) << "\n";
+    nowide::cout << "# «" << token << "» " << Lexer::typeName (type) << "\n";
     tokens.push_back (std::pair <std::string, Lexer::Type> (token, type));
   }
 
@@ -137,7 +137,7 @@ int main (int argc, char** argv)
   tokens.clear ();
   while (l3.token (token, type))
   {
-    std::cout << "# «" << token << "» " << Lexer::typeName (type) << "\n";
+    nowide::cout << "# «" << token << "» " << Lexer::typeName (type) << "\n";
     tokens.push_back (std::pair <std::string, Lexer::Type> (token, type));
   }
 
@@ -165,7 +165,7 @@ int main (int argc, char** argv)
   tokens.clear ();
   while (l4.token (token, type))
   {
-    std::cout << "# «" << token << "» " << Lexer::typeName (type) << "\n";
+    nowide::cout << "# «" << token << "» " << Lexer::typeName (type) << "\n";
     tokens.push_back (std::pair <std::string, Lexer::Type> (token, type));
   }
 

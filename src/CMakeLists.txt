@@ -12,10 +12,9 @@ set (task_SRCS CLI.cpp CLI.h
                DOM.cpp DOM.h
                Date.cpp Date.h
                Dates.cpp Dates.h
-               Directory.cpp Directory.h
                Duration.cpp Duration.h
                Eval.cpp Eval.h
-               File.cpp File.h
+               iostream.cpp
                Filter.cpp Filter.h
                Hooks.cpp Hooks.h
                ISO8601.cpp ISO8601.h
@@ -23,7 +22,6 @@ set (task_SRCS CLI.cpp CLI.h
                Lexer.cpp Lexer.h
                Msg.cpp Msg.h
                Nibbler.cpp Nibbler.h
-               Path.cpp Path.h
                RX.cpp RX.h
                TDB2.cpp TDB2.h
                Task.cpp Task.h
@@ -35,7 +33,6 @@ set (task_SRCS CLI.cpp CLI.h
                dependency.cpp
                feedback.cpp
                i18n.h
-               interactive.cpp
                legacy.cpp
                recur.cpp
                rules.cpp
@@ -44,6 +41,20 @@ set (task_SRCS CLI.cpp CLI.h
                utf8.cpp utf8.h
                util.cpp util.h
                wcwidth6.cpp)
+
+if (WINDOWS)
+  set(task_SRCS ${task_SRCS}
+    windows/Directory.cpp windows/Directory.h
+    windows/File.cpp windows/File.h
+    windows/Path.cpp windows/Path.h
+    windows/interactive.cpp)
+else (WINDOWS)
+  set(task_SRCS ${task_SRCS}
+    posix/Directory.cpp posix/Directory.h
+    posix/File.cpp posix/File.h
+    posix/Path.cpp posix/Path.h
+    posix/interactive.cpp)
+endif (WINDOWS)
 
 add_library (task STATIC ${task_SRCS})
 add_executable (task_executable main.cpp)

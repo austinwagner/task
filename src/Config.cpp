@@ -562,10 +562,10 @@ void Config::parse (const std::string& input, int nest /* = 1 */)
             if (included.readable ())
               this->load (included, nest + 1);
             else
-              throw format (STRING_CONFIG_READ_INCLUDE, included._data);
+              throw format (STRING_CONFIG_READ_INCLUDE, included.to_string());
           }
           else
-            throw format (STRING_CONFIG_INCLUDE_PATH, included._data);
+            throw format (STRING_CONFIG_INCLUDE_PATH, included.to_string());
         }
         else
           throw format (STRING_CONFIG_BAD_ENTRY, line);

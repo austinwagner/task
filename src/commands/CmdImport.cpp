@@ -34,6 +34,7 @@
 #include <i18n.h>
 #include <main.h>
 #include <CmdImport.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -65,7 +66,7 @@ int CmdImport::execute (std::string& output)
     if (! incoming.exists ())
       throw format (STRING_CMD_IMPORT_MISSING, *word);
 
-    std::cout << format (STRING_CMD_IMPORT_FILE, *word) << "\n";
+    nowide::cout << format (STRING_CMD_IMPORT_FILE, *word) << "\n";
 
     // Load the file.
     std::vector <std::string> lines;
@@ -88,7 +89,7 @@ int CmdImport::execute (std::string& output)
 
       context.tdb2.add (task);
       ++count;
-      std::cout << "  "
+      nowide::cout << "  "
                 << task.get ("uuid")
                 << " "
                 << task.get ("description")

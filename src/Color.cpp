@@ -450,7 +450,11 @@ std::string Color::colorize (const std::string& input)
   std::stringstream result;
 
   // 256 color
+#ifdef WINDOWS
+  if (_value & _COLOR_256 && supports_ansi_codes())
+#else
   if (_value & _COLOR_256)
+#endif
   {
     bool needTerminator = false;
 

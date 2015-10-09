@@ -29,7 +29,12 @@
 
 #include <string>
 #include <vector>
+
+#ifdef WINDOWS
+#include <boost/regex.h>
+#else
 #include <regex.h>
+#endif
 
 class RX
 {

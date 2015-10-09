@@ -33,6 +33,7 @@
 #include <util.h>
 #include <i18n.h>
 #include <CmdStart.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -97,7 +98,7 @@ int CmdStart::execute (std::string& output)
       }
       else
       {
-        std::cout << STRING_CMD_START_NO << "\n";
+        nowide::cout << STRING_CMD_START_NO << "\n";
         rc = 1;
         if (_permission_quit)
           break;
@@ -105,7 +106,7 @@ int CmdStart::execute (std::string& output)
     }
     else
     {
-      std::cout << format (STRING_CMD_START_ALREADY,
+      nowide::cout << format (STRING_CMD_START_ALREADY,
                            task->id,
                            task->get ("description"))
                 << "\n";

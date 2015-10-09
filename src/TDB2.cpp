@@ -40,6 +40,7 @@
 #include <util.h>
 #include <main.h>
 #include <TDB2.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -58,7 +59,7 @@ TF2::TF2 ()
 TF2::~TF2 ()
 {
   if (_dirty && context.verbose ("debug"))
-    std::cout << format (STRING_TDB2_DIRTY_EXIT, _file)
+    nowide::cout << format (STRING_TDB2_DIRTY_EXIT, _file)
               << "\n";
 }
 
@@ -346,7 +347,7 @@ void TF2::load_tasks ()
 
   catch (const std::string& e)
   {
-    throw e + format (STRING_TDB2_PARSE_ERROR, _file._data, line_number);
+    throw e + format (STRING_TDB2_PARSE_ERROR, _file.to_string(), line_number);
   }
 
   context.timer_load.stop ();
@@ -497,9 +498,9 @@ const std::string TF2::dump ()
 
   // File label.
   std::string label;
-  std::string::size_type slash = _file._data.rfind ('/');
+  std::string::size_type slash = _file.to_string().rfind ('/');
   if (slash != std::string::npos)
-    label = rightJustify (_file._data.substr (slash + 1), 14);
+    label = rightJustify (_file.to_string().substr (slash + 1), 14);
 
   // File mode.
   std::string mode = std::string (_file.readable () ? "r" : "-") +
@@ -667,13 +668,16 @@ void TDB2::update (
 void TDB2::commit ()
 {
   // Ignore harmful signals.
-  signal (SIGHUP,    SIG_IGN);
   signal (SIGINT,    SIG_IGN);
+  signal (SIGTERM,   SIG_IGN);
+
+#ifndef WINDOWS
+  signal (SIGHUP,    SIG_IGN);
   signal (SIGKILL,   SIG_IGN);
   signal (SIGPIPE,   SIG_IGN);
-  signal (SIGTERM,   SIG_IGN);
   signal (SIGUSR1,   SIG_IGN);
   signal (SIGUSR2,   SIG_IGN);
+#endif
 
   dump ();
   context.timer_commit.start ();
@@ -686,13 +690,16 @@ void TDB2::commit ()
   backlog.commit ();
 
   // Restore signal handling.
-  signal (SIGHUP,    SIG_DFL);
   signal (SIGINT,    SIG_DFL);
+  signal (SIGTERM,   SIG_DFL);
+
+#ifndef WINDOWS
+  signal (SIGHUP,    SIG_DFL);
   signal (SIGKILL,   SIG_DFL);
   signal (SIGPIPE,   SIG_DFL);
-  signal (SIGTERM,   SIG_DFL);
   signal (SIGUSR1,   SIG_DFL);
   signal (SIGUSR2,   SIG_DFL);
+#endif
 
   context.timer_commit.stop ();
 }
@@ -784,13 +791,13 @@ void TDB2::revert ()
 
     // Commit.  If processing makes it this far with no exceptions, then we're
     // done.
-    File::write (undo._file._data, u);
-    File::write (pending._file._data, p);
-    File::write (completed._file._data, c);
-    File::write (backlog._file._data, b);
+    File::write (undo._file.to_string(), u);
+    File::write (pending._file.to_string(), p);
+    File::write (completed._file.to_string(), c);
+    File::write (backlog._file.to_string(), b);
   }
   else
-    std::cout << STRING_CMD_CONFIG_NO_CHANGE << "\n";
+    nowide::cout << STRING_CMD_CONFIG_NO_CHANGE << "\n";
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -853,12 +860,12 @@ void TDB2::revert_pending (
       if (prior != "")
       {
         *task = prior;
-        std::cout << STRING_TDB2_REVERTED << "\n";
+        nowide::cout << STRING_TDB2_REVERTED << "\n";
       }
       else
       {
         p.erase (task);
-        std::cout << STRING_TDB2_REMOVED << "\n";
+        nowide::cout << STRING_TDB2_REMOVED << "\n";
       }
 
       break;
@@ -894,12 +901,12 @@ void TDB2::revert_completed (
         {
           c.erase (task);
           p.push_back (prior);
-          std::cout << STRING_TDB2_REVERTED << "\n";
+          nowide::cout << STRING_TDB2_REVERTED << "\n";
           context.debug ("TDB::revert_completed - task belongs in pending.data");
         }
         else
         {
-          std::cout << STRING_TDB2_REVERTED << "\n";
+          nowide::cout << STRING_TDB2_REVERTED << "\n";
           context.debug ("TDB::revert_completed - task belongs in completed.data");
         }
       }
@@ -907,11 +914,11 @@ void TDB2::revert_completed (
       {
         c.erase (task);
 
-        std::cout << STRING_TDB2_REVERTED << "\n";
+        nowide::cout << STRING_TDB2_REVERTED << "\n";
         context.debug ("TDB::revert_completed - task removed");
       }
 
-      std::cout << STRING_TDB2_UNDO_COMPLETE << "\n";
+      nowide::cout << STRING_TDB2_UNDO_COMPLETE << "\n";
       break;
     }
   }
@@ -972,7 +979,7 @@ void TDB2::show_diff (
 
   if (context.config.get ("undo.style") == "side")
   {
-    std::cout << "\n"
+    nowide::cout << "\n"
               << format (STRING_TDB2_LAST_MOD, lastChange.toString ())
               << "\n";
 
@@ -1051,7 +1058,7 @@ void TDB2::show_diff (
       }
     }
 
-    std::cout << "\n"
+    nowide::cout << "\n"
               << view.render ()
               << "\n";
   }
@@ -1174,7 +1181,7 @@ void TDB2::show_diff (
       }
     }
 
-    std::cout << "\n"
+    nowide::cout << "\n"
               << view.render ()
               << "\n";
   }

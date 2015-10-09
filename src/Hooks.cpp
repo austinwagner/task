@@ -33,7 +33,6 @@
 #endif
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/wait.h>
 #include <sys/types.h>
 #include <Context.h>
 #include <JSON.h>
@@ -42,6 +41,10 @@
 #include <text.h>
 #include <util.h>
 #include <i18n.h>
+
+#ifndef WINDOWS
+#include <sys/wait.h>
+#endif
 
 extern Context context;
 
@@ -89,7 +92,7 @@ void Hooks::initialize ()
     }
   }
   else if (_debug >= 1)
-    context.debug ("Hook directory not readable: " + d._data);
+    context.debug ("Hook directory not readable: " + d.to_string());
 
   _enabled = context.config.getBoolean ("hooks");
 }
@@ -536,10 +539,10 @@ std::vector <std::string>& Hooks::buildHookScriptArgs (std::vector <std::string>
   args.push_back ("command:" + context.cli.getCommand ());
 
   // rc file used after applying all overrides.
-  args.push_back ("rc:" + context.rc_file._data);
+  args.push_back ("rc:" + context.rc_file.to_string());
 
   // Directory containing *.data files.
-  args.push_back ("data:" + context.data_dir._data);
+  args.push_back ("data:" + context.data_dir.to_string());
 
   // Taskwarrior version, same as returned by "task --version"
   args.push_back ("version:" + std::string(VERSION));

@@ -55,6 +55,9 @@ public:
   bool executable () const;
   bool rename (const std::string&);
 
+  std::string to_string() const;
+  std::string original() const;
+
   // Statics
   static std::string expand (const std::string&);
   static std::vector<std::string> glob (const std::string&);

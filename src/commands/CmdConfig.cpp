@@ -209,7 +209,7 @@ int CmdConfig::execute (std::string& output)
       if (change)
       {
         out << format (STRING_CMD_CONFIG_FILE_MOD,
-                       context.config._original_file._data)
+                       context.config._original_file.to_string())
             << "\n";
       }
       else

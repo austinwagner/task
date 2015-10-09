@@ -233,11 +233,14 @@ void CLI::getOverride (int argc, const char** argv, std::string& home, File& rc)
       rc = raw.substr (3);
 
       home = ".";
+#ifdef WINDOWS
+      home = rc.parent();
+#else
       std::string::size_type last_slash = rc._data.rfind ("/");
       if (last_slash != std::string::npos)
         home = rc.parent ();
-
-      context.header (format (STRING_PARSER_ALTERNATE_RC, rc._data));
+#endif
+      context.header (format (STRING_PARSER_ALTERNATE_RC, rc.to_string()));
 
       // Keep looping, because if there are multiple rc:file arguments, the last
       // one should dominate.

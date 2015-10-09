@@ -32,6 +32,7 @@
 #include <text.h>
 #include <i18n.h>
 #include <CmdStop.h>
+#include <nowide/iostream.hpp>
 
 extern Context context;
 
@@ -94,7 +95,7 @@ int CmdStop::execute (std::string& output)
       }
       else
       {
-        std::cout << STRING_CMD_STOP_NO << "\n";
+        nowide::cout << STRING_CMD_STOP_NO << "\n";
         rc = 1;
         if (_permission_quit)
           break;
@@ -102,7 +103,7 @@ int CmdStop::execute (std::string& output)
     }
     else
     {
-      std::cout << format (STRING_CMD_STOP_ALREADY,
+      nowide::cout << format (STRING_CMD_STOP_ALREADY,
                            task->id,
                            task->get ("description"))
                 << "\n";

@@ -101,10 +101,10 @@ int CmdSync::execute (std::string& output)
 
   // CA must exist, if provided.
   File ca (context.config.get ("taskd.ca"));
-  if (ca._data != "" && ! ca.exists ())
+  if (ca.to_string() != "" && ! ca.exists ())
     throw std::string (STRING_CMD_SYNC_BAD_CA);
 
-  if (trust == TLSClient::allow_all && ca._data != "")
+  if (trust == TLSClient::allow_all && ca.to_string() != "")
     throw std::string (STRING_CMD_SYNC_TRUST_CA);
 
   File certificate (context.config.get ("taskd.certificate"));
@@ -161,16 +161,19 @@ int CmdSync::execute (std::string& output)
         << "\n";
 
   // Ignore harmful signals.
-  signal (SIGHUP,    SIG_IGN);
   signal (SIGINT,    SIG_IGN);
+  signal (SIGTERM,   SIG_IGN);
+
+#ifndef WINDOWS
+  signal (SIGHUP,    SIG_IGN);
   signal (SIGKILL,   SIG_IGN);
   signal (SIGPIPE,   SIG_IGN);
-  signal (SIGTERM,   SIG_IGN);
   signal (SIGUSR1,   SIG_IGN);
   signal (SIGUSR2,   SIG_IGN);
+#endif
 
   Msg response;
-  if (send (connection, ca._data, certificate._data, key._data, trust, request, response))
+  if (send (connection, ca.to_string(), certificate.to_string(), key.to_string(), trust, request, response))
   {
     std::string code = response.get ("code");
     if (code == "200")
@@ -313,13 +316,16 @@ int CmdSync::execute (std::string& output)
   output = out.str ();
 
   // Restore signal handling.
-  signal (SIGHUP,    SIG_DFL);
   signal (SIGINT,    SIG_DFL);
+  signal (SIGTERM,   SIG_DFL);
+
+#ifndef WINDOWS
+  signal (SIGHUP,    SIG_DFL);
   signal (SIGKILL,   SIG_DFL);
   signal (SIGPIPE,   SIG_DFL);
-  signal (SIGTERM,   SIG_DFL);
   signal (SIGUSR1,   SIG_DFL);
   signal (SIGUSR2,   SIG_DFL);
+#endif
 
 #else
   // Without GnuTLS found at compile time, there is no working sync command.
