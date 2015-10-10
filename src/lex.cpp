@@ -4,11 +4,14 @@
 #include <Lexer.h>
 #include <Context.h>
 #include <nowide/iostream.hpp>
+#include <nowide/args.hpp>
 
 Context context;
 
-int main (int argc, char** argv)
+int main (int argc, const char** argv)
 {
+  nowide::args(argc, *const_cast<char***>(&argv));
+
   for (auto i = 1; i < argc; i++)
   {
     nowide::cout << "argument '" << argv[i] << "'\n";

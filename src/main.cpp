@@ -31,30 +31,14 @@
 #include <i18n.h>
 #include <Context.h>
 #include <nowide/iostream.hpp>
-
-#ifdef WINDOWS
-#include <nowide/convert.hpp>
-#include <memory>
-#endif
+#include <nowide/args.hpp>
 
 Context context;
 
 ////////////////////////////////////////////////////////////////////////////////
-#ifdef WINDOWS
-int wmain (int argc, const wchar_t** argvw)
-{
-  std::unique_ptr<intptr_t[]> argvp(new intptr_t[argc]);
-  std::vector<std::string> args;
-  args.reserve(argc);
-  const char** argv = reinterpret_cast<const char**>(argvp.get());
-  for (int i = 0; i < argc; i++) {
-    args.push_back(nowide::narrow(argvw[i]));
-    argv[i] = args.back().c_str();
-  }
-#else
 int main (int argc, const char** argv)
 {
-#endif
+  nowide::args(argc, *const_cast<char***>(&argv));
   int status = 0;
 
   // Lightweight version checking that doesn't require initialization or any I/O.

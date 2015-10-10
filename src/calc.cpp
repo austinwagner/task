@@ -35,6 +35,7 @@
 #include <text.h>
 #include <i18n.h>
 #include <nowide/iostream.hpp>
+#include <nowide/args.hpp>
 
 Context context;
 
@@ -51,8 +52,9 @@ bool get (const std::string& name, Variant& value)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int main (int argc, char** argv)
+int main (int argc, const char** argv)
 {
+  nowide::args(argc, *const_cast<char***>(&argv));
   int status = 0;
 
   try
