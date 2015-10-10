@@ -34,21 +34,30 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
+#ifdef WINDOWS
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#define SHUT_RDWR SD_BOTH
+#else
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netdb.h>
+#endif
+
 #if (defined OPENBSD || defined SOLARIS || defined NETBSD)
 #include <errno.h>
-#else
+#elseif !defined(WINDOWS)
 #include <sys/errno.h>
 #endif
+
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #include <TLSClient.h>
 #include <gnutls/x509.h>
 #include <text.h>
 #include <i18n.h>
 #include <nowide/iostream.hpp>
+#include <nowide/convert.hpp>
 
 #define MAX_BUF 16384
 
@@ -204,18 +213,33 @@ void TLSClient::connect (const std::string& host, const std::string& port)
   gnutls_session_set_ptr (_session, (void*) this);
 
   // use IPv4 or IPv6, does not matter.
+#ifdef WINDOWS
+  ADDRINFOW hints = {0};
+#else
   struct addrinfo hints = {0};
+#endif
   hints.ai_family   = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags    = AI_PASSIVE; // use my IP
 
+#ifdef WINDOWS
+  ADDRINFOW *res;
+  int ret = GetAddrInfoW(nowide::widen(host).c_str(), nowide::widen(port).c_str(), &hints, &res);
+  if (ret != 0)
+    throw nowide::narrow(gai_strerrorW(ret));
+#else
   struct addrinfo* res;
   int ret = ::getaddrinfo (host.c_str (), port.c_str (), &hints, &res);
   if (ret != 0)
     throw std::string (::gai_strerror (ret));
+#endif
 
   // Try them all, stop on success.
+#ifdef WINDOWS
+  ADDRINFOW *p;
+#else
   struct addrinfo* p;
+#endif
   for (p = res; p != NULL; p = p->ai_next)
   {
     if ((_socket = ::socket (p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
@@ -228,7 +252,11 @@ void TLSClient::connect (const std::string& host, const std::string& port)
     if (::setsockopt (_socket,
                       SOL_SOCKET,
                       SO_REUSEADDR,
+#ifdef WINDOWS
+                      (const char*) &on,
+#else
                       (const void*) &on,
+#endif
                       sizeof (on)) == -1)
       throw std::string (::strerror (errno));
 
@@ -238,7 +266,11 @@ void TLSClient::connect (const std::string& host, const std::string& port)
     break;
   }
 
+#ifdef WINDOWS
+  FreeAddrInfoW(res);
+#else
   free (res);
+#endif
 
   if (p == NULL)
     throw format (STRING_CMD_SYNC_CONNECT, host, port);
@@ -507,4 +539,18 @@ void TLSClient::recv (std::string& data)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef WINDOWS
+namespace {
+  struct initialize {
+      initialize() {
+        WSADATA wsa_data;
+        if (!WSAStartup(MAKEWORD(2, 0), &wsa_data)) {
+          // Purposely avoiding nowide here
+          fprintf(stderr, "FATAL: WSAStartup failed with code %d\n", WSAGetLastError());
+          exit(100);
+        }
+      }
+  } inst;
+}
+#endif
 #endif

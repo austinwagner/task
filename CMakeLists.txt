@@ -13,7 +13,6 @@ project (task)
 set (PROJECT_VERSION "2.4.4")
 
 OPTION(USE_GNUTLS "Build gnutls support." ON)
-set(USE_GNUTLS false)
 
 message ("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
@@ -117,6 +116,9 @@ if (USE_GNUTLS)
      set (HAVE_LIBGNUTLS true)
      set (TASK_INCLUDE_DIRS ${TASK_INCLUDE_DIRS} ${GNUTLS_INCLUDE_DIR})
      set (TASK_LIBRARIES    ${TASK_LIBRARIES}    ${GNUTLS_LIBRARIES})
+     if (WINDOWS)
+       set (TASK_LIBRARIES ${TASK_LIBRARIES} "Ws2_32")
+     endif (WINDOWS)
    endif (GNUTLS_FOUND)
 endif (USE_GNUTLS)
 
