@@ -383,6 +383,14 @@ int Context::run ()
     rc = 4;
   }
 
+#ifdef WINDOWS
+  catch (std::exception& ex)
+  {
+    error (ex.what());
+    rc = 2;
+  }
+#endif
+
   catch (...)
   {
     error (STRING_UNKNOWN_ERROR);

@@ -168,6 +168,8 @@ bool DOM::get (const std::string& name, Variant& value)
       value = Variant ("GNU/kFreeBSD");
 #elif defined (GNUHURD)
       value = Variant ("GNU/Hurd");
+#elif defined (WINDOWS)
+      value = Variant ("Windows");
 #else
       value = Variant (STRING_DOM_UNKNOWN);
 #endif

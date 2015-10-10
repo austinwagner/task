@@ -38,6 +38,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <memory>
+#include <sstream>
 #else
 #include <uuid/uuid.h>
 #endif
@@ -108,7 +109,7 @@ public:
     ~SafeHandleBase() { closer(_handle); }
     HANDLE get() { return _handle; }
     HANDLE* ptr() { return &_handle; }
-    bool valid() { return _handle == (HANDLE)NullValue; }
+    bool valid() { return _handle != (HANDLE)NullValue; }
 };
 
 typedef SafeHandleBase<(LONG_PTR)INVALID_HANDLE_VALUE, CloseHandleCloser> SafeHandle;
@@ -118,6 +119,12 @@ typedef SafeHandleBase<(LONG_PTR)INVALID_HANDLE_VALUE, FindCloseCloser> FindHand
 time_t filetime_to_timet(const FILETIME& ft);
 
 bool supports_ansi_codes();
+
+#define WIN_TRY(f) if (!(f)) { \
+  std::ostringstream oss; \
+  oss << getErrorString(GetLastError()) << " (" << __FILE__ << ":" << __LINE__ << ")"; \
+  throw oss.str(); \
+}
 
 #endif
 

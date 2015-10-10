@@ -22,7 +22,6 @@ set (task_SRCS CLI.cpp CLI.h
                Lexer.cpp Lexer.h
                Msg.cpp Msg.h
                Nibbler.cpp Nibbler.h
-               RX.cpp RX.h
                TDB2.cpp TDB2.h
                Task.cpp Task.h
                Timer.cpp Timer.h
@@ -47,13 +46,15 @@ if (WINDOWS)
     windows/Directory.cpp windows/Directory.h
     windows/File.cpp windows/File.h
     windows/Path.cpp windows/Path.h
-    windows/interactive.cpp)
+    windows/interactive.cpp
+    windows/RX.cpp windows/RX.h)
 else (WINDOWS)
   set(task_SRCS ${task_SRCS}
     posix/Directory.cpp posix/Directory.h
     posix/File.cpp posix/File.h
     posix/Path.cpp posix/Path.h
-    posix/interactive.cpp)
+    posix/interactive.cpp
+    posix/RX.cpp posix/RX.h)
 endif (WINDOWS)
 
 add_library (task STATIC ${task_SRCS})

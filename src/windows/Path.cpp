@@ -167,7 +167,7 @@ bool Path::executable () const
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::rename (const std::string& new_name)
 {
-  boost::filesystem::path new_path(new_name);
+  boost::filesystem::path new_path(expand(new_name));
   boost::filesystem::rename(_path, new_path);
   _path = new_path;
   return true;
@@ -177,17 +177,24 @@ bool Path::rename (const std::string& new_name)
 // Only expand tilde on Windows
 std::string Path::expand (const std::string& in)
 {
-  if (in.size() >= 2 && in[0] == '~' && (in[1] == '\\' || in[1] == '/')) {
+  std::string res;
+  res.reserve(in.size());
+
+  for (auto c : in) {
+    res.push_back(c == '/' ? '\\' : c);
+  }
+
+  if (res.size() >= 2 && res[0] == '~' && res[1] == '\\') {
     wchar_t home[MAX_PATH];
     if (SHGetFolderPathW(nullptr, CSIDL_PROFILE, nullptr, SHGFP_TYPE_CURRENT, home) != S_OK) {
       throw "Could not get home path.";
     }
 
     std::string home_str = nowide::narrow(home);
-    return home_str + in.substr(1, std::string::npos);
+    return home_str + res.substr(1, std::string::npos);
   }
 
-  return in;
+  return res;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -222,5 +229,5 @@ std::string Path::to_string() const {
 }
 
 std::string Path::original() const {
-  return _path.string();
+  return to_string();
 }

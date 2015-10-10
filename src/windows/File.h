@@ -83,6 +83,10 @@ public:
   static bool remove (const std::string&);
 
 private:
+  void append (const std::vector <std::string>&, bool);
+  void write (const std::vector <std::string>&, bool);
+  bool open (bool);
+
   SafeHandle _file;
   bool  _locked;
 };

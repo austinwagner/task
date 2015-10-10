@@ -32,11 +32,29 @@
 #include <Context.h>
 #include <nowide/iostream.hpp>
 
+#ifdef WINDOWS
+#include <nowide/convert.hpp>
+#include <memory>
+#endif
+
 Context context;
 
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef WINDOWS
+int wmain (int argc, const wchar_t** argvw)
+{
+  std::unique_ptr<intptr_t[]> argvp(new intptr_t[argc]);
+  std::vector<std::string> args;
+  args.reserve(argc);
+  const char** argv = reinterpret_cast<const char**>(argvp.get());
+  for (int i = 0; i < argc; i++) {
+    args.push_back(nowide::narrow(argvw[i]));
+    argv[i] = args.back().c_str();
+  }
+#else
 int main (int argc, const char** argv)
 {
+#endif
   int status = 0;
 
   // Lightweight version checking that doesn't require initialization or any I/O.
@@ -64,6 +82,14 @@ int main (int argc, const char** argv)
       nowide::cerr << "Error: Memory allocation failed: " << error.what () << "\n";
       status = -3;
     }
+
+#ifdef WINDOWS
+    catch (std::exception& ex)
+    {
+      nowide::cerr << ex.what() << "\n";
+      status = -1;
+    }
+#endif
 
     catch (...)
     {

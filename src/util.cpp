@@ -493,7 +493,7 @@ std::string getErrorString(DWORD errCode) {
   std::string res;
 
   LPWSTR wErrorText = nullptr;
-  FormatMessageW(
+  DWORD len = FormatMessageW(
           FORMAT_MESSAGE_FROM_SYSTEM |
           FORMAT_MESSAGE_ALLOCATE_BUFFER |
           FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -505,6 +505,11 @@ std::string getErrorString(DWORD errCode) {
           nullptr);
 
   if (wErrorText != nullptr) {
+    // Remove \r\n from the end of the message
+    if (wErrorText[len - 2] == L'\r') {
+      wErrorText[len - 2] = 0;
+    }
+
     res = nowide::narrow(wErrorText);
     LocalFree(wErrorText);
     wErrorText = nullptr;

@@ -30,11 +30,14 @@
 #include <string>
 #include <vector>
 
-#ifdef WINDOWS
+// Disable the unicode defines before including boost regex
+// so we get the narrow character version. It won't handle UTF-8 well,
+// but POSIX regex doesn't seem to promise that it will either.
+#undef UNICODE
+#undef _UNICODE
 #include <boost/regex.h>
-#else
-#include <regex.h>
-#endif
+#define UNICODE
+#define _UNICODE
 
 class RX
 {

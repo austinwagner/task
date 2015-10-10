@@ -333,7 +333,7 @@ namespace details {
                     else if (consuming_escape_seq_) {
                         // For the sake of simplicity, I'm doing this after the code point has
                         // been processed, but a valid escape sequence is going to be entirely ASCII
-                        if (c > std::numeric_limits<char>::max()) return -1;
+                        if (c > 0x7F) return -1;
 
                         char ch = static_cast<char>(c);
 
@@ -456,6 +456,11 @@ namespace details {
             uf::code_point c;
             wsize_ = e-p;
             while(p < e && (c = uf::utf_traits<wchar_t>::decode(p,e))!=uf::illegal && c!=uf::incomplete) {
+                // Extremely naive line ending conversion
+                if (c == '\r') {
+                    continue;
+                }
+
                 out = uf::utf_traits<char>::encode(c,out);
                 wsize_ = e-p;
             }

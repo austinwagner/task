@@ -36,6 +36,7 @@
 #include <util.h>
 #include <i18n.h>
 #include <limits>
+#include <boost/numeric/conversion/cast.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 File::File ()
@@ -102,19 +103,29 @@ bool File::remove () const
 ////////////////////////////////////////////////////////////////////////////////
 bool File::open ()
 {
-  if (_path.empty() || !_file.valid()) {
+  return open(false);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool File::open (bool lock)
+{
+  if (_path.empty() || _file.valid()) {
     return false;
   }
 
   _file.reset(CreateFileW(
     _path.wstring().c_str(),
     GENERIC_READ | GENERIC_WRITE,
-    FILE_SHARE_READ | FILE_SHARE_WRITE,
+    FILE_SHARE_READ | (lock ? 0u : FILE_SHARE_WRITE),
     nullptr,
     OPEN_ALWAYS,
     FILE_ATTRIBUTE_NORMAL,
     nullptr
   ));
+
+  if (_file.valid()) {
+    _locked = lock;
+  }
 
   return _file.valid();
 }
@@ -122,7 +133,7 @@ bool File::open ()
 ////////////////////////////////////////////////////////////////////////////////
 bool File::openAndLock ()
 {
-  return open () && lock ();
+  return open (true);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -139,42 +150,40 @@ void File::close ()
 ////////////////////////////////////////////////////////////////////////////////
 bool File::lock ()
 {
-  _locked = false;
-  if (_file.valid())
-  {
-    _file.reset(ReOpenFile(_file.get(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, 0));
-    _locked = _file.valid();
+  if (_locked) {
+    return true;
   }
 
-  return _locked;
+  close();
+  return open(true);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void File::unlock ()
 {
-  if (_locked)
-  {
-    _file.reset(ReOpenFile(_file.get(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0));
+  if (!_locked) {
+    return;
   }
+
+  close();
+  open(false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Opens if necessary.
 void File::read (std::string& contents) {
   contents = "";
-  contents.reserve (size ());
-
   if (!_file.valid()) {
     open();
   }
+
+  contents.reserve (size ());
 
   char buffer[512];
   DWORD read = 1;
 
   while (read > 0) {
-    if (ReadFile(_file.get(), buffer, sizeof(buffer), &read, nullptr) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
+    WIN_TRY(ReadFile(_file.get(), buffer, sizeof(buffer), &read, nullptr));
 
     for (DWORD i = 0; i < read; i++) {
       char c = buffer[i];
@@ -202,9 +211,7 @@ void File::read (std::vector <std::string>& contents)
   std::string line;
 
   while (read > 0) {
-    if (ReadFile(_file.get(), buffer, sizeof(buffer), &read, nullptr) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
+    WIN_TRY(ReadFile(_file.get(), buffer, sizeof(buffer), &read, nullptr));
 
     for (DWORD i = 0; i < read; i++) {
       char c = buffer[i];
@@ -214,8 +221,10 @@ void File::read (std::vector <std::string>& contents)
         continue;
       }
       else if (c == '\n') {
-        contents.push_back(line);
-        line = std::string();
+        if (!line.empty()) {
+          contents.push_back(line);
+          line = std::string();
+        }
       }
       else {
         line.push_back(c);
@@ -236,17 +245,10 @@ void File::write (const std::string& line) {
   }
 
   if (_file.valid()) {
-    if (line.size() > std::numeric_limits<DWORD>::max()) {
-      throw "Line too long.";
-    }
+    DWORD line_size = boost::numeric_cast<DWORD>(line.size());
 
-    if (WriteFile(_file.get(), line.c_str(), (DWORD)line.size(), nullptr, nullptr) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
-
-    if (WriteFile(_file.get(), "\r\n", 2, nullptr, nullptr) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
+    WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
+    WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr));
   }
 }
 
@@ -254,22 +256,24 @@ void File::write (const std::string& line) {
 // Opens if necessary.
 void File::write (const std::vector <std::string>& lines)
 {
+  write(lines, true);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Opens if necessary.
+void File::write (const std::vector <std::string>& lines, bool add_newlines)
+{
   if (!_file.valid()) {
     open();
   }
 
   if (_file.valid()) {
     for (auto& line : lines) {
-      if (line.size() > std::numeric_limits<DWORD>::max()) {
-        throw "Line too long.";
-      }
+      DWORD line_size = boost::numeric_cast<DWORD>(line.size());
 
-      if (WriteFile(_file.get(), line.c_str(), (DWORD) line.size(), nullptr, nullptr) != TRUE) {
-        throw getErrorString(GetLastError());
-      }
-
-      if (WriteFile(_file.get(), "\r\n", 2, nullptr, nullptr) != TRUE) {
-        throw getErrorString(GetLastError());
+      WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
+      if (add_newlines) {
+        WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr));
       }
     }
   }
@@ -283,47 +287,41 @@ void File::append (const std::string& line) {
   }
 
   if (_file.valid()) {
-    if (line.size() > std::numeric_limits<DWORD>::max()) {
-      throw "Line too long.";
-    }
+    DWORD line_size = boost::numeric_cast<DWORD>(line.size());
 
-    if (SetFilePointer(_file.get(), 0, nullptr, FILE_END) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
+    LARGE_INTEGER offset;
+    offset.QuadPart = 0;
 
-    if (WriteFile(_file.get(), line.c_str(), (DWORD) line.size(), nullptr, nullptr) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
+    WIN_TRY(SetFilePointerEx(_file.get(), offset, nullptr, FILE_END));
 
-    if (WriteFile(_file.get(), "\r\n", 2, nullptr, nullptr) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
+    WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
+    WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr))
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Opens if necessary.
 void File::append (const std::vector <std::string>& lines) {
+  append(lines, true);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Opens if necessary.
+void File::append (const std::vector <std::string>& lines, bool add_newlines) {
   if (!_file.valid()) {
     open();
   }
 
   if (_file.valid()) {
     for (auto& line : lines) {
-      if (line.size() > std::numeric_limits<DWORD>::max()) {
-        throw "Line too long.";
-      }
+      DWORD line_size = boost::numeric_cast<DWORD>(line.size());
 
-      if (SetFilePointer(_file.get(), 0, nullptr, FILE_END) != TRUE) {
-        throw getErrorString(GetLastError());
-      }
+      WIN_TRY(SetFilePointer(_file.get(), 0, nullptr, FILE_END));
 
-      if (WriteFile(_file.get(), line.c_str(), (DWORD) line.size(), nullptr, nullptr) != TRUE) {
-        throw getErrorString(GetLastError());
-      }
+      WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr))
 
-      if (WriteFile(_file.get(), "\r\n", 2, nullptr, nullptr) != TRUE) {
-        throw getErrorString(GetLastError());
+      if (add_newlines) {
+        WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr))
       }
     }
   }
@@ -337,12 +335,8 @@ void File::truncate ()
   }
 
   if (_file.valid()) {
-    if (SetFilePointer(_file.get(), 0, nullptr, FILE_END) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
-    if (SetEndOfFile(_file.get()) != TRUE) {
-      throw getErrorString(GetLastError());
-    }
+    WIN_TRY(SetFilePointer(_file.get(), 0, nullptr, FILE_END));
+    WIN_TRY(SetEndOfFile(_file.get()));
   }
 }
 
@@ -371,28 +365,16 @@ mode_t File::mode ()
 size_t File::size () const
 {
   LARGE_INTEGER size;
-  if (GetFileSizeEx(const_cast<File*>(this)->_file.get(), &size) != TRUE) {
-    throw getErrorString(GetLastError());
-  }
+  WIN_TRY(GetFileSizeEx(const_cast<File*>(this)->_file.get(), &size))
 
-  if (size.QuadPart < 0) {
-    throw "Invalid file size.";
-
-  }
-  if ((unsigned)size.QuadPart > std::numeric_limits<size_t>::max()) {
-    throw "File too large.";
-  }
-
-  return (size_t)size.QuadPart;
+  return boost::numeric_cast<size_t>(size.QuadPart);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 time_t File::mtime () const
 {
   BY_HANDLE_FILE_INFORMATION fileInfo;
-  if (GetFileInformationByHandle(const_cast<File*>(this)->_file.get(), &fileInfo) != TRUE) {
-    throw getErrorString(GetLastError());
-  }
+  WIN_TRY(GetFileInformationByHandle(const_cast<File*>(this)->_file.get(), &fileInfo));
 
   return filetime_to_timet(fileInfo.ftLastWriteTime);
 }
@@ -401,9 +383,7 @@ time_t File::mtime () const
 time_t File::ctime () const
 {
   BY_HANDLE_FILE_INFORMATION fileInfo;
-  if (GetFileInformationByHandle(const_cast<File*>(this)->_file.get(), &fileInfo) != TRUE) {
-    throw getErrorString(GetLastError());
-  }
+  WIN_TRY(GetFileInformationByHandle(const_cast<File*>(this)->_file.get(), &fileInfo));
 
   return filetime_to_timet(fileInfo.ftLastAccessTime);
 }
@@ -412,9 +392,7 @@ time_t File::ctime () const
 time_t File::btime () const
 {
   BY_HANDLE_FILE_INFORMATION fileInfo;
-  if (GetFileInformationByHandle(const_cast<File*>(this)->_file.get(), &fileInfo) != TRUE) {
-    throw getErrorString(GetLastError());
-  }
+  WIN_TRY(GetFileInformationByHandle(const_cast<File*>(this)->_file.get(), &fileInfo));
 
   return filetime_to_timet(fileInfo.ftCreationTime);
 }
@@ -422,32 +400,14 @@ time_t File::btime () const
 ////////////////////////////////////////////////////////////////////////////////
 bool File::create (const std::string& name, int mode /* = 0640 */)
 {
-  std::string full_name = expand (name);
-  std::ofstream out (full_name.c_str ());
-  if (out.good ())
-  {
-    out.close ();
-    return true;
-  }
-
-  return false;
+  return File(name).create(mode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string File::read (const std::string& name)
 {
   std::string contents = "";
-
-  std::ifstream in (name.c_str ());
-  if (in.good ())
-  {
-    std::string line;
-    line.reserve (1024);
-    while (getline (in, line))
-      contents += line + "\n";
-
-    in.close ();
-  }
+  File(name).read(contents);
 
   return contents;
 }
@@ -456,55 +416,23 @@ std::string File::read (const std::string& name)
 bool File::read (const std::string& name, std::string& contents)
 {
   contents = "";
-
-  std::ifstream in (name.c_str ());
-  if (in.good ())
-  {
-    std::string line;
-    line.reserve (1024);
-    while (getline (in, line))
-      contents += line + "\n";
-
-    in.close ();
-    return true;
-  }
-
-  return false;
+  File(name).read(contents);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::read (const std::string& name, std::vector <std::string>& contents)
 {
   contents.clear ();
-
-  std::ifstream in (name.c_str ());
-  if (in.good ())
-  {
-    std::string line;
-    line.reserve (1024);
-    while (getline (in, line))
-      contents.push_back (line);
-
-    in.close ();
-    return true;
-  }
-
-  return false;
+  File(name).read(contents);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::write (const std::string& name, const std::string& contents)
 {
-  std::ofstream out (name.c_str (),
-                     std::ios_base::out | std::ios_base::trunc);
-  if (out.good ())
-  {
-    out << contents;
-    out.close ();
-    return true;
-  }
-
-  return false;
+  File(name).write(contents);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -513,39 +441,15 @@ bool File::write (
   const std::vector <std::string>& lines,
   bool addNewlines /* = true */)
 {
-  std::ofstream out (expand (name).c_str (),
-                     std::ios_base::out | std::ios_base::trunc);
-  if (out.good ())
-  {
-    std::vector <std::string>::const_iterator it;
-    for (it = lines.begin (); it != lines.end (); ++it)
-    {
-      out << *it;
-
-      if (addNewlines)
-        out << "\n";
-    }
-
-    out.close ();
-    return true;
-  }
-
-  return false;
+  File(name).write(lines, addNewlines);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::append (const std::string& name, const std::string& contents)
 {
-  std::ofstream out (expand (name).c_str (),
-                     std::ios_base::out | std::ios_base::app);
-  if (out.good ())
-  {
-    out << contents;
-    out.close ();
-    return true;
-  }
-
-  return false;
+  File(name).append(contents);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -554,24 +458,8 @@ bool File::append (
   const std::vector <std::string>& lines,
   bool addNewlines /* = true */)
 {
-  std::ofstream out (expand (name).c_str (),
-                     std::ios_base::out | std::ios_base::app);
-  if (out.good ())
-  {
-    std::vector <std::string>::const_iterator it;
-    for (it = lines.begin (); it != lines.end (); ++it)
-    {
-      out << *it;
-
-      if (addNewlines)
-        out << "\n";
-    }
-
-    out.close ();
-    return true;
-  }
-
-  return false;
+  File(name).append(lines, addNewlines);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
