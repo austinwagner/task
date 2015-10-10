@@ -544,7 +544,7 @@ namespace {
   struct initialize {
       initialize() {
         WSADATA wsa_data;
-        if (!WSAStartup(MAKEWORD(2, 0), &wsa_data)) {
+        if (WSAStartup(MAKEWORD(2, 0), &wsa_data) != 0) {
           // Purposely avoiding nowide here
           fprintf(stderr, "FATAL: WSAStartup failed with code %d\n", WSAGetLastError());
           exit(100);

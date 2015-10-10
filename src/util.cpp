@@ -493,7 +493,8 @@ std::string getErrorString(DWORD errCode) {
   std::string res;
 
   LPWSTR wErrorText = nullptr;
-  DWORD len = FormatMessageW(
+  DWORD len =
+    FormatMessageW(
           FORMAT_MESSAGE_FROM_SYSTEM |
           FORMAT_MESSAGE_ALLOCATE_BUFFER |
           FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -534,18 +535,12 @@ int setenv(const char *name, const char* value, int overwrite) {
     }
   }
 
-  if (SetEnvironmentVariableW(nowide::widen(name).c_str(), nowide::widen(value).c_str()) == 0) {
-    throw getErrorString(GetLastError());
-  }
-
+  WIN_TRY(SetEnvironmentVariableW(nowide::widen(name).c_str(), nowide::widen(value).c_str()));
   return 0;
 }
 
 int unsetenv(const char *name) {
-  if (SetEnvironmentVariableW(nowide::widen(name).c_str(), nullptr) == 0) {
-    throw getErrorString(GetLastError());
-  }
-
+  WIN_TRY(SetEnvironmentVariableW(nowide::widen(name).c_str(), nullptr));
   return 0;
 }
 
@@ -621,21 +616,10 @@ int execute (
   SafeHandle stdOutRead;
   SafeHandle stdOutWrite;
 
-  if (!CreatePipe(stdOutRead.ptr(), stdOutWrite.ptr(), &secAttr, 0)) {
-    throw getErrorString(GetLastError());
-  }
-
-  if (!SetHandleInformation(stdOutRead.get(), HANDLE_FLAG_INHERIT, 0)) {
-    throw getErrorString(GetLastError());
-  }
-
-  if (!CreatePipe(stdInRead.ptr(), stdInWrite.ptr(), &secAttr, 0)) {
-    throw getErrorString(GetLastError());
-  }
-
-  if (!SetHandleInformation(stdInRead.get(), HANDLE_FLAG_INHERIT, 0)) {
-    throw getErrorString(GetLastError());
-  }
+  WIN_TRY(CreatePipe(stdOutRead.ptr(), stdOutWrite.ptr(), &secAttr, 0));
+  WIN_TRY(SetHandleInformation(stdOutRead.get(), HANDLE_FLAG_INHERIT, 0));
+  WIN_TRY(CreatePipe(stdInRead.ptr(), stdInWrite.ptr(), &secAttr, 0));
+  WIN_TRY(SetHandleInformation(stdInRead.get(), HANDLE_FLAG_INHERIT, 0));
 
   STARTUPINFOW startInfo = {0};
   startInfo.cb = sizeof(STARTUPINFOW);
@@ -649,7 +633,7 @@ int execute (
   std::wstring argString = nowide::widen(arg_list_to_command_line(args));
   wchar_t *argStringRaw = const_cast<wchar_t*>(argString.c_str());
 
-  BOOL procCreated =
+  WIN_TRY(
     CreateProcessW(
       nowide::widen(executable).c_str(),
       argStringRaw,
@@ -660,24 +644,15 @@ int execute (
       NULL,
       NULL,
       &startInfo,
-      &procInfo);
-
-  if (!procCreated) {
-    throw getErrorString(GetLastError());
-  }
+      &procInfo));
 
   CloseHandle(procInfo.hThread);
   SafeHandle procHandle(procInfo.hProcess);
 
-  DWORD inputSize = (DWORD)input.size();
-  if (inputSize < 0) {
-    throw "Input too long.";
-  }
+  DWORD inputSize = boost::numeric_cast<DWORD>(input.size());
 
   DWORD written;
-  if (!WriteFile(stdInWrite.get(), input.c_str(), inputSize, &written, NULL)) {
-    throw getErrorString(GetLastError());
-  }
+  WIN_TRY(WriteFile(stdInWrite.get(), input.c_str(), inputSize, &written, NULL));
 
   stdInWrite.reset();
 
@@ -685,23 +660,16 @@ int execute (
   char buffer[1024];
 
   while (read > 0) {
-    if (!ReadFile(stdOutRead.get(), buffer, sizeof(buffer), &read, NULL)) {
-      throw getErrorString(GetLastError());
-    }
-
+    WIN_TRY(ReadFile(stdOutRead.get(), buffer, sizeof(buffer), &read, NULL));
     output.append(buffer);
   }
 
-  if (!WaitForSingleObject(procHandle.get(), INFINITE)) {
-    throw getErrorString(GetLastError());
-  }
+  WIN_TRY(WaitForSingleObject(procHandle.get(), INFINITE));
 
   DWORD exitCode;
-  if (!GetExitCodeProcess(procHandle.get(), &exitCode)) {
-    throw getErrorString(GetLastError());
-  }
+  WIN_TRY(GetExitCodeProcess(procHandle.get(), &exitCode));
 
-  return exitCode;
+  return boost::numeric_cast<int>(exitCode);
 }
 
 bool supports_ansi_codes_;
