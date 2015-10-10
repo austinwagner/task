@@ -185,8 +185,7 @@ namespace details {
                     boost::split(parts, modifiers, boost::is_any_of(";"));
                 }
 
-                CONSOLE_SCREEN_BUFFER_INFO bufInfo;
-                ZeroMemory(&bufInfo, sizeof(CONSOLE_SCREEN_BUFFER_INFO));
+                CONSOLE_SCREEN_BUFFER_INFO bufInfo = {0};
                 GetConsoleScreenBufferInfo(handle_, &bufInfo);
 
                 WORD attribs = bufInfo.wAttributes;

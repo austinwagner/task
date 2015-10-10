@@ -637,16 +637,14 @@ int execute (
     throw getErrorString(GetLastError());
   }
 
-  STARTUPINFOW startInfo;
-  ZeroMemory(&startInfo, sizeof(STARTUPINFOW));
+  STARTUPINFOW startInfo = {0};
   startInfo.cb = sizeof(STARTUPINFOW);
   startInfo.hStdError = stdOutWrite.get();
   startInfo.hStdOutput = stdOutWrite.get();
   startInfo.hStdInput = stdInRead.get();
   startInfo.dwFlags = STARTF_USESTDHANDLES;
 
-  PROCESS_INFORMATION procInfo;
-  ZeroMemory(&procInfo, sizeof(PROCESS_INFORMATION));
+  PROCESS_INFORMATION procInfo = {0};
 
   std::wstring argString = nowide::widen(arg_list_to_command_line(args));
   wchar_t *argStringRaw = const_cast<wchar_t*>(argString.c_str());
