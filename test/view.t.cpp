@@ -135,7 +135,7 @@ int main (int argc, char** argv)
     view.intraColorEven (even_color);
 
     // Render the view.
-    nowide::cout << view.render (data, sequence);
+    std::cout << view.render (data, sequence);
     int expected_lines = 5;
     if (!isatty (fileno (stdout)))
       expected_lines = 6;
@@ -176,7 +176,7 @@ int main (int argc, char** argv)
                              "and not flaky tests.");
     string_view.set (row, 2, "bottom right");
 
-    nowide::cout << string_view.render ();
+    std::cout << string_view.render ();
     t.ok (string_view.lines () > 4, "View::lines > 4");
   }
 

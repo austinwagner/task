@@ -39,7 +39,7 @@ int main (int argc, char** argv)
 {
   if (argc == 1)
   {
-    nowide::cout << "\nUsage: json_test [-q] <file | JSON> ...\n"
+    std::cout << "\nUsage: json_test [-q] <file | JSON> ...\n"
               << "\n"
               << "      -q        quiet, no JSON dump\n"
               << "      <file>    file containing JSON\n"
@@ -71,13 +71,13 @@ int main (int argc, char** argv)
           root = json::parse (argv[i]);
 
         if (root && !quiet)
-          nowide::cout << root->dump () << "\n";
+          std::cout << root->dump () << "\n";
 
         delete root;
       }
 
-      catch (const std::string& e) { nowide::cout << e << "\n";         }
-      catch (...)                  { nowide::cout << "Unknown error\n"; }
+      catch (const std::string& e) { std::cout << e << "\n";         }
+      catch (...)                  { std::cout << "Unknown error\n"; }
     }
   }
 

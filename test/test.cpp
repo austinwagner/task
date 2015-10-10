@@ -49,7 +49,7 @@ UnitTest::UnitTest (int planned)
 , _failed (0)
 , _skipped (0)
 {
-  nowide::cout << "1.." << _planned << "\n";
+  std::cout << "1.." << _planned << "\n";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -61,7 +61,7 @@ UnitTest::~UnitTest ()
 
   if (_counter < _planned)
   {
-    nowide::cout << "# Only "
+    std::cout << "# Only "
               << _counter
               << " tests, out of a planned "
               << _planned
@@ -70,13 +70,13 @@ UnitTest::~UnitTest ()
   }
 
   else if (_counter > _planned)
-    nowide::cout << "# "
+    std::cout << "# "
               << _counter
               << " tests were run, but only "
               << _planned
               << " were planned.\n";
 
-  nowide::cout << "# "
+  std::cout << "# "
             << _passed
             << " passed, "
             << _failed
@@ -97,14 +97,14 @@ void UnitTest::plan (int planned)
   _failed = 0;
   _skipped = 0;
 
-  nowide::cout << "1.." << _planned << "\n";
+  std::cout << "1.." << _planned << "\n";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void UnitTest::planMore (int extra)
 {
   _planned += extra;
-  nowide::cout << "1.." << _planned << "\n";
+  std::cout << "1.." << _planned << "\n";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -115,7 +115,7 @@ void UnitTest::ok (bool expression, const std::string& name)
   if (expression)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -124,7 +124,7 @@ void UnitTest::ok (bool expression, const std::string& name)
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -140,7 +140,7 @@ void UnitTest::notok (bool expression, const std::string& name)
   if (!expression)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -149,7 +149,7 @@ void UnitTest::notok (bool expression, const std::string& name)
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -164,7 +164,7 @@ void UnitTest::is (bool actual, bool expected, const std::string& name)
   if (actual == expected)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -173,7 +173,7 @@ void UnitTest::is (bool actual, bool expected, const std::string& name)
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -192,7 +192,7 @@ void UnitTest::is (size_t actual, size_t expected, const std::string& name)
   if (actual == expected)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -201,7 +201,7 @@ void UnitTest::is (size_t actual, size_t expected, const std::string& name)
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -220,7 +220,7 @@ void UnitTest::is (int actual, int expected, const std::string& name)
   if (actual == expected)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -229,7 +229,7 @@ void UnitTest::is (int actual, int expected, const std::string& name)
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -248,7 +248,7 @@ void UnitTest::is (double actual, double expected, const std::string& name)
   if (actual == expected)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -257,7 +257,7 @@ void UnitTest::is (double actual, double expected, const std::string& name)
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -276,7 +276,7 @@ void UnitTest::is (double actual, double expected, double tolerance, const std::
   if (fabs (actual - expected) <= tolerance)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -285,7 +285,7 @@ void UnitTest::is (double actual, double expected, double tolerance, const std::
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -304,7 +304,7 @@ void UnitTest::is (unsigned char actual, unsigned char expected, const std::stri
   if (actual == expected)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -313,7 +313,7 @@ void UnitTest::is (unsigned char actual, unsigned char expected, const std::stri
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -335,7 +335,7 @@ void UnitTest::is (
   if (actual == expected)
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -344,7 +344,7 @@ void UnitTest::is (
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -367,7 +367,7 @@ void UnitTest::is (
   if (! strcmp (actual, expected))
   {
     ++_passed;
-    nowide::cout << "ok "
+    std::cout << "ok "
               << _counter
               << " - "
               << name
@@ -376,7 +376,7 @@ void UnitTest::is (
   else
   {
     ++_failed;
-    nowide::cout << "not ok "
+    std::cout << "not ok "
               << _counter
               << " - "
               << name
@@ -394,7 +394,7 @@ void UnitTest::diag (const std::string& text)
 {
   std::string::size_type start = text.find_first_not_of (" \t\n\r\f");
   std::string::size_type end   = text.find_last_not_of  (" \t\n\r\f");
-  nowide::cout << "# " << text.substr (start, end - start + 1) << "\n";
+  std::cout << "# " << text.substr (start, end - start + 1) << "\n";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -402,7 +402,7 @@ void UnitTest::pass (const std::string& text)
 {
   ++_counter;
   ++_passed;
-  nowide::cout << "ok "
+  std::cout << "ok "
             << _counter
             << " - "
             << text
@@ -414,7 +414,7 @@ void UnitTest::fail (const std::string& text)
 {
   ++_counter;
   ++_failed;
-  nowide::cout << "not ok "
+  std::cout << "not ok "
             << _counter
             << " - "
             << text
@@ -426,7 +426,7 @@ void UnitTest::skip (const std::string& text)
 {
   ++_counter;
   ++_skipped;
-  nowide::cout << "skip "
+  std::cout << "skip "
             << _counter
             << " - "
             << text
