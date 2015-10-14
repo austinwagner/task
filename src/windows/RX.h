@@ -29,15 +29,7 @@
 
 #include <string>
 #include <vector>
-
-// Disable the unicode defines before including boost regex
-// so we get the narrow character version. It won't handle UTF-8 well,
-// but POSIX regex doesn't seem to promise that it will either.
-#undef UNICODE
-#undef _UNICODE
-#include <boost/regex.h>
-#define UNICODE
-#define _UNICODE
+#include <regex>
 
 class RX
 {
@@ -60,7 +52,7 @@ private:
   bool _compiled;
   std::string _pattern;
   bool _case_sensitive;
-  regex_t _regex;
+  std::regex _regex;
 };
 
 #endif

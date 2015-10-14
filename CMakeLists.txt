@@ -158,7 +158,7 @@ endif (HAVE_UUID_UNPARSE_LOWER)
 
 if (WINDOWS)
   set (Boost_USE_STATIC_LIBS ON)
-  find_package (Boost COMPONENTS filesystem system regex)
+  find_package (Boost COMPONENTS filesystem system)
   if (Boost_FOUND)
     set (TASK_INCLUDE_DIRS ${TASK_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
     set (TASK_LIBRARIES ${TASK_LIBRARIES} ${Boost_LIBRARIES})

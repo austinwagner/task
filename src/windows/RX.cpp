@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <RX.h>
+#include <boost/numeric/conversion/cast.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 RX::RX ()
@@ -79,8 +80,6 @@ bool RX::operator== (const RX& other) const
 ////////////////////////////////////////////////////////////////////////////////
 RX::~RX ()
 {
-  if (_compiled)
-    regfree (&_regex);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -88,18 +87,12 @@ void RX::compile ()
 {
   if (!_compiled)
   {
-    memset (&_regex, 0, sizeof (regex_t));
-
-    int result;
-    if ((result = regcomp (&_regex, _pattern.c_str (),
-                           REG_EXTENDED | REG_NEWLINE |
-                           (_case_sensitive ? 0 : REG_ICASE))) != 0)
-    {
-      char message[256];
-      regerror (result, &_regex, message, 256);
-      throw std::string (message);
+    std::regex_constants::syntax_option_type opts = std::regex_constants::egrep;
+    if (!_case_sensitive) {
+      opts |= std::regex_constants::icase;
     }
 
+    _regex = std::regex(_pattern, opts);
     _compiled = true;
   }
 }
@@ -110,7 +103,7 @@ bool RX::match (const std::string& in)
   if (!_compiled)
     compile ();
 
-  return regexec (&_regex, in.c_str (), 0, NULL, 0) == 0 ? true : false;
+  return std::regex_match(in, _regex);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -121,21 +114,13 @@ bool RX::match (
   if (!_compiled)
     compile ();
 
-  regmatch_t rm[2];
-  int offset = 0;
-  int length = in.length ();
-  while (regexec (&_regex, in.c_str () + offset, 2, &rm[0], 0) == 0 &&
-         offset < length)
-  {
-    matches.push_back (in.substr (rm[0].rm_so + offset, rm[0].rm_eo - rm[0].rm_so));
-    offset += rm[0].rm_eo;
-
-    // Protection against zero-width patterns causing infinite loops.
-    if (rm[0].rm_so == rm[0].rm_eo)
-      ++offset;
+  std::string::const_iterator it = in.begin();
+  std::smatch raw_matches;
+  while (std::regex_search(it, in.end(), raw_matches, _regex)) {
+    matches.push_back(raw_matches[0].str());
   }
 
-  return matches.size () ? true : false;
+  return !matches.empty();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -147,22 +132,15 @@ bool RX::match (
   if (!_compiled)
     compile ();
 
-  regmatch_t rm[2];
-  int offset = 0;
-  int length = in.length ();
-  while (regexec (&_regex, in.c_str () + offset, 2, &rm[0], 0) == 0 &&
-         offset < length)
-  {
-    start.push_back (rm[0].rm_so + offset);
-    end.push_back   (rm[0].rm_eo + offset);
-    offset += rm[0].rm_eo;
-
-    // Protection against zero-width patterns causing infinite loops.
-    if (rm[0].rm_so == rm[0].rm_eo)
-      ++offset;
+  std::string::const_iterator it = in.begin();
+  std::smatch matches;
+  while (std::regex_search(it, in.end(), matches, _regex)) {
+    start.push_back(boost::numeric_cast<int>(std::distance(matches[0].first, in.begin())));
+    end.push_back(boost::numeric_cast<int>(std::distance(matches[0].second, in.begin()) - 1));
+    it = matches[0].second;
   }
 
-  return start.size () ? true : false;
+  return !start.empty();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
