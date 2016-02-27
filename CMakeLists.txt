@@ -69,6 +69,11 @@ elseif (${CMAKE_SYSTEM_NAME} STREQUAL "CYGWIN")
   #       workaround instead of fixing Cygwin.
   set (_CXX11_FLAGS "-std=gnu++0x")
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+  if (MSVC)
+    # If GCC is okay with us using these functions, then I think
+    # it's alright to ignore MSVC here
+    add_definitions (-D_CRT_SECURE_NO_WARNINGS)
+  endif (MSVC)
   set (WINDOWS true)
 else (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   set (UNKNOWN true)
