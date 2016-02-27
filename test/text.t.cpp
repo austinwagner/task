@@ -35,9 +35,9 @@
 Context context;
 
 ////////////////////////////////////////////////////////////////////////////////
-int main (int argc, char** argv)
+int main (int, char**)
 {
-  UnitTest t (205);
+  UnitTest t (225);
 
   // Ensure environment has no influence.
   unsetenv ("TASKDATA");
@@ -102,6 +102,12 @@ int main (int argc, char** argv)
   t.is (line, "width", "extractLine 10 'width' -> 'width'");
 
   t.notok (extractLine (line, text, 10, true, offset), "extractLine 10 '' -> ''");
+
+  text = "AAAAAAAAAABBBBBBBBBB";
+  offset = 0;
+  extractLine (line, text, 10, true, offset);
+  t.is (line, "AAAAAAAAA-", "extractLine hyphenated unbreakable line");
+  t.diag (line);
 
   // void split (std::vector<std::string>& results, const std::string& input, const char delimiter)
   std::vector <std::string> items;
@@ -171,10 +177,7 @@ int main (int argc, char** argv)
   t.is (joined.length (), (size_t) 0,  "join -> length 0");
   t.is (joined,           "",          "join -> ''");
 
-  unjoined.push_back ("");
-  unjoined.push_back ("a");
-  unjoined.push_back ("bc");
-  unjoined.push_back ("def");
+  unjoined = {"", "a", "bc", "def"};
   join (joined, "", unjoined);
   t.is (joined.length (), (size_t) 6, "join '' 'a' 'bc' 'def' -> length 6");
   t.is (joined,           "abcdef",   "join '' 'a' 'bc' 'def' -> 'abcdef'");
@@ -190,9 +193,7 @@ int main (int argc, char** argv)
   t.is (joined.length (), (size_t) 0, "join -> length 0");
   t.is (joined,           "",         "join -> ''");
 
-  unjoined2.push_back (0);
-  unjoined2.push_back (1);
-  unjoined2.push_back (2);
+  unjoined2 = {0, 1, 2};
   join (joined, "", unjoined2);
   t.is (joined.length (), (size_t) 3, "join 0 1 2 -> length 3");
   t.is (joined,           "012",      "join 0 1 2 -> '012'");
@@ -269,7 +270,16 @@ int main (int argc, char** argv)
   t.is (commify ("12345678"),   "12,345,678",    "commify '12345678' -> '12,345,678'");
   t.is (commify ("123456789"),  "123,456,789",   "commify '123456789' -> '123,456,789'");
   t.is (commify ("1234567890"), "1,234,567,890", "commify '1234567890' -> '1,234,567,890'");
-
+  t.is (commify ("1.0"),          "1.0",             "commify '1.0' -> '1.0'");
+  t.is (commify ("12.0"),         "12.0",            "commify '12.0' -> '12.0'");
+  t.is (commify ("123.0"),        "123.0",           "commify '123.0' -> '123.0'");
+  t.is (commify ("1234.0"),       "1,234.0",         "commify '1234.0' -> '1,234.0'");
+  t.is (commify ("12345.0"),      "12,345.0",        "commify '12345.0' -> '12,345.0'");
+  t.is (commify ("123456.0"),     "123,456.0",       "commify '123456.0' -> '123,456.0'");
+  t.is (commify ("1234567.0"),    "1,234,567.0",     "commify '1234567.0' -> '1,234,567.0'");
+  t.is (commify ("12345678.0"),   "12,345,678.0",    "commify '12345678.0' -> '12,345,678.0'");
+  t.is (commify ("123456789.0"),  "123,456,789.0",   "commify '123456789.0' -> '123,456,789.0'");
+  t.is (commify ("1234567890.0"), "1,234,567,890.0", "commify '1234567890.0' -> '1,234,567,890.0'");
   t.is (commify ("pre"),         "pre",          "commify 'pre' -> 'pre'");
   t.is (commify ("pre1234"),     "pre1,234",     "commify 'pre1234' -> 'pre1,234'");
   t.is (commify ("1234post"),    "1,234post",    "commify '1234post' -> '1,234post'");
@@ -347,6 +357,9 @@ int main (int argc, char** argv)
   t.is ((int) find ("one two three", "e",  3, true), (int) 11, "offset obeyed");
   t.is ((int) find ("one two three", "e", 11, true), (int) 11, "offset obeyed");
 
+  t.is ((int) find ("one two three", "e",  3, false), (int) 11, "offset obeyed");
+  t.is ((int) find ("one two three", "e", 11, false), (int) 11, "offset obeyed");
+
   // int strippedLength (const std::string&);
   t.is (strippedLength (std::string ("")),                                  0, "strippedLength                              -> 0");
   t.is (strippedLength (std::string ("abc")),                               3, "strippedLength abc                          -> 3");
@@ -367,6 +380,8 @@ int main (int argc, char** argv)
   t.is (formatHex (123), "7b", "formatHex (123) -> 7b");
 
   // std::string format (float, int, int);
+  t.is (format (0.12345678, 8, 4),      "  0.1235",     "format (0.12345678,    8,   4) -> __0.1235");
+
   t.is (format (1.23456789, 8, 1),      "       1",     "format (1.23456789,    8,   1) -> _______1");
   t.is (format (1.23456789, 8, 2),      "     1.2",     "format (1.23456789,    8,   2) -> _____1.2");
   t.is (format (1.23456789, 8, 3),      "    1.23",     "format (1.23456789,    8,   3) -> ____1.23");
@@ -401,10 +416,16 @@ int main (int argc, char** argv)
   t.is (rightJustify ("foo", 5), "  foo", "rightJustify foo,5 -> '  foo'");
   t.is (rightJustify ("föo", 5), "  föo", "rightJustify föo,5 -> '  föo'");
 
-  // int utf8_length (const std::string&);
-  t.is ((int) utf8_length ("Çirçös"),            6, "utf8_length (Çirçös) == 6");
-  t.is ((int) utf8_length ("ツネナラム"),        5, "utf8_length (ツネナラム) == 5");
-  t.is ((int) utf8_length ("Zwölf Boxkämpfer"), 16, "utf8_length (Zwölf Boxkämpfer) == 16");
+  // bool closeEnough (const std::string&, const std::string&, unsigned int minLength = 0);
+  t.ok (closeEnough ("foobar", "foobar"),      "closeEnough foobar == foobar");
+  t.ok (closeEnough ("foobar", "foobar", 0),   "closeEnough foobar == foobar,0");
+  t.ok (closeEnough ("foobar", "foobar", 1),   "closeEnough foobar == foobar,1");
+  t.ok (closeEnough ("foobar", "foobar", 2),   "closeEnough foobar == foobar,2");
+  t.ok (closeEnough ("foobar", "foobar", 3),   "closeEnough foobar == foobar,3");
+  t.ok (closeEnough ("foobar", "foobar", 4),   "closeEnough foobar == foobar,4");
+  t.ok (closeEnough ("foobar", "foobar", 5),   "closeEnough foobar == foobar,5");
+  t.ok (closeEnough ("foobar", "foobar", 6),   "closeEnough foobar == foobar,6");
+  t.ok (closeEnough ("foobar", "foo", 3),      "closeEnough foobar == foo,3");
 
   return 0;
 }

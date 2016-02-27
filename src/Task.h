@@ -32,6 +32,7 @@
 #include <string>
 #include <stdio.h>
 #include <time.h>
+#include <JSON.h>
 
 class Task : public std::map <std::string, std::string>
 {
@@ -48,10 +49,8 @@ public:
   static float urgencyScheduledCoefficient;
   static float urgencyWaitingCoefficient;
   static float urgencyBlockedCoefficient;
-  static float urgencyInheritCoefficient;
   static float urgencyAnnotationsCoefficient;
   static float urgencyTagsCoefficient;
-  static float urgencyNextCoefficient;
   static float urgencyDueCoefficient;
   static float urgencyBlockingCoefficient;
   static float urgencyAgeCoefficient;
@@ -63,6 +62,7 @@ public:
   Task& operator= (const Task&); // Assignment operator
   bool operator== (const Task&); // Comparison operator
   Task (const std::string&);     // Parse
+  Task (const json::object*);    // Parse
   ~Task ();                      // Destructor
 
   void parse (const std::string&);
@@ -112,6 +112,8 @@ public:
   bool is_duemonth () const;
   bool is_dueyear () const;
   bool is_overdue () const;
+  bool is_udaPresent () const;
+  bool is_orphanPresent () const;
 #endif
 
   status getStatus () const;
@@ -140,10 +142,9 @@ public:
   void getDependencies (std::vector <int>&) const;
   void getDependencies (std::vector <std::string>&) const;
 
-  void getUDAs (std::vector <std::string>&) const;
   void getUDAOrphans (std::vector <std::string>&) const;
 
-  void substitute (const std::string&, const std::string&, bool);
+  void substitute (const std::string&, const std::string&, const std::string&);
 #endif
 
   void validate (bool applyDefault = true);
@@ -157,6 +158,7 @@ public:
 private:
   int determineVersion (const std::string&);
   void parseJSON (const std::string&);
+  void parseJSON (const json::object*);
   void parseLegacy (const std::string&);
   void validate_before (const std::string&, const std::string&);
   const std::string encode (const std::string&) const;
@@ -171,7 +173,6 @@ public:
   float urgency_inherit () const;
   float urgency_annotations () const;
   float urgency_tags () const;
-  float urgency_next () const;
   float urgency_due () const;
   float urgency_blocking () const;
   float urgency_age () const;

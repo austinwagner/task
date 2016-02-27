@@ -28,11 +28,12 @@
 #define INCLUDED_TDB2
 
 #include <map>
+#include <unordered_map>
 #include <vector>
 #include <string>
 #include <stdio.h>
 #include <ViewText.h>
-#include <File.h>
+#include <FS.h>
 #include <Task.h>
 
 // TF2 Class represents a single file in the task database.
@@ -81,6 +82,12 @@ public:
   bool _has_ids;
   bool _auto_dep_scan;
   std::vector <Task> _tasks;
+
+  // _tasks_map was introduced mainly for speeding up "task import".
+  // Iterating over all _tasks for each imported task is slow, making use of
+  // appropriate data structures is fast.
+  std::unordered_map <std::string, Task> _tasks_map;
+
   std::vector <Task> _added_tasks;
   std::vector <Task> _modified_tasks;
   std::vector <std::string> _lines;
@@ -96,6 +103,8 @@ private:
 class TDB2
 {
 public:
+  static bool debug_mode;
+
   TDB2 ();
   ~TDB2 ();
 
@@ -107,6 +116,7 @@ public:
   void revert ();
   int  gc ();
   int  next_id ();
+  int  latest_id ();
 
   // Generalized task accessors.
   const std::vector <Task> all_tasks ();
@@ -128,12 +138,12 @@ public:
 
 private:
   void gather_changes ();
-  void update (const std::string&, Task&, const bool, const bool addition = false);
+  void update (Task&, const bool, const bool addition = false);
   bool verifyUniqueUUID (const std::string&);
   void show_diff (const std::string&, const std::string&, const std::string&);
   void revert_undo (std::vector <std::string>&, std::string&, std::string&, std::string&, std::string&);
-  void revert_pending (std::vector <std::string>&, const std::string&, const std::string&, const std::string&);
-  void revert_completed (std::vector <std::string>&, std::vector <std::string>&, const std::string&, const std::string&, const std::string&);
+  void revert_pending (std::vector <std::string>&, const std::string&, const std::string&);
+  void revert_completed (std::vector <std::string>&, std::vector <std::string>&, const std::string&, const std::string&);
   void revert_backlog (std::vector <std::string>&, const std::string&, const std::string&, const std::string&);
 
 public:

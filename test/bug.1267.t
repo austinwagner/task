@@ -44,12 +44,9 @@ class TestBug1267(TestCase):
         """
         project = "MakePudding"
 
-        args = ["rc.default.project={0}".format(project), "add",
-                "proj:", "Add cream"]
-        self.t(args)
+        self.t("rc.default.project={0} add proj: 'Add cream'".format(project))
 
-        args = ("ls",)
-        code, out, err = self.t(args, merge_streams=False)
+        code, out, err = self.t("ls")
 
         self.assertNotIn(project, out)
 
@@ -60,11 +57,9 @@ class TestBug1267(TestCase):
 
         self.t.config("default.project", project)
 
-        args = ("add", "proj:", "Add cream")
-        self.t(args)
+        self.t("add proj: 'Add cream'")
 
-        args = ("ls",)
-        code, out, err = self.t(args, merge_streams=False)
+        code, out, err = self.t("ls")
 
         self.assertNotIn(project, out)
 
@@ -73,4 +68,4 @@ if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

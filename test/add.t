@@ -33,40 +33,98 @@ import unittest
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from basetest import Task, TestCase
-from basetest.utils import UUID_REGEXP
 
 
 class TestAdd(TestCase):
     def setUp(self):
         self.t = Task()
-        self.t(("add", "This is a test"))
 
     def test_add(self):
         "Testing add command"
 
-        code, out, err = self.t(("info", "1"))
-
-        self.assertRegexpMatches(out, "ID\s+1\n")
-        self.assertRegexpMatches(out, "Description\s+This is a test\n")
-        self.assertRegexpMatches(out, "Status\s+Pending\n")
-        self.assertRegexpMatches(out, "UUID\s+" + UUID_REGEXP + "\n")
+        self.t("add This is a test")
+        code, out, err = self.t("_get 1.description")
+        self.assertEqual(out, "This is a test\n")
 
     def test_modify_slash(self):
         "Test the /// modifier"
 
-        self.t(("1", "modify", "/test/TEST/"))
-        self.t(("1", "modify", "/is //"))
+        self.t("add This is a test")
+        self.t("1 modify /test/TEST/")
+        self.t("1 modify '/is //'")
 
-        code, out, err = self.t(("info", "1"))
+        code, out, err = self.t("_get 1.description")
+        self.assertEqual(out, "This a TEST\n")
 
-        self.assertRegexpMatches(out, "ID\s+1\n")
-        self.assertRegexpMatches(out, "Status\s+Pending\n")
-        self.assertRegexpMatches(out, "Description\s+This a TEST\n")
-        self.assertRegexpMatches(out, "UUID\s+" + UUID_REGEXP + "\n")
+    def test_floating_point_preservation(self):
+        """Verify that floating point numbers are unmolested
+
+           Bug 924: '1.0' --> '1.0000'
+        """
+        self.t("add release 1.0")
+        self.t("add 'release 2.0'")
+        self.t("add \\\"release 3.0\\\"")
+
+        code, out, err = self.t("_get 1.description")
+        self.assertEqual(out, "release 1.0\n")
+
+        code, out, err = self.t("_get 2.description")
+        self.assertEqual(out, "release 2.0\n")
+
+        code, out, err = self.t("_get 3.description")
+        self.assertEqual(out, "release 3.0\n")
+
+    def test_escaped_quotes_are_preserved(self):
+        """Verify that escaped quotes are preserved
+
+           Bug 917: escaping runs amok
+        """
+        self.t("add one \\'two\\' three")
+        self.t("add four \\\"five\\\" six")
+
+        code, out, err = self.t("list")
+        self.assertIn("one 'two' three", out)
+        self.assertIn("four \"five\" six", out)
+
+    def test_extra_space_in_path(self):
+        """Test that path-like args are preserved
+
+           Bug 884: Extra space in path name.
+        """
+        self.t("add /one/two/three/")
+        self.t("add '/four/five/six/'")
+
+        code, out, err = self.t("ls")
+        self.assertIn("/one/two/three/", out)
+        self.assertIn("/four/five/six/", out)
+
+    def test_parentheses_and_spaces_preserved(self):
+        """Test parentheses and spacing is preserved on add
+
+           Bug 819: When I run "task add foo\'s bar." the description of the new task is "foo 's bar .".
+        """
+        self.t("add foo\\\'s bar")
+        self.t("add foo (bar)")
+        self.t("add 'baz (qux)'")
+
+        code, out, err = self.t("ls")
+        self.assertIn("foo's bar", out)
+        self.assertIn("foo (bar)", out)
+        self.assertIn("baz (qux)", out)
+
+    def test_single_quote_preserved(self):
+        """Test single quote in a terminated multi-word string is preserved
+
+           TW-1642: After "--", an apostrophe unexpectedly ends the task description
+        """
+        self.t("add -- \"Return Randy's stuff\"")
+
+        code, out, err = self.t ("_get 1.description")
+        self.assertIn("Return Randy's stuff\n", out)
 
 
 if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

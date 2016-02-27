@@ -46,11 +46,11 @@ class TestProjects(TestCase):
         """'task projects' shouldn't consider deleted tasks in summary.
         Reported in bug 1044
         """
-        self.t(("add", "project:A", "1"))
-        self.t(("add", "project:B", "2"))
-        self.t(("add", "project:B", "3"))
-        self.t(("3", "delete"))
-        code, out, err = self.t(("project:B", "projects"))
+        self.t("add project:A 1")
+        self.t("add project:B 2")
+        self.t("add project:B 3")
+        self.t("3 delete", input="y\n")
+        code, out, err = self.t("project:B projects")
 
         expected = "1 project \(1 task\)"
         self.assertRegexpMatches(out, expected)
@@ -58,31 +58,31 @@ class TestProjects(TestCase):
     def test_project_progress(self):
         """project status/progress is shown and is up-to-date"""
 
-        code, out, err = self.t(("add", "one", "pro:foo"))
+        code, out, err = self.t("add one pro:foo")
         self.assertRegexpMatches(err, self.STATUS.format("foo", "0%",
                                                          "1 task"))
 
-        code, out, err = self.t(("add", "two", "pro:foo"))
+        code, out, err = self.t("add two pro:foo")
         self.assertRegexpMatches(err, self.STATUS.format("foo", "0%",
                                                          "2 of 2 tasks"))
 
-        code, out, err = self.t(("add", "three", "pro:foo"))
+        code, out, err = self.t("add three pro:foo")
         self.assertRegexpMatches(err, self.STATUS.format("foo", "0%",
                                                          "3 of 3 tasks"))
 
-        code, out, err = self.t(("add", "four", "pro:foo"))
+        code, out, err = self.t("add four pro:foo")
         self.assertRegexpMatches(err, self.STATUS.format("foo", "0%",
                                                          "4 of 4 tasks"))
 
-        code, out, err = self.t(("1", "done"))
+        code, out, err = self.t("1 done")
         self.assertRegexpMatches(err, self.STATUS.format("foo", "25%",
                                                          "3 of 4 tasks"))
 
-        code, out, err = self.t(("2", "delete"))
+        code, out, err = self.t("2 delete", input="y\n")
         self.assertRegexpMatches(err, self.STATUS.format("foo", "33%",
                                                          "2 of 3 tasks"))
 
-        code, out, err = self.t(("3", "modify", "pro:bar"))
+        code, out, err = self.t("3 modify pro:bar")
         self.assertRegexpMatches(err, self.STATUS.format("foo", "50%",
                                                          "1 of 2 tasks"))
         self.assertRegexpMatches(err, self.STATUS.format("bar", "0%",
@@ -91,18 +91,18 @@ class TestProjects(TestCase):
     def test_project_spaces(self):
         """projects with spaces are handled correctly"""
 
-        self.t(("add", "hello", "pro:bob"))
-        code, out, err = self.t(("1", "mod", 'pro:"foo bar"'))
+        self.t("add hello pro:bob")
+        code, out, err = self.t('1 mod pro:"foo bar"')
         self.assertRegexpMatches(err, self.STATUS.format("foo bar", "0%",
                                                          "1 task"))
 
     def add_tasks(self):
-        self.t(("add", "testing", "project:existingParent"))
-        self.t(("add", "testing", "project:existingParent.child"))
-        self.t(("add", "testing", "project:abstractParent.kid"))
-        self.t(("add", "testing", "project:.myProject"))
-        self.t(("add", "testing", "project:myProject"))
-        self.t(("add", "testing", "project:.myProject."))
+        self.t("add testing project:existingParent")
+        self.t("add testing project:existingParent.child")
+        self.t("add testing project:abstractParent.kid")
+        self.t("add testing project:.myProject")
+        self.t("add testing project:myProject")
+        self.t("add testing project:.myProject.")
 
     def validate_indentation(self, out):
         order = (
@@ -137,7 +137,7 @@ class TestProjects(TestCase):
         """
         self.add_tasks()
 
-        code, out, err = self.t(("projects",))
+        code, out, err = self.t("projects")
 
         self.validate_indentation(out)
 
@@ -148,27 +148,45 @@ class TestProjects(TestCase):
         """
         self.add_tasks()
 
-        code, out, err = self.t(("summary",))
+        code, out, err = self.t("summary")
 
         self.validate_indentation(out)
+
+    def test_project_helper(self):
+        """Verify _projects helper list projects"""
+        self.t("add project:A one")
+        self.t("add project:B two")
+        self.t("2 delete", input="y\n")
+        self.t("log project:C three")
+        self.t("list")
+
+        code, out, err = self.t("_projects")
+        self.assertIn("A", out)
+        self.assertNotIn("B", out)
+        self.assertNotIn("C", out)
+
+        code, out, err = self.t("_projects rc.list.all.projects:1")
+        self.assertIn("A", out)
+        self.assertIn("B", out)
+        self.assertIn("C", out)
 
 
 class TestBug299(TestCase):
     def setUp(self):
         self.t = Task()
-        self.t(("add", "project:one", "foo"))
-        self.t(("add", "project:ones", "faz"))
-        self.t(("add", "project:phone", "boo"))
-        self.t(("add", "project:bones", "too"))
-        self.t(("add", "project:two", "bar"))
-        self.t(("add", "project:three", "baz"))
+        self.t("add project:one foo")
+        self.t("add project:ones faz")
+        self.t("add project:phone boo")
+        self.t("add project:bones too")
+        self.t("add project:two bar")
+        self.t("add project:three baz")
 
     def test_project_exclusion_isnt(self):
         """check project exclusion using project.isnt:<name>
 
         Reported in bug 299
         """
-        code, out, err = self.t(("list", "project.isnt:one", "pro.isnt:two"))
+        code, out, err = self.t("list project.isnt:one pro.isnt:two")
 
         self.assertNotRegexpMatches(out, "one.*foo")
         self.assertRegexpMatches(out, "ones.*faz")
@@ -183,7 +201,7 @@ class TestBug299(TestCase):
 
         Reported in bug 299
         """
-        code, out, err = self.t(("list", "project.hasnt:one", "pro.hasnt:two"))
+        code, out, err = self.t("list project.hasnt:one pro.hasnt:two")
 
         self.assertNotRegexpMatches(out, "one.*foo")
         self.assertNotRegexpMatches(out, "ones.*faz")
@@ -194,8 +212,134 @@ class TestBug299(TestCase):
         self.assertRegexpMatches(out, "three.*baz")
 
 
+class TestBug555(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_log_with_project_segfault(self):
+        """log with a project causes a segfault
+
+        Reported in bug 555
+        """
+        code, out, err = self.t("log description project:p")
+
+        self.assertNotIn("Segmentation fault", out)
+        self.assertNotIn("Segmentation fault", err)
+        self.assertIn("Logged task", out)
+
+
+class TestBug605(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_delete_task_for_empty_project(self):
+        """Project correctly reports % completion when empty or all tasks completed
+
+        Reported in bug 605
+        """
+        self.t("add One project:p1")
+
+        code, out, err = self.t("1 delete", input="y\n")
+        self.assertIn("is 0% complete", err)
+
+        self.t("add Two project:p1")
+        code, out, err = self.t("2 done")
+        self.assertIn("is 100% complete", err)
+
+
+class TestBug906(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_project_hierarchy_filter(self):
+        """Test project hierarchy filters
+
+           Bug 906
+        """
+        self.t("add zero")
+        self.t("add one pro:a.b")
+        self.t("add two pro:a")
+
+        code, out, err = self.t("pro:a list")
+        self.assertNotIn("zero", out)
+        self.assertIn("one", out)
+        self.assertIn("two", out)
+
+        code, out, err = self.t("pro:a.b list")
+        self.assertNotIn("zero", out)
+        self.assertIn("one", out)
+        self.assertNotIn("two", out)
+
+        code, out, err = self.t("pro.not:a list")
+        self.assertIn("zero", out)
+        self.assertNotIn("one", out)
+        self.assertNotIn("two", out)
+
+        code, out, err = self.t("pro.not:a.b list")
+        self.assertIn("zero", out)
+        self.assertNotIn("one", out)
+        self.assertIn("two", out)
+
+
+class TestBug856(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_project_hierarchy_filter(self):
+        """Test project.none: works
+
+           Bug 856: "task list project.none:" does not work.
+        """
+        self.t("add assigned project:X")
+        self.t("add floating")
+
+        code, out, err = self.t("project: ls")
+        self.assertIn("floating", out)
+        self.assertNotIn("assigned", out)
+
+        code, out, err = self.t("project:\'\' ls")
+        self.assertIn("floating", out)
+        self.assertNotIn("assigned", out)
+
+        code, out, err = self.t("project.none: ls")
+        self.assertIn("floating", out)
+        self.assertNotIn("assigned", out)
+
+
+class TestBug1511(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_project_hierarchy_filter(self):
+        """Test project:one-two can be added and queried
+
+           Bug 1511: Project titles not properly parsed if they contain hyphens
+        """
+        self.t("add zero")
+        self.t("add one project:two-three")
+        code, out, err = self.t("project:two-three list")
+        self.assertIn("one", out)
+        self.assertNotIn("zero", out)
+
+
+class TestBug1455(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_project_hierarchy_filter(self):
+        """Test project:school)
+
+           Bug 1455: Filter parser does not properly handle parentheses in attributes
+        """
+        self.t("add zero")
+        self.t("add one project:two)")
+        code, out, err = self.t("project:two) list")
+        self.assertIn("one", out)
+        self.assertNotIn("zero", out)
+
+
 if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

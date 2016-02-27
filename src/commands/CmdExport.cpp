@@ -36,11 +36,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdExport::CmdExport ()
 {
-  _keyword     = "export";
-  _usage       = "task <filter> export";
-  _description = STRING_CMD_EXPORT_USAGE;
-  _read_only   = true;
-  _displays_id = true;
+  _keyword               = "export";
+  _usage                 = "task <filter> export";
+  _description           = STRING_CMD_EXPORT_USAGE;
+  _read_only             = true;
+  _displays_id           = true;
+  _needs_gc              = true;
+  _uses_context          = false;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::migration;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -54,7 +60,10 @@ int CmdExport::execute (std::string& output)
   // Apply filter.
   Filter filter;
   std::vector <Task> filtered;
-  filter.subset (filtered, false);
+  filter.subset (filtered);
+
+  // Export == render.
+  context.timer_render.start ();
 
   // Obey 'limit:N'.
   int rows = 0;
@@ -70,8 +79,7 @@ int CmdExport::execute (std::string& output)
     output += "[\n";
 
   int counter = 0;
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto task = filtered.begin (); task != filtered.end (); ++task)
   {
     if (task != filtered.begin ())
       {
@@ -92,6 +100,7 @@ int CmdExport::execute (std::string& output)
   if (json_array)
     output += "]\n";
 
+  context.timer_render.stop ();
   return rc;
 }
 

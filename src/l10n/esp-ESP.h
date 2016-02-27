@@ -76,7 +76,7 @@
 //
 //   5. Add your new language to task.git/cmake.h.in:
 //
-//        #define LANGUAGE_DEU_DEU ${LANGUAGE_DEU_DEU}                                        
+//        #define LANGUAGE_DEU_DEU ${LANGUAGE_DEU_DEU}
 //
 //   6. Build your localized Taskwarrior with these commands:
 //
@@ -105,9 +105,9 @@
 #define STRING_PARSER_ALIAS_NEST     "Límite de alias anidados ({1}) alcanzado."
 #define STRING_PARSER_OVERRIDE_RC    "Sobrescritura de configuración rc.{1}:{2}"
 #define STRING_PARSER_UNKNOWN_ATTMOD "Error: modificador de atributo no reconocido '{1}'."
-#define STRING_PARSER_UUID_AFTER_COMMA "UUID no reconocido tras coma."
 #define STRING_PARSER_ALTERNATE_RC   "Usando el archivo .taskrc alternativo {1}"
 #define STRING_PARSER_ALTERNATE_DATA "Usando data.location alternativa {1}"
+#define STRING_PARSER_UNEXPECTED_ARG "The '{1}' command does not allow '{2}'."
 
 // Variant
 //
@@ -115,22 +115,16 @@
 // mostly concerned with how various operators interact with the different
 // data types.
 #define STRING_VARIANT_TIME_T        "No se puede instanciar este tipo con un valor de naturaleza time_t."
-#define STRING_VARIANT_CMP_UNKNOWN   "No se puede comparar un tipo desconocido"
-#define STRING_VARIANT_EQ_UNKNOWN    "No se puede equiparar un tipo desconocido"
-#define STRING_VARIANT_EXP_UNKNOWN   "No se puede exponenciar un tipo desconocido"
 #define STRING_VARIANT_EXP_BOOL      "No se puede exponenciar un booleano"
 #define STRING_VARIANT_EXP_NON_INT   "No se puede exponenciar a una potencia no entera"
 #define STRING_VARIANT_EXP_STRING    "No se puede exponenciar una cadena de caracteres"
 #define STRING_VARIANT_EXP_DATE      "No se puede exponenciar una fecha"
 #define STRING_VARIANT_EXP_DURATION  "No se puede exponenciar una duración"
-#define STRING_VARIANT_SUB_UNKNOWN   "No se puede sustraer un tipo desconocido"
 #define STRING_VARIANT_SUB_BOOL      "No se puede sustraer de un booleano"
 #define STRING_VARIANT_SUB_STRING    "No se puede sustraer una cadenas de caracteres"
 #define STRING_VARIANT_SUB_DATE      "No se puede sustraer una fecha"
-#define STRING_VARIANT_ADD_UNKNOWN   "No se puede sumar un tipo desconocido"
 #define STRING_VARIANT_ADD_BOOL      "No se puede sumar dos booleanos"
 #define STRING_VARIANT_ADD_DATE      "No se puede sumar dos fechas"
-#define STRING_VARIANT_MUL_UNKNOWN   "No se puede multiplicar un tipo desconocido"
 #define STRING_VARIANT_MUL_BOOL      "No se puede multiplicar un booleano"
 #define STRING_VARIANT_MUL_DATE      "No se puede multiplicar una fecha"
 #define STRING_VARIANT_MUL_REAL_STR  "No se puede multiplicar un número real por una cadena de caracteres"
@@ -141,7 +135,6 @@
 #define STRING_VARIANT_MUL_DUR_STR   "No se puede multiplicar una duración por una cadena de caracteres"
 #define STRING_VARIANT_MUL_DUR_DATE  "No se puede multiplicar una duración por una fecha"
 #define STRING_VARIANT_MUL_DUR_DUR   "No se puede multiplicar una duración por otra"
-#define STRING_VARIANT_DIV_UNKNOWN   "No se puede dividir un tipo desconocido"
 #define STRING_VARIANT_DIV_BOOL      "No se puede dividir un booleano"
 #define STRING_VARIANT_DIV_INT_BOOL  "No se puede dividir un entero por un booleano"
 #define STRING_VARIANT_DIV_ZERO      "No se puede dividir por cero"
@@ -166,11 +159,8 @@
 #define STRING_VARIANT_MOD_REAL_DATE "No se puede modular un real por una fecha"
 #define STRING_VARIANT_MOD_REAL_STR  "No se puede modular un real por una cadena de caracteres"
 #define STRING_VARIANT_MOD_STR       "No se puede modular una cadena de caracteres"
-#define STRING_VARIANT_MOD_UNKNOWN   "No se puede modular un tipo desconocido"
 #define STRING_VARIANT_MOD_ZERO      "No se puede modular cero"
-#define STRING_VARIANT_RENDER_UNK    "No se puede dibujar un tipo desconocido."
 #define STRING_VARIANT_SQRT_NEG      "No se puede calcular la raíz cuadrada de un tipo desconocido"
-#define STRING_VARIANT_COERCE_UNK    "No se puede convertir un dato ni a un tipo desconocido ni desde el mismo"
 
 // Dates
 //
@@ -241,6 +231,16 @@
 #define STRING_COLUMN_LABEL_UDACOUNT "Recuento de uso"
 #define STRING_COLUMN_LABEL_ORPHAN   "UDA huérfano"
 
+#define STRING_COLUMN_LABEL_COMMAND  "Command"
+#define STRING_COLUMN_LABEL_CATEGORY "Category"
+#define STRING_COLUMN_LABEL_RO       "R/W"
+#define STRING_COLUMN_LABEL_SHOWS_ID "ID"
+#define STRING_COLUMN_LABEL_GC       "GC"
+#define STRING_COLUMN_LABEL_CONTEXT  "Context"
+#define STRING_COLUMN_LABEL_FILTER   "Filter"
+#define STRING_COLUMN_LABEL_MODS     "Mods"
+#define STRING_COLUMN_LABEL_MISC     "Misc"
+
 // Column Examples
 #define STRING_COLUMN_EXAMPLES_TAGS  "casa @tarea"
 #define STRING_COLUMN_EXAMPLES_PROJ  "casa.jardín"
@@ -272,7 +272,10 @@
 #define STRING_CMD_LOG_USAGE         "Añade una nueva tarea que ya ha sido completada"
 #define STRING_CMD_LOG_NO_RECUR      "No puede registrar tareas recurrentes."
 #define STRING_CMD_LOG_NO_WAITING    "No puede registrar tareas en espera."
-#define STRING_CMD_LOG_LOGGED        "Tarea registrada."
+
+//#define STRING_CMD_LOG_LOGGED        "Tarea registrada."
+#define STRING_CMD_LOG_LOGGED        "Logged task {1}."
+
 #define STRING_CMD_IDS_USAGE_RANGE   "Muestra los IDs de las tareas coincidentes, como un rango"
 #define STRING_CMD_IDS_USAGE_LIST    "Muestra los IDs de las tareas coincidentes, en forma de lista"
 #define STRING_CMD_IDS_USAGE_ZSH     "Muestra los IDs y descripciones de las tareas coincidentes"
@@ -291,7 +294,6 @@
 #define STRING_CMD_INFO_MODIFIED     "Modificada por última vez"
 #define STRING_CMD_INFO_VIRTUAL_TAGS "Virtual tags"
 #define STRING_CMD_UNDO_USAGE        "Revierte el cambio más reciente a una tarea"
-#define STRING_CMD_UNDO_MODS         "El comando undo no permite más modificación a la tarea."
 #define STRING_CMD_STATS_USAGE       "Muestra estadísticas de la base de datos de tareas"
 #define STRING_CMD_STATS_CATEGORY    "Categoría"
 #define STRING_CMD_STATS_DATA        "Datos"
@@ -314,7 +316,6 @@
 
 #define STRING_CMD_STATS_DESC_LEN    "Longitud media de desc"
 #define STRING_CMD_STATS_CHARS       "{1} caracteres"
-#define STRING_CMD_STATS_LAST_SYNC   "Ültima sincronización del servidor"
 #define STRING_CMD_STATS_BLOCKED     "Tareas bloqueadas"
 #define STRING_CMD_STATS_BLOCKING    "Tareas bloqueantes"
 #define STRING_CMD_REPORTS_USAGE     "Lista todos los informes soportados"
@@ -345,6 +346,9 @@
 #define STRING_CMD_GHISTORY_YEAR     "Año"
 #define STRING_CMD_GHISTORY_MONTH    "Mes"
 #define STRING_CMD_GHISTORY_NUMBER   "Número Añadidas/Completadas/Suprimidas"
+#define STRING_CMD_UNIQUE_USAGE      "Generates lists of unique attribute values"
+#define STRING_CMD_UNIQUE_MISSING    "An attribute must be specified.  See 'task _columns'."
+#define STRING_CMD_UNIQUE_VALID      "You must specify an attribute or UDA."
 
 #define STRING_CMD_DONE_USAGE        "Marca la tarea especificada como completada"
 #define STRING_CMD_DONE_CONFIRM      "¿Completar tarea {1} '{2}'?"
@@ -371,6 +375,7 @@
 #define STRING_CMD_COUNT_USAGE       "Cuenta tareas que coinciden"
 #define STRING_CMD_GET_USAGE         "Método de acceso al DOM"
 #define STRING_CMD_GET_NO_DOM        "Referencia a DOM no especificada."
+#define STRING_CMD_GET_BAD_REF       "'{1}' is not a DOM reference."
 
 #define STRING_CMD_UDAS_NO           "Ningún UDA definido."
 #define STRING_CMD_UDAS_SUMMARY      "{1} UDA definido"
@@ -457,9 +462,9 @@
 
 #define STRING_CMD_IMPORT_USAGE      "Importa archivos JSON"
 #define STRING_CMD_IMPORT_SUMMARY    "Importadas {1} tareas."
-#define STRING_CMD_IMPORT_NOFILE     "Debe especificar un archivo a importar."
 #define STRING_CMD_IMPORT_FILE       "Importando '{1}'"
 #define STRING_CMD_IMPORT_MISSING    "Archivo '{1}' no encontrado."
+#define STRING_CMD_IMPORT_UUID_BAD   "Not a valid UUID '{1}'."
 #define STRING_TASK_NO_DESC          "La anotación carece de descripción: {1}"
 #define STRING_TASK_NO_ENTRY         "La anotación carece de fecha de entrada: {1}"
 
@@ -477,7 +482,7 @@
 #define STRING_CMD_SYNC_SUCCESS2     "Sincronización correcta. {1} cambios recibidos."
 #define STRING_CMD_SYNC_SUCCESS3     "Sincronización correcta. {1} cambios enviados, {2} cambios recibidos."
 #define STRING_CMD_SYNC_SUCCESS_NOP  "Sincronización correcta. No hay cambios"
-#define STRING_CMD_SYNC_FAIL_ACCOUNT "Sincronización fallida. O bien sus credenciales son incorrectas, o su cuenta de Servidor Task no está habilitada."
+#define STRING_CMD_SYNC_FAIL_ACCOUNT "Sincronización fallida. O bien sus credenciales son incorrectas, o su cuenta en el servidor Task no existe."
 #define STRING_CMD_SYNC_FAIL_ERROR   "Sincronización fallida. El Servidor Task devolvió error: {1} {2}"
 #define STRING_CMD_SYNC_FAIL_CONNECT "Sincronización fallida. No se pudo conectar con el Servidor Task."
 #define STRING_CMD_SYNC_BAD_SERVER   "Sincronización fallida. Ajuste de configuración '{1}' incorrecto"
@@ -519,12 +524,12 @@
 #define STRING_CMD_DIAG_HOOK_ENABLE  "Habilitado"
 #define STRING_CMD_DIAG_HOOK_DISABLE "Inhabilitado"
 
+#define STRING_CMD_COMMANDS_USAGE    "Generates a list of all commands, with behavior details"
 #define STRING_CMD_HCOMMANDS_USAGE   "Genera una lista de todos los comandos, con fines de auto-completado"
 #define STRING_CMD_ZSHCOMMANDS_USAGE "Genera una lista de todos los comandos, con fines de auto-completado zsh"
 
 #define STRING_CMD_ZSHATTS_USAGE     "Genera una lista de todos los atributos, con fines de auto-completado zsh"
 #define STRING_CMD_ALIASES_USAGE     "Genera una lista de todos los alias, con fines de auto-completado"
-#define STRING_CMD_INSTALL_USAGE     "Instala extensiones y scripts externos"
 
 #define STRING_CMD_MODIFY_USAGE1     "Modifica la tarea existente con los argumentos provistos."
 //#define STRING_CMD_MODIFY_USAGE1     "Modifies the existing task with provided arguments."
@@ -597,6 +602,7 @@
 #define STRING_CMD_BURN_USAGE_D      "Muestra un diagrama burndown, por días"
 #define STRING_CMD_BURN_TITLE        "Burndown"  // |esp-ESP|==|eng-USA|
 #define STRING_CMD_BURN_TOO_SMALL    "Ventana de terminal demasiado pequeña para dibujar una gráfica."
+#define STRING_CMD_BURN_TOO_LARGE    "Terminal window too large to draw a graph."
 #define STRING_CMD_BURN_DAILY        "Diario"
 #define STRING_CMD_BURN_WEEKLY       "Semanal"
 #define STRING_CMD_BURN_MONTHLY      "Mensual"
@@ -636,47 +642,26 @@
 #define STRING_DATE_INVALID_FORMAT   "'{1}' no es una fecha válida según el formato '{2}'."
 #define STRING_DATE_BAD_WEEKSTART    "La variable de configuración 'weekstart' solamente puede contener 'Sunday' (domingo) o 'Monday' (lunes)."
 
-#define STRING_DATE_JANUARY_LONG     "enero"
-#define STRING_DATE_FEBRUARY_LONG    "febrero"
-#define STRING_DATE_MARCH_LONG       "marzo"
-#define STRING_DATE_APRIL_LONG       "abril"
-#define STRING_DATE_MAY_LONG         "mayo"
-#define STRING_DATE_JUNE_LONG        "junio"
-#define STRING_DATE_JULY_LONG        "julio"
-#define STRING_DATE_AUGUST_LONG      "agosto"
-#define STRING_DATE_SEPTEMBER_LONG   "septiembre"
-#define STRING_DATE_OCTOBER_LONG     "octubre"
-#define STRING_DATE_NOVEMBER_LONG    "noviembre"
-#define STRING_DATE_DECEMBER_LONG    "diciembre"
+#define STRING_DATE_JANUARY          "enero"
+#define STRING_DATE_FEBRUARY         "febrero"
+#define STRING_DATE_MARCH            "marzo"
+#define STRING_DATE_APRIL            "abril"
+#define STRING_DATE_MAY              "mayo"
+#define STRING_DATE_JUNE             "junio"
+#define STRING_DATE_JULY             "julio"
+#define STRING_DATE_AUGUST           "agosto"
+#define STRING_DATE_SEPTEMBER        "septiembre"
+#define STRING_DATE_OCTOBER          "octubre"
+#define STRING_DATE_NOVEMBER         "noviembre"
+#define STRING_DATE_DECEMBER         "diciembre"
 
-#define STRING_DATE_JANUARY_SHORT    "ene"
-#define STRING_DATE_FEBRUARY_SHORT   "feb"  // |esp-ESP|==|eng-USA|
-#define STRING_DATE_MARCH_SHORT      "mar"  // |esp-ESP|==|eng-USA|
-#define STRING_DATE_APRIL_SHORT      "abr"
-#define STRING_DATE_MAY_SHORT        "may"  // |esp-ESP|==|eng-USA|
-#define STRING_DATE_JUNE_SHORT       "jun"  // |esp-ESP|==|eng-USA|
-#define STRING_DATE_JULY_SHORT       "jul"  // |esp-ESP|==|eng-USA|
-#define STRING_DATE_AUGUST_SHORT     "ago"
-#define STRING_DATE_SEPTEMBER_SHORT  "sep"  // |esp-ESP|==|eng-USA|
-#define STRING_DATE_OCTOBER_SHORT    "oct"  // |esp-ESP|==|eng-USA|
-#define STRING_DATE_NOVEMBER_SHORT   "nov"  // |esp-ESP|==|eng-USA|
-#define STRING_DATE_DECEMBER_SHORT   "dic"
-
-#define STRING_DATE_SUNDAY_LONG      "domingo"
-#define STRING_DATE_MONDAY_LONG      "lunes"
-#define STRING_DATE_TUESDAY_LONG     "martes"
-#define STRING_DATE_WEDNESDAY_LONG   "miércoles"
-#define STRING_DATE_THURSDAY_LONG    "jueves"
-#define STRING_DATE_FRIDAY_LONG      "viernes"
-#define STRING_DATE_SATURDAY_LONG    "sábado"
-
-#define STRING_DATE_SUNDAY_SHORT     "dom"
-#define STRING_DATE_MONDAY_SHORT     "lun"
-#define STRING_DATE_TUESDAY_SHORT    "mar"
-#define STRING_DATE_WEDNESDAY_SHORT  "mie"
-#define STRING_DATE_THURSDAY_SHORT   "jue"
-#define STRING_DATE_FRIDAY_SHORT     "vie"
-#define STRING_DATE_SATURDAY_SHORT   "sab"
+#define STRING_DATE_SUNDAY           "domingo"
+#define STRING_DATE_MONDAY           "lunes"
+#define STRING_DATE_TUESDAY          "martes"
+#define STRING_DATE_WEDNESDAY        "miércoles"
+#define STRING_DATE_THURSDAY         "jueves"
+#define STRING_DATE_FRIDAY           "viernes"
+#define STRING_DATE_SATURDAY         "sábado"
 
 // dependency
 #define STRING_DEPEND_BLOCKED        "La tarea {1} está bloqueada por:"
@@ -686,7 +671,6 @@
 // DOM
 #define STRING_DOM_UNKNOWN           "<desconocido>"
 #define STRING_DOM_UNREC             "DOM: No se pudo obtener el nombre no reconocido '{1}'."
-#define STRING_DOM_CANNOT_SET        "DOM: No se pudo establecer '{1}'."
 
 // Eval
 #define STRING_EVAL_NO_EXPRESSION    "Ninguna expresión para evaluar."
@@ -697,8 +681,9 @@
 
 // edit
 #define STRING_EDIT_NO_CHANGES       "No se detectaron modificaciones."
-#define STRING_EDIT_NO_EDITS         "No se realizó edición."
+#define STRING_EDIT_FAILED           "Editing failed with exit code {1}."
 #define STRING_EDIT_COMPLETE         "Edición completada."
+#define STRING_EDIT_IN_PROGRESS      "Task is already being edited."
 #define STRING_EDIT_LAUNCHING        "Lanzando '{1}' ahora..."
 #define STRING_EDIT_CHANGES          "Se detectaron modificaciones."
 #define STRING_EDIT_UNPARSEABLE      "Taskwarrior no pudo manejar sus modificaciones. ¿Quiere intentarlo de nuevo?"
@@ -777,6 +762,9 @@
 #define STRING_INVALID_SORT_COL      "La columna '{1}' no es un campo de ordenación válido."
 #define STRING_TLS_INIT_FAIL         "Error inicializando TLS. {1}"
 #define STRING_ERROR_DETAILS         "El ajuste 'calendar.details.report' debe contener un único nombre de informe."
+#define STRING_ERROR_NO_FILTER       "Command line filters are not supported by this command."
+#define STRING_ERROR_CONFIRM_SIGINT  "Interrupted: No changes made."
+#define STRING_ERROR_BAD_STATUS      "The status '{1}' is not valid."
 
 // Feedback
 #define STRING_FEEDBACK_NO_TASKS     "Ninguna tarea."
@@ -805,6 +793,7 @@
 #define STRING_FEEDBACK_TAG_NONAG    "La marca especial 'nonag' evitará el recuerdo fastidioso cuando la tarea sea modificada."
 #define STRING_FEEDBACK_TAG_NOCAL    "La marca especial 'nocal' mantendrá esta tarea fuera del informe 'calendar'."
 #define STRING_FEEDBACK_TAG_NEXT     "La etiqueta especial 'next' aumentará la urgencia de esta tarea para que aparezca en el informe 'next'."
+#define STRING_FEEDBACK_TAG_VIRTUAL  "Virtual tags (including '{1}') are reserved and may not be added or removed."
 #define STRING_FEEDBACK_UNBLOCKED    "Desbloqueada {1} '{2}'."
 #define STRING_FEEDBACK_EXPIRED      "La tarea {1} '{2}' caducó y fue eliminada."
 #define STRING_FEEDBACK_BACKLOG      "Hay modificaciones locales.  Se require una sincronización."
@@ -901,6 +890,10 @@
 #define STRING_TDB2_UNDO_COMPLETE    "Deshacer completado."
 #define STRING_TDB2_UNDO_SYNCED      "No se puede deshacer el cambio porque la tarea ya ha sido sincronizada. Como alternativa, modifique la tarea."
 #define STRING_TDB2_DIRTY_EXIT       "Saliendo con cambios sin escribir a {1}"
+#define STRING_TDB2_UNWAIT           "Un-waiting task '{1}'"
+
+// recur.cpp
+#define STRING_RECUR_CREATE          "Creating recurring task instance '{1}'"
 
 // View
 #define STRING_VIEW_TOO_SMALL        "El informe tiene una anchura mínima de {1} y no cabe en la disponible, que es {2}."
@@ -923,7 +916,7 @@
   "  task add -- project:Home needs scheduling\n" */
  #define STRING_CMD_HELP_TEXT \
   "La documentación de Taskwarrior se puede consultar usando 'man task', 'man taskrc'" \
-  "man task-color', 'man task-synch o en http://taskwarrior.org\n" \
+  "man task-color', 'man task-sync' o en http://taskwarrior.org\n" \
   "\n" \
   "La forma general para los comandos es:\n" \
   "  task [<filter>] <command> [<mods>]\n" \
@@ -973,21 +966,27 @@
   "  end:            Fecha en la que la tarea fue completada/eliminada\n" \
   "  start:          Fecha en la que la tarea fue comenzada\n" \
   "  scheduled:      Fecha programada para que la tarea comience\n" \
+  "  modified:       Date task was last modified\n" \
   "  depends:        Otras tareas de las que esta tarea depende\n" \
   "\n" \
   "Los modificadores de atributos hacen a los filtros más precisos. Modificadores soportados son:\n" \
-  "  before     (antes de; sinónimos under, below)\n" \
-  "  after      (después de; sinónimos over, above)\n" \
-  "  none       (nada)\n" \
-  "  any        (cualquiera)\n" \
-  "  is         (es; sinónimo equals)\n" \
-  "  isnt       (no es; sinónimo not)\n" \
-  "  has        (tiene; sinónimo contains)\n" \
-  "  hasnt      (no tiene)\n" \
-  "  startswith (comienza con; sinónimo left)\n" \
-  "  endswith   (se termina con; sinónimo right)\n" \
-  "  word       (contiene palabra)\n" \
-  "  noword     (no contiene palabra)\n" \
+  "\n" \
+  "  Modifiers         Example            Equivalent           Meaning\n" \
+  "  ----------------  -----------------  -------------------  -------------------------\n" \
+  "                    due:today          due = today          Fuzzy match\n" \
+  "  not               due.not:today      due != today         Fuzzy non-match\n" \
+  "  before, below     due.before:today   due < tomorrow       Exact date comparison\n" \
+  "  after, above      due.after:today    due > tomorrow       Exact date comparison\n" \
+  "  none              project.none:      project == ''        Empty\n" \
+  "  any               project.any:       project !== ''       Not empty\n" \
+  "  is, equals        project.is:x       project == x         Exact match\n" \
+  "  isnt              project.isnt:x     project !== x        Exact non-match\n" \
+  "  has, contains     desc.has:Hello     desc ~ Hello         Pattern match\n" \
+  "  hasnt,            desc.hasnt:Hello   desc !~ Hello        Pattern non-match\n" \
+  "  startswith, left  desc.left:Hel      desc ~ '^Hel'        Beginning match\n" \
+  "  endswith, right   desc.right:llo     desc ~ 'llo$'        End match\n" \
+  "  word              desc.word:Hello    desc ~ '\\bHello\\b'   Boundaried word match\n" \
+  "  noword            desc.noword:Hello  desc !~ '\\bHello\\b'  Boundaried word non-match\n" \
   "\n" \
   "Soporte de expresiones algebraicas alternativas:\n" \
   "  and  or  xor            Operadores lógicos\n" \

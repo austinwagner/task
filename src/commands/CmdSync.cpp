@@ -29,6 +29,7 @@
 #include <inttypes.h>
 #include <signal.h>
 #include <Context.h>
+#include <Filter.h>
 #include <Color.h>
 #include <text.h>
 #include <util.h>
@@ -40,11 +41,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdSync::CmdSync ()
 {
-  _keyword     = "synchronize";
-  _usage       = "task          synchronize [initialize]";
-  _description = STRING_CMD_SYNC_USAGE;
-  _read_only   = false;
-  _displays_id = false;
+  _keyword               = "synchronize";
+  _usage                 = "task          synchronize [initialize]";
+  _description           = STRING_CMD_SYNC_USAGE;
+  _read_only             = false;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::migration;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -54,13 +61,16 @@ int CmdSync::execute (std::string& output)
 #ifdef HAVE_TLS_LIBRARY
   std::stringstream out;
 
+  Filter filter;
+  if (filter.hasFilter ())
+    throw std::string (STRING_ERROR_NO_FILTER);
+
   // Loog for the 'init' keyword to indicate one-time pending.data upload.
   bool first_time_init = false;
-  std::vector <std::string> words = context.cli.getWords ();
-  std::vector <std::string>::iterator word;
-  for (word = words.begin (); word != words.end (); ++word)
+  std::vector <std::string> words = context.cli2.getWords ();
+  for (auto& word : words)
   {
-    if (closeEnough ("initialize", *word, 4))
+    if (closeEnough ("initialize", word, 4))
     {
       if (!context.config.getBoolean ("confirmation") ||
           confirm (STRING_CMD_SYNC_INIT))
@@ -125,24 +135,22 @@ int CmdSync::execute (std::string& output)
     // deltas is meaningless.
     context.tdb2.backlog._file.truncate ();
 
-    std::vector <Task> pending = context.tdb2.pending.get_tasks ();
-    std::vector <Task>::iterator i;
-    for (i = pending.begin (); i != pending.end (); ++i)
+    auto pending = context.tdb2.pending.get_tasks ();
+    for (auto& i : pending)
     {
-      payload += i->composeJSON () + "\n";
+      payload += i.composeJSON () + "\n";
       ++upload_count;
     }
   }
   else
   {
     std::vector <std::string> lines = context.tdb2.backlog.get_lines ();
-    std::vector <std::string>::iterator i;
-    for (i = lines.begin (); i != lines.end (); ++i)
+    for (auto& i : lines)
     {
-      if ((*i)[0] == '{')
+      if (i[0] == '{')
         ++upload_count;
 
-      payload += *i + "\n";
+      payload += i + "\n";
     }
   }
 
@@ -166,7 +174,6 @@ int CmdSync::execute (std::string& output)
 
 #ifndef WINDOWS
   signal (SIGHUP,    SIG_IGN);
-  signal (SIGKILL,   SIG_IGN);
   signal (SIGPIPE,   SIG_IGN);
   signal (SIGUSR1,   SIG_IGN);
   signal (SIGUSR2,   SIG_IGN);
@@ -193,14 +200,13 @@ int CmdSync::execute (std::string& output)
         context.tdb2.all_tasks ();
 
       std::string sync_key = "";
-      std::vector <std::string>::iterator line;
-      for (line = lines.begin (); line != lines.end (); ++line)
+      for (auto& line : lines)
       {
-        if ((*line)[0] == '{')
+        if (line[0] == '{')
         {
           ++download_count;
 
-          Task from_server (*line);
+          Task from_server (line);
           std::string uuid = from_server.get ("uuid");
 
           // Is it a new task from the server, or an update to an existing one?
@@ -228,9 +234,9 @@ int CmdSync::execute (std::string& output)
             context.tdb2.add (from_server, false);
           }
         }
-        else if (*line != "")
+        else if (line != "")
         {
-          sync_key = *line;
+          sync_key = line;
           context.debug ("Sync key " + sync_key);
         }
 
@@ -321,7 +327,6 @@ int CmdSync::execute (std::string& output)
 
 #ifndef WINDOWS
   signal (SIGHUP,    SIG_DFL);
-  signal (SIGKILL,   SIG_DFL);
   signal (SIGPIPE,   SIG_DFL);
   signal (SIGUSR1,   SIG_DFL);
   signal (SIGUSR2,   SIG_DFL);
@@ -347,7 +352,7 @@ bool CmdSync::send (
 {
   // It is important that the ':' be the *last* colon, in order to support
   // IPv6 addresses.
-  std::string::size_type colon = to.rfind (':');
+  auto colon = to.rfind (':');
   if (colon == std::string::npos)
     throw format (STRING_CMD_SYNC_BAD_SERVER, to);
 

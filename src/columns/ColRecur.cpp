@@ -26,7 +26,7 @@
 
 #include <cmake.h>
 #include <Context.h>
-#include <Duration.h>
+#include <ISO8601.h>
 #include <ColRecur.h>
 #include <text.h>
 #include <utf8.h>
@@ -37,31 +37,21 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 ColumnRecur::ColumnRecur ()
 {
-  _name  = "recur";
+  _name     = "recur";
 
   // This is 'string', and not 'duration' to force the value to be stored as a
   // raw duration, so that it can be reevaluated every time.
-  _type  = "string";
+  _type     = "string";
 
-  _style = "duration";
-  _label = STRING_COLUMN_LABEL_RECUR;
-
-  _styles.push_back ("duration");
-  _styles.push_back ("indicator");
-
-  _examples.push_back ("weekly");
-  _examples.push_back (context.config.get ("recurrence.indicator"));
+  _style    = "duration";
+  _label    = STRING_COLUMN_LABEL_RECUR;
+  _styles   = {"duration", "indicator"};
+  _examples = {"weekly", context.config.get ("recurrence.indicator")};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ColumnRecur::~ColumnRecur ()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool ColumnRecur::validate (std::string& value)
-{
-  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -86,12 +76,14 @@ void ColumnRecur::measure (Task& task, unsigned int& minimum, unsigned int& maxi
     if (_style == "default" ||
         _style == "duration")
     {
-      minimum = maximum = Duration (task.get ("recur")).formatISO ().length ();
+      minimum = maximum = ISO8601p (task.get ("recur")).format ().length ();
     }
     else if (_style == "indicator")
     {
-      minimum = maximum = utf8_width (context.config.get ("recurrence.indicator"));
-      _fixed_width = true;
+      if (task.has ("recur"))
+        minimum = maximum = utf8_width (context.config.get ("recurrence.indicator"));
+      else
+        minimum = maximum = 0;
     }
     else
       throw format (STRING_COLUMN_BAD_FORMAT, _name, _style);
@@ -113,7 +105,7 @@ void ColumnRecur::render (
       lines.push_back (
         color.colorize (
           rightJustify (
-            Duration (task.get ("recur")).formatISO (), width)));
+            ISO8601p (task.get ("recur")).format (), width)));
     }
     else if (_style == "indicator")
     {

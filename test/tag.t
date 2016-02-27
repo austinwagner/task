@@ -1,152 +1,512 @@
-#! /usr/bin/env perl
-################################################################################
-##
-## Copyright 2006 - 2015, Paul Beckingham, Federico Hernandez.
-##
-## Permission is hereby granted, free of charge, to any person obtaining a copy
-## of this software and associated documentation files (the "Software"), to deal
-## in the Software without restriction, including without limitation the rights
-## to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-## copies of the Software, and to permit persons to whom the Software is
-## furnished to do so, subject to the following conditions:
-##
-## The above copyright notice and this permission notice shall be included
-## in all copies or substantial portions of the Software.
-##
-## THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-## OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-## FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-## THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-## LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-## OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-## SOFTWARE.
-##
-## http://www.opensource.org/licenses/mit-license.php
-##
-################################################################################
+#!/usr/bin/env python2.7
+# -*- coding: utf-8 -*-
+###############################################################################
+#
+# Copyright 2006 - 2015, Paul Beckingham, Federico Hernandez.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# http://www.opensource.org/licenses/mit-license.php
+#
+###############################################################################
 
-use strict;
-use warnings;
-use Test::More tests => 32;
+import sys
+import os
+import unittest
+# Ensure python finds the local simpletap module
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Ensure environment has no influence.
-delete $ENV{'TASKDATA'};
-delete $ENV{'TASKRC'};
+from basetest import Task, TestCase
 
-use File::Basename;
-my $ut = basename ($0);
-my $rc = $ut . '.rc';
 
-# Create the rc file.
-if (open my $fh, '>', $rc)
-{
-  print $fh "data.location=.\n",
-            "confirmation=off\n",
-            "verbose=nothing\n";
-  close $fh;
-}
+class TestTags(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        """Executed once before any test in the class"""
+        cls.t = Task()
 
-# Add task with tags.
-my $output = qx{../src/task rc:$rc add +one This +two is a test +three 2>&1; ../src/task rc:$rc info 1 2>&1};
-like ($output, qr/^Tags\s+one two three\n/m, "$ut: tags found");
+    def setUp(self):
+        """Executed before each test in the class"""
 
-# Remove tags.
-$output = qx{../src/task rc:$rc 1 modify -three -two -one 2>&1; ../src/task rc:$rc info 1 2>&1};
-unlike ($output, qr/^Tags/m, "$ut: -three -two -one tag removed");
+    def test_tag_manipulation(self):
+        """Test addition and removal of tags"""
+        self.t("add +one This +two is a test +three")
+        code, out, err = self.t("_get 1.tags")
+        self.assertEqual("one,two,three\n", out)
 
-# Add tags.
-$output = qx{../src/task rc:$rc 1 modify +four +five +six 2>&1; ../src/task rc:$rc info 1 2>&1};
-like ($output, qr/^Tags\s+four five six\n/m, "$ut: tags found");
+        # Remove tags.
+        self.t("1 modify -three -two -one")
+        code, out, err = self.t("_get 1.tags")
+        self.assertEqual("\n", out)
 
-# Remove tags.
-$output = qx{../src/task rc:$rc 1 modify -four -five -six 2>&1; ../src/task rc:$rc info 1 2>&1};
-unlike ($output, qr/^Tags/m, "$ut: -four -five -six tag removed");
+        # Add tags.
+        self.t("1 modify +four +five +six")
+        code, out, err = self.t("_get 1.tags")
+        self.assertEqual("four,five,six\n", out)
 
-# Add and remove tags.
-$output = qx{../src/task rc:$rc 1 modify +duplicate -duplicate 2>&1; ../src/task rc:$rc info 1 2>&1};
-unlike ($output, qr/^Tags/m, "$ut: +duplicate -duplicate NOP");
+        # Remove tags.
+        self.t("1 modify -four -five -six")
+        code, out, err = self.t("_get 1.tags")
+        self.assertEqual("\n", out)
 
-# Remove missing tag.
-$output = qx{../src/task rc:$rc 1 modify -missing 2>&1; ../src/task rc:$rc info 1 2>&1};
-unlike ($output, qr/^Tags/m, "$ut: -missing NOP");
+        # Add and remove tags.
+        self.t("1 modify +duplicate -duplicate")
+        code, out, err = self.t("_get 1.tags")
+        self.assertEqual("\n", out)
 
-# Virtual tag testing.
-qx{../src/task rc:$rc log completed 2>&1};
-qx{../src/task rc:$rc add deleted 2>&1; ../src/task rc:$rc 2 delete 2>&1};
-qx{../src/task rc:$rc add minimal 2>&1};
-qx{../src/task rc:$rc add maximal +tag pro:PRO pri:H due:yesterday 2>&1};
-qx{../src/task rc:$rc 4 start 2>&1};
-qx{../src/task rc:$rc 4 annotate note 2>&1};
-qx{../src/task rc:$rc add blocked depends:1 2>&1};
-qx{../src/task rc:$rc add due_eom due:eom 2>&1};
-qx{../src/task rc:$rc add due_eow due:eow 2>&1};
+        # Remove missing tag.
+        code, out, err = self.t("1 modify -missing")
+        self.assertIn("Modified 0 tasks", out)
 
-$output = qx{../src/task rc:$rc +COMPLETED all};
-like ($output, qr/completed/, "$ut: +COMPLETED");
-$output = qx{../src/task rc:$rc -COMPLETED all};
-unlike ($output, qr/completed/, "$ut: -COMPLETED");
 
-$output = qx{../src/task rc:$rc +DELETED all};
-like ($output, qr/deleted/, "$ut: +DELETED");
-$output = qx{../src/task rc:$rc -DELETED all};
-unlike ($output, qr/deleted/, "$ut: -DELETED");
+class TestVirtualTags(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        """Executed once before any test in the class"""
+        cls.t = Task()
+        cls.t.config("verbose", "nothing")
+        cls.t("log completed")
+        cls.t("add deleted")
+        cls.t("1 delete", input="y\n")
+        cls.t("add minimal")
+        cls.t("add maximal +tag pro:PRO pri:H due:yesterday")
+        cls.t("3 start")
+        cls.t("3 annotate note")
+        cls.t("add blocked depends:2")
+        cls.t("add due_eom due:eom")
+        cls.t("add due_eow due:eow")
 
-$output = qx{../src/task rc:$rc +PENDING all};
-like ($output, qr/minimal/, "$ut: +PENDING");
-$output = qx{../src/task rc:$rc -PENDING all};
-unlike ($output, qr/minimal/, "$ut: -PENDING");
+    def setUp(self):
+        """Executed before each test in the class"""
 
-$output = qx{../src/task rc:$rc +TAGGED list};
-like ($output, qr/maximal/, "$ut: +TAGGED");
-$output = qx{../src/task rc:$rc -TAGGED list};
-unlike ($output, qr/maximal/, "$ut: -TAGGED");
+    def test_virtual_tag_COMPLETED(self):
+        """Verify 'COMPLETED' appears when expected"""
+        code, out, err = self.t("+COMPLETED all")
+        self.assertIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +OVERDUE list};
-like ($output, qr/maximal/, "$ut: +OVERDUE");
-$output = qx{../src/task rc:$rc -OVERDUE list};
-unlike ($output, qr/maximal/, "$ut: -OVERDUE");
+        code, out, err = self.t("-COMPLETED all")
+        self.assertNotIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +BLOCKED list};
-like ($output, qr/blocked/, "$ut: +BLOCKED");
-$output = qx{../src/task rc:$rc -BLOCKED list};
-unlike ($output, qr/blocked/, "$ut: -BLOCKED");
+    def test_virtual_tag_DELETED(self):
+        """Verify 'DELETED' appears when expected"""
+        code, out, err = self.t("+DELETED all")
+        self.assertNotIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +BLOCKING list};
-like ($output, qr/This is a test/, "$ut: +BLOCKING");
-$output = qx{../src/task rc:$rc -BLOCKING list};
-unlike ($output, qr/This is a test/, "$ut: -BLOCKING");
+        code, out, err = self.t("-DELETED all")
+        self.assertIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +UNBLOCKED list};
-like ($output, qr/minimal/, "$ut: +UNBLOCKED");
-$output = qx{../src/task rc:$rc -UNBLOCKED list};
-unlike ($output, qr/minimal/, "$ut: -UNBLOCKED");
+    def test_virtual_tag_PENDING(self):
+        """Verify 'PENDING' appears when expected"""
+        code, out, err = self.t("+PENDING all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +YEAR list};
-like ($output, qr/due_eom/, "$ut: +YEAR");
-$output = qx{../src/task rc:$rc -YEAR list};
-unlike ($output, qr/due_eom/, "$ut: -YEAR");
+        code, out, err = self.t("-PENDING all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +MONTH list};
-like ($output, qr/due_eom/, "$ut: +MONTH");
-$output = qx{../src/task rc:$rc -MONTH list};
-unlike ($output, qr/due_eom/, "$ut: -MONTH");
+    def test_virtual_tag_TAGGED(self):
+        """Verify 'TAGGED' appears when expected"""
+        code, out, err = self.t("+TAGGED all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +WEEK list};
-like ($output, qr/due_eow/, "$ut: +WEEK");
-$output = qx{../src/task rc:$rc -WEEK list};
-unlike ($output, qr/due_eow/, "$ut: -WEEK");
+        code, out, err = self.t("-TAGGED all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +ACTIVE list};
-like ($output, qr/maximal/, "$ut: +ACTIVE");
-$output = qx{../src/task rc:$rc -ACTIVE list};
-unlike ($output, qr/maximal/, "$ut: -ACTIVE");
+    def test_virtual_tag_OVERDUE(self):
+        """Verify 'OVERDUE' appears when expected"""
+        code, out, err = self.t("+OVERDUE all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
 
-$output = qx{../src/task rc:$rc +ANNOTATED list};
-like ($output, qr/maximal/, "$ut: +ANNOTATED");
-$output = qx{../src/task rc:$rc -ANNOTATED list};
-unlike ($output, qr/maximal/, "$ut: -ANNOTATED");
+        code, out, err = self.t("-OVERDUE all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
 
-# Cleanup.
-unlink qw(pending.data completed.data undo.data backlog.data), $rc;
-exit 0;
+    def test_virtual_tag_BLOCKED(self):
+        """Verify 'BLOCKED' appears when expected"""
+        code, out, err = self.t("+BLOCKED all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
 
+        code, out, err = self.t("-BLOCKED all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
+
+    def test_virtual_tag_BLOCKING(self):
+        """Verify 'BLOCKING' appears when expected"""
+        code, out, err = self.t("+BLOCKING all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
+
+        code, out, err = self.t("-BLOCKING all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
+
+    def test_virtual_tag_UNBLOCKED(self):
+        """Verify 'UNBLOCKED' appears when expected"""
+        code, out, err = self.t("+UNBLOCKED all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
+
+        code, out, err = self.t("-UNBLOCKED all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
+
+    def test_virtual_tag_YEAR(self):
+        """Verify 'YEAR' appears when expected"""
+        code, out, err = self.t("+YEAR all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
+
+        code, out, err = self.t("-YEAR all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
+
+    def test_virtual_tag_MONTH(self):
+        """Verify 'MONTH' appears when expected"""
+        code, out, err = self.t("+MONTH all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertNotIn("blocked", out)
+        self.assertIn("due_eom", out)
+        # Ignore maximal, due_eow, which may be a different month.
+
+        code, out, err = self.t("-MONTH all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        # Ignore maximal, due_eow, which may be a different month.
+
+    def test_virtual_tag_WEEK(self):
+        """Verify 'WEEK' appears when expected"""
+        code, out, err = self.t("+WEEK all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertNotIn("blocked", out)
+        # Ignore maximal, due_eom, which may be a different week.
+        self.assertIn("due_eow", out)
+
+        code, out, err = self.t("-WEEK all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertIn("blocked", out)
+        # Ignore maximal, due_eom, which may be a different week.
+        self.assertNotIn("due_eow", out)
+
+    def test_virtual_tag_ACTIVE(self):
+        """Verify 'ACTIVE' appears when expected"""
+        code, out, err = self.t("+ACTIVE all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
+
+        code, out, err = self.t("-ACTIVE all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
+
+    def test_virtual_tag_ANNOTATED(self):
+        """Verify 'ANNOTATED' appears when expected"""
+        code, out, err = self.t("+ANNOTATED all")
+        self.assertNotIn("completed", out)
+        self.assertNotIn("deleted", out)
+        self.assertNotIn("minimal", out)
+        self.assertIn("maximal", out)
+        self.assertNotIn("blocked", out)
+        self.assertNotIn("due_eom", out)
+        self.assertNotIn("due_eow", out)
+
+        code, out, err = self.t("-ANNOTATED all")
+        self.assertIn("completed", out)
+        self.assertIn("deleted", out)
+        self.assertIn("minimal", out)
+        self.assertNotIn("maximal", out)
+        self.assertIn("blocked", out)
+        self.assertIn("due_eom", out)
+        self.assertIn("due_eow", out)
+
+    def test_virtual_tags_helper(self):
+        """Verify '_tags' shows appropriate tags"""
+        code, out, err = self.t("_tags")
+        self.assertIn("PENDING", out)
+        self.assertIn("next", out)
+        self.assertIn("nocal", out)
+        self.assertIn("nocolor", out)
+        self.assertIn("nonag", out)
+        self.assertIn("tag", out)
+
+
+class TestVirtualTagUDA(TestCase):
+    def setUp(self):
+        """Executed before each test in the class"""
+        self.t = Task()
+        self.t.config("uda.animal.type",  "string")
+        self.t.config("uda.animal.label", "Animal")
+        self.t("add one animal:donkey")
+        self.t("add two")
+
+    def test_virtual_tag_UDA(self):
+        """Verify 'UDA' appears when expected"""
+        code, out, err = self.t("+UDA all")
+        self.assertIn("one", out)
+        self.assertNotIn("two", out)
+
+
+class TestVirtualTagORPHAN(TestCase):
+    def setUp(self):
+        """Executed before each test in the class"""
+        self.t = Task()
+        self.t("add one rc.uda.animal.type:string rc.uda.animal.label:Animal animal:donkey")
+        self.t("add two")
+
+    def test_virtual_tag_ORPHAN(self):
+        """Verify 'ORPHAN' appears when expected"""
+        code, out, err = self.t("+ORPHAN all")
+        self.assertIn("one", out)
+        self.assertNotIn("two", out)
+
+
+class Test285(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.t = Task()
+        cls.t.config("verbose", "nothing")
+
+        #              OVERDUE YESTERDAY DUE TODAY TOMORROW WEEK MONTH YEAR
+        # due:-1week      Y       -       -    -       -      ?    ?     ?
+        # due:-1day       Y       Y       -    -       -      ?    ?     ?
+        # due:today       Y       -       Y    Y       -      ?    ?     ?
+        # due:tomorrow    -       -       Y    -       Y      ?    ?     ?
+        # due:3days       -       -       Y    -       -      ?    ?     ?
+        # due:1month      -       -       -    -       -      -    -     ?
+        # due:1year       -       -       -    -       -      -    -     -
+
+        cls.t('add due_last_week     due:-1week')
+        cls.t('add due_yesterday     due:-1day')
+        cls.t('add due_earlier_today due:today')
+        cls.t('add due_later_today   due:tomorrow')
+        cls.t('add due_three_days    due:3days')
+        cls.t('add due_next_month    due:1month')
+        cls.t('add due_next_year     due:1year')
+
+    def test_overdue(self):
+        """+OVERDUE"""
+        code, out, err = self.t("+OVERDUE count")
+        self.assertEqual(out, "3\n", "+OVERDUE == 3 tasks")
+
+    def test_yesterday(self):
+        """+YESTERDAY"""
+        code, out, err = self.t("+YESTERDAY count")
+        self.assertEqual(out, "1\n", "+YESTERDAY == 1 task")
+
+    def test_due(self):
+        """+DUE"""
+        code, out, err = self.t("+DUE count")
+        self.assertEqual(out, "3\n", "+DUE == 3 task")
+
+    def test_today(self):
+        """+TODAY"""
+        code, out, err = self.t("+TODAY count")
+        self.assertEqual(out, "1\n", "+TODAY == 1 task")
+
+    def test_duetoday(self):
+        """+DUETODAY"""
+        code, out, err = self.t("+DUETODAY count")
+        self.assertEqual(out, "1\n", "+DUETODAY == 1 task")
+
+    def test_tomorrow(self):
+        """+TOMORROW"""
+        code, out, err = self.t("+TOMORROW count")
+        self.assertEqual(out, "1\n", "+TOMORROW == 1 task")
+
+
+class TestDuplicateTags(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        """Executed once before any test in the class"""
+        cls.t = Task()
+        cls.t.config("verbose", "nothing")
+
+    def setUp(self):
+        """Executed before each test in the class"""
+
+    def test_duplicate_tags(self):
+        """When using the 'tags' attribute directly, make sure it strips duplicates"""
+        self.t("add one tags:A,A,B,C,C,C")
+        code, out, err = self.t("_get 1.tags")
+        self.assertEqual("A,B,C\n", out)
+
+
+class TestListAllTags(TestCase):
+    def setUp(self):
+        """Executed before each test in the class"""
+        self.t = Task()
+
+    def test_list_all_tags(self):
+        """Verify the 'tags' command obeys 'rc.list.all.tags'
+
+           Create a data set of two tasks, with unique tags, one
+           pending, one completed.
+        """
+        self.t("add +t1 one")
+        self.t("add +t2 two")
+        self.t("1 done")
+        self.t("list")  # GC/handleRecurrence
+
+        code, out, err = self.t("rc.verbose:nothing tags")
+        self.assertNotIn("t1", out)
+        self.assertIn("t2", out)
+
+        code, out, err = self.t("rc.verbose:nothing rc.list.all.tags:yes tags")
+        self.assertIn("t1", out)
+        self.assertIn("t2", out)
+
+
+class TestBug1700(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_tags_overwrite(self):
+        """Verify that 'tags:a,b' overwrites existing tags."""
+        self.t("add +tag1 +tag2 one")
+        code, out, err = self.t("_get 1.tags")
+        self.assertIn("tag1,tag2", out)
+        self.assertNotIn("tag3", out)
+
+        self.t("1 modify tags:tag2,tag3")
+        code, out, err = self.t("_get 1.tags")
+        self.assertNotIn("tag1", out)
+        self.assertIn("tag2,tag3", out)
+
+
+if __name__ == "__main__":
+    from simpletap import TAPTestRunner
+    unittest.main(testRunner=TAPTestRunner())
+
+# vim: ai sts=4 et sw=4 ft=python

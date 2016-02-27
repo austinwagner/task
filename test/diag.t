@@ -35,18 +35,25 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from basetest import Task, TestCase
 
 
-class TestDiagColor(TestCase):
+class TestDiagnostics(TestCase):
     def setUp(self):
         self.t = Task()
+        self.t.config("editor",            "edlin")
+        self.t.config("taskd.ca",          "/tmp/ca")
+        self.t.config("taskd.trust",       "strict")
+        self.t.config("taskd.credentials", "us/me/xxx")
 
-    def test_diag_color_builtin(self):
+    def test_diagnostics(self):
         """Task diag output, so we can monitor platforms"""
+        self.t.activate_hooks()
         code, out, err = self.t.diag()
-        self.diag (out)
+        self.tap(out)
+        self.assertRegexpMatches(out, "Compliance:\s+C\+\+11")
+        self.assertRegexpMatches(out, "libgnutls:\s+\d+\.\d+\.\d+")
 
 
 if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

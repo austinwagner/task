@@ -39,11 +39,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdColumns::CmdColumns ()
 {
-  _keyword     = "columns";
-  _usage       = "task          columns [substring]";
-  _description = STRING_CMD_COLUMNS_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "columns";
+  _usage                 = "task          columns [substring]";
+  _description           = STRING_CMD_COLUMNS_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::config;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -51,15 +57,14 @@ int CmdColumns::execute (std::string& output)
 {
   // Obtain the arguments from the description.  That way, things like '--'
   // have already been handled.
-  std::vector <std::string> words = context.cli.getWords ();
+  std::vector <std::string> words = context.cli2.getWords ();
   if (words.size () > 1)
     throw std::string (STRING_CMD_COLUMNS_ARGS);
 
   // Include all columns in the table.
   std::vector <std::string> names;
-  std::map <std::string, Column*>::const_iterator col;
-  for (col = context.columns.begin (); col != context.columns.end (); ++col)
-    names.push_back (col->first);
+  for (auto& col : context.columns)
+    names.push_back (col.first);
 
   std::sort (names.begin (), names.end ());
 
@@ -67,34 +72,47 @@ int CmdColumns::execute (std::string& output)
   ViewText formats;
   formats.width (context.getWidth ());
   formats.add (Column::factory ("string", STRING_COLUMN_LABEL_COLUMN));
+  formats.add (Column::factory ("string", STRING_COLUMN_LABEL_TYPE));
   formats.add (Column::factory ("string", STRING_COLUMN_LABEL_STYLES));
   formats.add (Column::factory ("string", STRING_COLUMN_LABEL_EXAMPLES));
 
-  Color label (context.config.get ("color.label"));
-  formats.colorHeader (label);
+  if (context.color ())
+  {
+    Color label (context.config.get ("color.label"));
+    formats.colorHeader (label);
 
-  Color alternate (context.config.get ("color.alternate"));
-  formats.colorOdd (alternate);
-  formats.intraColorOdd (alternate);
+    Color alternate (context.config.get ("color.alternate"));
+    formats.colorOdd (alternate);
+    formats.intraColorOdd (alternate);
+  }
 
-  std::vector <std::string>::iterator name;
-  for (name = names.begin (); name != names.end (); ++name)
+  for (auto& name : names)
   {
     if (words.size () == 0 ||
-        find (*name, words[0], false) != std::string::npos)
+        find (name, words[0], false) != std::string::npos)
     {
-      const std::vector <std::string> styles   = context.columns[*name]->styles ();
-      const std::vector <std::string> examples = context.columns[*name]->examples ();
+      const std::vector <std::string> styles   = context.columns[name]->styles ();
+      const std::vector <std::string> examples = context.columns[name]->examples ();
 
       for (unsigned int i = 0; i < styles.size (); ++i)
       {
         int row = formats.addRow ();
-        formats.set (row, 0, i == 0 ? *name : "");
-        formats.set (row, 1, styles[i] + (i == 0 ? "*" : ""));
-        formats.set (row, 2, i < examples.size () ? examples[i] : "");
+        formats.set (row, 0, i == 0 ? name : "");
+        formats.set (row, 1, i == 0 ? context.columns[name]->type () : "");
+        formats.set (row, 2, styles[i] + (i == 0 ? "*" : ""));
+        formats.set (row, 3, i < examples.size () ? examples[i] : "");
       }
     }
   }
+
+  int row = formats.addRow ();
+  formats.set (row, 0, "<uda>");
+  formats.set (row, 1, "<type>");
+  formats.set (row, 2, "default*");
+
+  row = formats.addRow ();
+  formats.set (row, 0, "");
+  formats.set (row, 2, "indicator");
 
   output = optionalBlankLine ()
          + formats.render ()
@@ -108,11 +126,17 @@ int CmdColumns::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 CmdCompletionColumns::CmdCompletionColumns ()
 {
-  _keyword     = "_columns";
-  _usage       = "task          _columns";
-  _description = STRING_CMD_COLUMNS_USAGE2;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "_columns";
+  _usage                 = "task          _columns";
+  _description           = STRING_CMD_COLUMNS_USAGE2;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::internal;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -120,16 +144,14 @@ int CmdCompletionColumns::execute (std::string& output)
 {
   // Include all columns.
   std::vector <std::string> names;
-  std::map <std::string, Column*>::const_iterator col;
-  for (col = context.columns.begin (); col != context.columns.end (); ++col)
-    names.push_back (col->first);
+  for (auto& col : context.columns)
+    names.push_back (col.first);
 
   std::sort (names.begin (), names.end ());
 
   // Render only the column names.
-  std::vector <std::string>::iterator name;
-  for (name = names.begin (); name != names.end (); ++name)
-    output += *name + "\n";
+  for (auto& name : names)
+    output += name + "\n";
 
   return 0;
 }

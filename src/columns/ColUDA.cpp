@@ -26,8 +26,7 @@
 
 #include <cmake.h>
 #include <Context.h>
-#include <Duration.h>
-#include <Date.h>
+#include <ISO8601.h>
 #include <ColUDA.h>
 #include <text.h>
 #include <utf8.h>
@@ -39,16 +38,13 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 ColumnUDA::ColumnUDA ()
 {
-  _name  = "<uda>";
-  _type  = "string";
-  _style = "default";
-  _label = "";
-  _uda   = true;
-
+  _name      = "<uda>";
+  _type      = "string";
+  _style     = "default";
+  _label     = "";
+  _uda       = true;
   _hyphenate = (_type == "string") ? true : false;
-
-  _styles.push_back (_style);
-  _styles.push_back ("indicator");
+  _styles    = {_style, "indicator"};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -64,9 +60,8 @@ bool ColumnUDA::validate (std::string& value)
     return true;
 
   // Look for exact match value.
-  std::vector <std::string>::iterator i;
-  for (i = _values.begin (); i != _values.end (); ++i)
-    if (*i == value)
+  for (auto& i : _values)
+    if (i == value)
       return true;
 
   // Fail if not found.
@@ -93,18 +88,18 @@ void ColumnUDA::measure (Task& task, unsigned int& minimum, unsigned int& maximu
           //   rc.report.<report>.dateformat
           //   rc.dateformat.report
           //   rc.dateformat
-          Date date ((time_t) strtol (value.c_str (), NULL, 10));
+          ISO8601d date ((time_t) strtol (value.c_str (), NULL, 10));
           std::string format = context.config.get ("report." + _report + ".dateformat");
           if (format == "")
             format = context.config.get ("dateformat.report");
           if (format == "")
             format = context.config.get ("dateformat");
 
-          minimum = maximum = Date::length (format);
+          minimum = maximum = ISO8601d::length (format);
         }
         else if (_type == "duration")
         {
-          minimum = maximum = utf8_width (Duration (value).formatISO ());
+          minimum = maximum = utf8_width (ISO8601p (value).format ());
         }
         else if (_type == "string")
         {
@@ -120,8 +115,10 @@ void ColumnUDA::measure (Task& task, unsigned int& minimum, unsigned int& maximu
     }
     else if (_style == "indicator")
     {
-      minimum = maximum = utf8_width (context.config.get ("uda." + _name + ".indicator"));
-      _fixed_width = true;
+      if (task.has (_name))
+        minimum = maximum = utf8_width (context.config.get ("uda." + _name + ".indicator"));
+      else
+        minimum = maximum = 0;
     }
     else
       throw format (STRING_COLUMN_BAD_FORMAT, _name, _style);
@@ -155,15 +152,14 @@ void ColumnUDA::render (
         lines.push_back (
           color.colorize (
             leftJustify (
-              Date ((time_t) strtol (value.c_str (), NULL, 10))
-                .toString (format), width)));
+              ISO8601d ((time_t) strtol (value.c_str (), NULL, 10)).toString (format), width)));
       }
       else if (_type == "duration")
       {
         lines.push_back (
           color.colorize (
             rightJustify (
-              Duration (value).formatISO (),
+              ISO8601p (value).format (),
               width)));
       }
       else if (_type == "string")
@@ -171,9 +167,8 @@ void ColumnUDA::render (
         std::vector <std::string> raw;
         wrapText (raw, value, width, _hyphenate);
 
-        std::vector <std::string>::iterator i;
-        for (i = raw.begin (); i != raw.end (); ++i)
-          lines.push_back (color.colorize (leftJustify (*i, width)));
+        for (auto& i : raw)
+          lines.push_back (color.colorize (leftJustify (i, width)));
       }
       else if (_type == "numeric")
       {

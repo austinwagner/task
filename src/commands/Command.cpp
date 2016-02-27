@@ -83,6 +83,7 @@
 #include <CmdTimesheet.h>
 #include <CmdUDAs.h>
 #include <CmdUndo.h>
+#include <CmdUnique.h>
 #include <CmdUrgency.h>
 #include <CmdVersion.h>
 
@@ -107,6 +108,7 @@ void Command::factory (std::map <std::string, Command*>& all)
   c = new CmdCalendar ();           all[c->keyword ()] = c;
   c = new CmdColor ();              all[c->keyword ()] = c;
   c = new CmdColumns ();            all[c->keyword ()] = c;
+  c = new CmdCommands ();           all[c->keyword ()] = c;
   c = new CmdCompletionAliases ();  all[c->keyword ()] = c;
   c = new CmdCompletionColumns ();  all[c->keyword ()] = c;
   c = new CmdCompletionCommands (); all[c->keyword ()] = c;
@@ -157,6 +159,7 @@ void Command::factory (std::map <std::string, Command*>& all)
   c = new CmdTimesheet ();          all[c->keyword ()] = c;
   c = new CmdUDAs ();               all[c->keyword ()] = c;
   c = new CmdUndo ();               all[c->keyword ()] = c;
+  c = new CmdUnique ();             all[c->keyword ()] = c;
   c = new CmdUrgency ();            all[c->keyword ()] = c;
   c = new CmdUUIDs ();              all[c->keyword ()] = c;
   c = new CmdVersion ();            all[c->keyword ()] = c;
@@ -172,7 +175,7 @@ void Command::factory (std::map <std::string, Command*>& all)
     if (i.first.substr (0, 7) == "report.")
     {
       std::string report = i.first.substr (7);
-      std::string::size_type columns = report.find (".columns");
+      auto columns = report.find (".columns");
       if (columns != std::string::npos)
         reports.push_back (report.substr (0, columns));
     }
@@ -194,57 +197,40 @@ void Command::factory (std::map <std::string, Command*>& all)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+const std::map <Command::Category, std::string> Command::categoryNames =
+{
+  // These strings are intentionally not l10n'd: they are used as identifiers.
+   {Command::Category::unassigned,   "unassigned"} // should never happen
+  ,{Command::Category::metadata,     "metadata"}
+  ,{Command::Category::report,       "report"}
+  ,{Command::Category::operation,    "operation"}
+  ,{Command::Category::context,      "context"}
+  ,{Command::Category::graphs,       "graphs"   }
+  ,{Command::Category::config,       "config"   }
+  ,{Command::Category::migration,    "migration"}
+  ,{Command::Category::misc,         "misc"     }
+  ,{Command::Category::internal,     "internal"}
+  ,{Command::Category::UNDOCUMENTED, "undocumented"}
+};
+
+////////////////////////////////////////////////////////////////////////////////
 Command::Command ()
-: _usage ("")
+: _keyword ("")
+, _usage ("")
 , _description ("")
 , _read_only (true)
 , _displays_id (true)
 , _needs_confirm (false)
+, _needs_gc (true)
+, _uses_context (false)
+, _accepts_filter (false)
+, _accepts_modifications (false)
+, _accepts_miscellaneous (false)
+, _category(Category::unassigned)
 , _permission_quit (false)
 , _permission_all (false)
 , _first_iteration (true)
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-Command::Command (const Command& other)
-{
-  _usage           = other._usage;
-  _description     = other._description;
-  _read_only       = other._read_only;
-  _displays_id     = other._displays_id;
-  _needs_confirm   = other._needs_confirm;
-  _permission_quit = other._permission_quit;
-  _permission_all  = other._permission_all;
-  _first_iteration = other._first_iteration;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-Command& Command::operator= (const Command& other)
-{
-  if (this != &other)
-  {
-    _usage           = other._usage;
-    _description     = other._description;
-    _read_only       = other._read_only;
-    _displays_id     = other._displays_id;
-    _needs_confirm   = other._needs_confirm;
-    _permission_quit = other._permission_quit;
-    _permission_all  = other._permission_all;
-    _first_iteration = other._first_iteration;
-  }
-
-  return *this;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool Command::operator== (const Command& other) const
-{
-  return _usage         == other._usage       &&
-         _description   == other._description &&
-         _read_only     == other._read_only   &&
-         _displays_id   == other._displays_id &&
-         _needs_confirm == other._needs_confirm;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -283,6 +269,42 @@ bool Command::displays_id () const
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+bool Command::needs_gc () const
+{
+  return _needs_gc;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Command::uses_context () const
+{
+  return _uses_context;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Command::accepts_filter () const
+{
+  return _accepts_filter;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Command::accepts_modifications () const
+{
+  return _accepts_modifications;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Command::accepts_miscellaneous () const
+{
+  return _accepts_miscellaneous;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+Command::Category Command::category () const
+{
+  return _category;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Returns true or false indicating whether to proceed with a write command, on
 // a per-task basis, after (potentially) asking for permission.
 //
@@ -292,7 +314,6 @@ bool Command::displays_id () const
 //   rc.confirmation
 //   this->_read_only
 bool Command::permission (
-  const Task& task,
   const std::string& question,
   unsigned int quantity)
 {

@@ -37,11 +37,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdAdd::CmdAdd ()
 {
-  _keyword     = "add";
-  _usage       = "task          add <mods>";
-  _description = STRING_CMD_ADD_USAGE;
-  _read_only   = false;
-  _displays_id = false;
+  _keyword               = "add";
+  _usage                 = "task          add <mods>";
+  _description           = STRING_CMD_ADD_USAGE;
+  _read_only             = false;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = true;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::operation;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,7 +58,8 @@ int CmdAdd::execute (std::string& output)
   task.modify (Task::modReplace, true);
   context.tdb2.add (task);
 
-  if (context.verbose ("new-id"))
+  // Do not display ID 0, users cannot query by that
+  if (context.verbose ("new-id") && task.id != 0)
     output += format (STRING_CMD_ADD_FEEDBACK, task.id) + "\n";
   else if (context.verbose ("new-uuid"))
     output += format (STRING_CMD_ADD_FEEDBACK, task.get ("uuid")) + "\n";

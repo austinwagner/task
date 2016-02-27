@@ -40,15 +40,21 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdAnnotate::CmdAnnotate ()
 {
-  _keyword     = "annotate";
-  _usage       = "task <filter> annotate <mods>";
-  _description = STRING_CMD_ANNO_USAGE;
-  _read_only   = false;
-  _displays_id = false;
+  _keyword               = "annotate";
+  _usage                 = "task <filter> annotate <mods>";
+  _description           = STRING_CMD_ANNO_USAGE;
+  _read_only             = false;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = true;
+  _accepts_modifications = true;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::operation;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int CmdAnnotate::execute (std::string& output)
+int CmdAnnotate::execute (std::string&)
 {
   int rc = 0;
   int count = 0;
@@ -68,46 +74,44 @@ int CmdAnnotate::execute (std::string& output)
   // Accumulated project change notifications.
   std::map <std::string, std::string> projectChanges;
 
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
-    Task before (*task);
+    Task before (task);
 
     // Annotate the specified task.
     std::string question = format (STRING_CMD_ANNO_CONFIRM,
-                                   task->id,
-                                   task->get ("description"));
+                                   task.id,
+                                   task.get ("description"));
 
-    task->modify (Task::modAnnotate, true);
+    task.modify (Task::modAnnotate, true);
 
-    if (permission (*task, taskDifferences (before, *task) + question, filtered.size ()))
+    if (permission (taskDifferences (before, task) + question, filtered.size ()))
     {
-      context.tdb2.modify (*task);
+      context.tdb2.modify (task);
       ++count;
-      feedback_affected (STRING_CMD_ANNO_TASK, *task);
+      feedback_affected (STRING_CMD_ANNO_TASK, task);
       if (context.verbose ("project"))
-        projectChanges[task->get ("project")] = onProjectChange (*task, false);
+        projectChanges[task.get ("project")] = onProjectChange (task, false);
 
       // Annotate siblings.
-      if (task->has ("parent"))
+      if (task.has ("parent"))
       {
         if ((context.config.get ("recurrence.confirmation") == "prompt"
              && confirm (STRING_CMD_ANNO_CONFIRM_R)) ||
             context.config.getBoolean ("recurrence.confirmation"))
         {
-          std::vector <Task> siblings = context.tdb2.siblings (*task);
-          std::vector <Task>::iterator sibling;
-          for (sibling = siblings.begin (); sibling != siblings.end (); ++sibling)
+          std::vector <Task> siblings = context.tdb2.siblings (task);
+          for (auto& sibling : siblings)
           {
-            sibling->modify (Task::modAnnotate, true);
-            context.tdb2.modify (*sibling);
+            sibling.modify (Task::modAnnotate, true);
+            context.tdb2.modify (sibling);
             ++count;
-            feedback_affected (STRING_CMD_ANNO_TASK_R, *sibling);
+            feedback_affected (STRING_CMD_ANNO_TASK_R, sibling);
           }
 
           // Annotate the parent
           Task parent;
-          context.tdb2.get (task->get ("parent"), parent);
+          context.tdb2.get (task.get ("parent"), parent);
           parent.modify (Task::modAnnotate, true);
           context.tdb2.modify (parent);
         }
@@ -123,10 +127,9 @@ int CmdAnnotate::execute (std::string& output)
   }
 
   // Now list the project changes.
-  std::map <std::string, std::string>::iterator i;
-  for (i = projectChanges.begin (); i != projectChanges.end (); ++i)
-    if (i->first != "")
-      context.footnote (i->second);
+  for (auto& change : projectChanges)
+    if (change.first != "")
+      context.footnote (change.second);
 
   feedback_affected (count == 1 ? STRING_CMD_ANNO_1 : STRING_CMD_ANNO_N, count);
   return rc;

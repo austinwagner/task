@@ -46,24 +46,24 @@ class TestBug1031(TestCase):
 
     def test_alias_to(self):
         """alias working as expected: 'from' -> 'to'"""
-        self.t(("add", "from"))
-        code, out, err = self.t(("1", "info"))
+        self.t("add from")
+        code, out, err = self.t("1 info")
 
         expected = "Description\s+to"
         self.assertRegexpMatches(out, expected)
 
     def test_alias_to_to(self):
         """alias working as expected: 'from -- to' -> 'to to'"""
-        self.t(("add", "from", "--", "to"))
-        code, out, err = self.t(("1", "info"))
+        self.t("add from -- to")
+        code, out, err = self.t("1 info")
 
         expected = "Description\s+to to"
         self.assertRegexpMatches(out, expected)
 
     def test_alias_to_from(self):
         """alias working as expected: 'to -- from' -> 'to from'"""
-        self.t(("add", "to", "--", "from"))
-        code, out, err = self.t(("1", "info"))
+        self.t("add to -- from")
+        code, out, err = self.t("1 info")
 
         expected = "Description\s+to from"
         self.assertRegexpMatches(out, expected)
@@ -72,4 +72,4 @@ if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

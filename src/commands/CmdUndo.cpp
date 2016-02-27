@@ -26,6 +26,7 @@
 
 #include <cmake.h>
 #include <Context.h>
+#include <Filter.h>
 #include <i18n.h>
 #include <CmdUndo.h>
 
@@ -34,22 +35,22 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdUndo::CmdUndo ()
 {
-  _keyword     = "undo";
-  _usage       = "task          undo";
-  _description = STRING_CMD_UNDO_USAGE;
-  _read_only   = false;
-  _displays_id = false;
+  _keyword               = "undo";
+  _usage                 = "task          undo";
+  _description           = STRING_CMD_UNDO_USAGE;
+  _read_only             = false;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::operation;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int CmdUndo::execute (std::string& output)
+int CmdUndo::execute (std::string&)
 {
-  // Detect attempts to modify the task.
-  std::vector <A>::iterator a;
-  for (a = context.cli._args.begin (); a != context.cli._args.end (); ++a)
-    if (a->hasTag ("MODIFICATION"))
-      throw std::string (STRING_CMD_UNDO_MODS);
-
   context.tdb2.revert ();
   return 0;
 }

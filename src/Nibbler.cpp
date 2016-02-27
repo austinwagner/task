@@ -31,22 +31,23 @@
 #include <inttypes.h>
 #include <Lexer.h>
 #include <Nibbler.h>
+#include <util.h>
 #ifdef NIBBLER_FEATURE_DATE
-#include <Date.h>
+#include <ISO8601.h>
 #endif
 #ifdef NIBBLER_FEATURE_REGEX
 #include <RX.h>
 #endif
 #include <Lexer.h>
 #include <util.h>
+#include <memory>
 
 static const char*        _uuid_pattern    = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
 static const unsigned int _uuid_min_length = 8;
 
 ////////////////////////////////////////////////////////////////////////////////
 Nibbler::Nibbler ()
-: _input ("")
-, _length (0)
+: _length (0)
 , _cursor (0)
 , _saved (0)
 {
@@ -54,7 +55,7 @@ Nibbler::Nibbler ()
 
 ////////////////////////////////////////////////////////////////////////////////
 Nibbler::Nibbler (const std::string& input)
-: _input (input)
+: _input (std::make_shared <std::string> (input))
 , _length (input.length ())
 , _cursor (0)
 {
@@ -92,15 +93,15 @@ bool Nibbler::getUntil (char c, std::string& result)
 {
   if (_cursor < _length)
   {
-    std::string::size_type i = _input.find (c, _cursor);
+    auto i = _input->find (c, _cursor);
     if (i != std::string::npos)
     {
-      result = _input.substr (_cursor, i - _cursor);
+      result = _input->substr (_cursor, i - _cursor);
       _cursor = i;
     }
     else
     {
-      result = _input.substr (_cursor);
+      result = _input->substr (_cursor);
       _cursor = _length;
     }
 
@@ -115,15 +116,15 @@ bool Nibbler::getUntil (const std::string& terminator, std::string& result)
 {
   if (_cursor < _length)
   {
-    std::string::size_type i = _input.find (terminator, _cursor);
+    auto i = _input->find (terminator, _cursor);
     if (i != std::string::npos)
     {
-      result = _input.substr (_cursor, i - _cursor);
+      result = _input->substr (_cursor, i - _cursor);
       _cursor = i;
     }
     else
     {
-      result = _input.substr (_cursor);
+      result = _input->substr (_cursor);
       _cursor = _length;
     }
 
@@ -142,14 +143,14 @@ bool Nibbler::getUntilRx (const std::string& regex, std::string& result)
     RX r (regex, true);
     std::vector <int> start;
     std::vector <int> end;
-    if (r.match (start, end, _input.substr (_cursor)))
+    if (r.match (start, end, _input->substr (_cursor)))
     {
-      result = _input.substr (_cursor, start[0]);
+      result = _input->substr (_cursor, start[0]);
       _cursor += start[0];
     }
     else
     {
-      result = _input.substr (_cursor);
+      result = _input->substr (_cursor);
       _cursor = _length;
     }
 
@@ -165,15 +166,15 @@ bool Nibbler::getUntilOneOf (const std::string& chars, std::string& result)
 {
   if (_cursor < _length)
   {
-    std::string::size_type i = _input.find_first_of (chars, _cursor);
+    auto i = _input->find_first_of (chars, _cursor);
     if (i != std::string::npos)
     {
-      result = _input.substr (_cursor, i - _cursor);
+      result = _input->substr (_cursor, i - _cursor);
       _cursor = i;
     }
     else
     {
-      result = _input.substr (_cursor);
+      result = _input->substr (_cursor);
       _cursor = _length;
     }
 
@@ -200,7 +201,7 @@ bool Nibbler::getUntilEOS (std::string& result)
 {
   if (_cursor < _length)
   {
-    result = _input.substr (_cursor);
+    result = _input->substr (_cursor);
     _cursor = _length;
     return true;
   }
@@ -213,7 +214,7 @@ bool Nibbler::getN (const int quantity, std::string& result)
 {
   if (_cursor + quantity <= _length)
   {
-    result = _input.substr (_cursor, quantity);
+    result = _input->substr (_cursor, quantity);
     _cursor += quantity;
     return true;
   }
@@ -234,14 +235,14 @@ bool Nibbler::getQuoted (
   result = "";
 
   if (_cursor >= _length ||
-      _input[_cursor] != c)
+      (*_input)[_cursor] != c)
   {
     return false;
   }
 
-  for (std::string::size_type i = _cursor; i < _length; ++i)
+  for (auto i = _cursor; i < _length; ++i)
   {
-    current = _input[i];
+    current = (*_input)[i];
 
     if (current == '\\' && !inescape)
     {
@@ -285,9 +286,9 @@ bool Nibbler::getQuoted (
 bool Nibbler::getDigit (int& result)
 {
   if (_cursor < _length &&
-      Lexer::isDigit (_input[_cursor]))
+      Lexer::isDigit ((*_input)[_cursor]))
   {
-    result = _input[_cursor++] - '0';
+    result = (*_input)[_cursor++] - '0';
     return true;
   }
 
@@ -297,18 +298,18 @@ bool Nibbler::getDigit (int& result)
 ////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::getDigit6 (int& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
   if (i < _length &&
       _length - i >= 6)
   {
-    if (Lexer::isDigit (_input[i + 0]) &&
-        Lexer::isDigit (_input[i + 1]) &&
-        Lexer::isDigit (_input[i + 2]) &&
-        Lexer::isDigit (_input[i + 3]) &&
-        Lexer::isDigit (_input[i + 4]) &&
-        Lexer::isDigit (_input[i + 5]))
+    if (Lexer::isDigit ((*_input)[i + 0]) &&
+        Lexer::isDigit ((*_input)[i + 1]) &&
+        Lexer::isDigit ((*_input)[i + 2]) &&
+        Lexer::isDigit ((*_input)[i + 3]) &&
+        Lexer::isDigit ((*_input)[i + 4]) &&
+        Lexer::isDigit ((*_input)[i + 5]))
     {
-      result = strtoimax (_input.substr (_cursor, 6).c_str (), NULL, 10);
+      result = strtoimax (_input->substr (_cursor, 6).c_str (), NULL, 10);
       _cursor += 6;
       return true;
     }
@@ -320,16 +321,16 @@ bool Nibbler::getDigit6 (int& result)
 ////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::getDigit4 (int& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
   if (i < _length &&
       _length - i >= 4)
   {
-    if (Lexer::isDigit (_input[i + 0]) &&
-        Lexer::isDigit (_input[i + 1]) &&
-        Lexer::isDigit (_input[i + 2]) &&
-        Lexer::isDigit (_input[i + 3]))
+    if (Lexer::isDigit ((*_input)[i + 0]) &&
+        Lexer::isDigit ((*_input)[i + 1]) &&
+        Lexer::isDigit ((*_input)[i + 2]) &&
+        Lexer::isDigit ((*_input)[i + 3]))
     {
-      result = strtoimax (_input.substr (_cursor, 4).c_str (), NULL, 10);
+      result = strtoimax (_input->substr (_cursor, 4).c_str (), NULL, 10);
       _cursor += 4;
       return true;
     }
@@ -341,15 +342,15 @@ bool Nibbler::getDigit4 (int& result)
 ////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::getDigit3 (int& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
   if (i < _length &&
       _length - i >= 3)
   {
-    if (Lexer::isDigit (_input[i + 0]) &&
-        Lexer::isDigit (_input[i + 1]) &&
-        Lexer::isDigit (_input[i + 2]))
+    if (Lexer::isDigit ((*_input)[i + 0]) &&
+        Lexer::isDigit ((*_input)[i + 1]) &&
+        Lexer::isDigit ((*_input)[i + 2]))
     {
-      result = strtoimax (_input.substr (_cursor, 3).c_str (), NULL, 10);
+      result = strtoimax (_input->substr (_cursor, 3).c_str (), NULL, 10);
       _cursor += 3;
       return true;
     }
@@ -361,14 +362,14 @@ bool Nibbler::getDigit3 (int& result)
 ////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::getDigit2 (int& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
   if (i < _length &&
       _length - i >= 2)
   {
-    if (Lexer::isDigit (_input[i + 0]) &&
-        Lexer::isDigit (_input[i + 1]))
+    if (Lexer::isDigit ((*_input)[i + 0]) &&
+        Lexer::isDigit ((*_input)[i + 1]))
     {
-      result = strtoimax (_input.substr (_cursor, 2).c_str (), NULL, 10);
+      result = strtoimax (_input->substr (_cursor, 2).c_str (), NULL, 10);
       _cursor += 2;
       return true;
     }
@@ -380,23 +381,23 @@ bool Nibbler::getDigit2 (int& result)
 ////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::getInt (int& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
 
   if (i < _length)
   {
-    if (_input[i] == '-')
+    if ((*_input)[i] == '-')
       ++i;
-    else if (_input[i] == '+')
+    else if ((*_input)[i] == '+')
       ++i;
   }
 
   // TODO Potential for use of find_first_not_of
-  while (i < _length && Lexer::isDigit (_input[i]))
+  while (i < _length && Lexer::isDigit ((*_input)[i]))
     ++i;
 
   if (i > _cursor)
   {
-    result = strtoimax (_input.substr (_cursor, i - _cursor).c_str (), NULL, 10);
+    result = strtoimax (_input->substr (_cursor, i - _cursor).c_str (), NULL, 10);
     _cursor = i;
     return true;
   }
@@ -407,14 +408,14 @@ bool Nibbler::getInt (int& result)
 ////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::getUnsignedInt (int& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
   // TODO Potential for use of find_first_not_of
-  while (i < _length && Lexer::isDigit (_input[i]))
+  while (i < _length && Lexer::isDigit ((*_input)[i]))
     ++i;
 
   if (i > _cursor)
   {
-    result = strtoimax (_input.substr (_cursor, i - _cursor).c_str (), NULL, 10);
+    result = strtoimax (_input->substr (_cursor, i - _cursor).c_str (), NULL, 10);
     _cursor = i;
     return true;
   }
@@ -440,45 +441,45 @@ bool Nibbler::getUnsignedInt (int& result)
 // 
 bool Nibbler::getNumber (std::string& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
 
   // [+-]?
-  if (i < _length && (_input[i] == '-' || _input[i] == '+'))
+  if (i < _length && ((*_input)[i] == '-' || (*_input)[i] == '+'))
     ++i;
 
   // digit+
-  if (i < _length && Lexer::isDigit (_input[i]))
+  if (i < _length && Lexer::isDigit ((*_input)[i]))
   {
     ++i;
 
-    while (i < _length && Lexer::isDigit (_input[i]))
+    while (i < _length && Lexer::isDigit ((*_input)[i]))
       ++i;
 
     // ( . digit+ )?
-    if (i < _length && _input[i] == '.')
+    if (i < _length && (*_input)[i] == '.')
     {
       ++i;
 
-      while (i < _length && Lexer::isDigit (_input[i]))
+      while (i < _length && Lexer::isDigit ((*_input)[i]))
         ++i;
     }
 
     // ( [eE] [+-]? digit+ )?
-    if (i < _length && (_input[i] == 'e' || _input[i] == 'E'))
+    if (i < _length && ((*_input)[i] == 'e' || (*_input)[i] == 'E'))
     {
       ++i;
 
-      if (i < _length && (_input[i] == '+' || _input[i] == '-'))
+      if (i < _length && ((*_input)[i] == '+' || (*_input)[i] == '-'))
         ++i;
 
-      if (i < _length && Lexer::isDigit (_input[i]))
+      if (i < _length && Lexer::isDigit ((*_input)[i]))
       {
         ++i;
 
-        while (i < _length && Lexer::isDigit (_input[i]))
+        while (i < _length && Lexer::isDigit ((*_input)[i]))
           ++i;
 
-        result = _input.substr (_cursor, i - _cursor);
+        result = _input->substr (_cursor, i - _cursor);
         _cursor = i;
         return true;
       }
@@ -486,7 +487,7 @@ bool Nibbler::getNumber (std::string& result)
       return false;
     }
 
-    result = _input.substr (_cursor, i - _cursor);
+    result = _input->substr (_cursor, i - _cursor);
     _cursor = i;
     return true;
   }
@@ -509,78 +510,10 @@ bool Nibbler::getNumber (double &result)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// number:
-//   int frac? exp?
-// 
-// int:
-//   digit+
-// 
-// frac:
-//   . digit+
-// 
-// exp:
-//   e digit+
-// 
-// e:
-//   e|E (+|-)?
-// 
-bool Nibbler::getUnsignedNumber (double& result)
-{
-  std::string::size_type i = _cursor;
-
-  // digit+
-  if (i < _length && Lexer::isDigit (_input[i]))
-  {
-    ++i;
-
-    while (i < _length && Lexer::isDigit (_input[i]))
-      ++i;
-
-    // ( . digit+ )?
-    if (i < _length && _input[i] == '.')
-    {
-      ++i;
-
-      while (i < _length && Lexer::isDigit (_input[i]))
-        ++i;
-    }
-
-    // ( [eE] [+-]? digit+ )?
-    if (i < _length && (_input[i] == 'e' || _input[i] == 'E'))
-    {
-      ++i;
-
-      if (i < _length && (_input[i] == '+' || _input[i] == '-'))
-        ++i;
-
-      if (i < _length && Lexer::isDigit (_input[i]))
-      {
-        ++i;
-
-        while (i < _length && Lexer::isDigit (_input[i]))
-          ++i;
-
-        result = strtof (_input.substr (_cursor, i - _cursor).c_str (), NULL);
-        _cursor = i;
-        return true;
-      }
-
-      return false;
-    }
-
-    result = strtof (_input.substr (_cursor, i - _cursor).c_str (), NULL);
-    _cursor = i;
-    return true;
-  }
-
-  return false;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::getLiteral (const std::string& literal)
 {
   if (_cursor < _length &&
-      _input.find (literal, _cursor) == _cursor)
+      _input->find (literal, _cursor) == _cursor)
   {
     _cursor += literal.length ();
     return true;
@@ -605,7 +538,7 @@ bool Nibbler::getRx (const std::string& regex, std::string& result)
 
     RX r (modified_regex, true);
     std::vector <std::string> results;
-    if (r.match (results, _input.substr (_cursor)))
+    if (r.match (results, _input->substr (_cursor)))
     {
       result = results[0];
       _cursor += result.length ();
@@ -620,50 +553,50 @@ bool Nibbler::getRx (const std::string& regex, std::string& result)
 ////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::getUUID (std::string& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
 
   if (i < _length &&
       _length - i >= 36)
   {
     // 88888888-4444-4444-4444-cccccccccccc
-    if (isxdigit (_input[i + 0]) &&
-        isxdigit (_input[i + 1]) &&
-        isxdigit (_input[i + 2]) &&
-        isxdigit (_input[i + 3]) &&
-        isxdigit (_input[i + 4]) &&
-        isxdigit (_input[i + 5]) &&
-        isxdigit (_input[i + 6]) &&
-        isxdigit (_input[i + 7]) &&
-        _input[i + 8] == '-'     &&
-        isxdigit (_input[i + 9]) &&
-        isxdigit (_input[i + 10]) &&
-        isxdigit (_input[i + 11]) &&
-        isxdigit (_input[i + 12]) &&
-        _input[i + 13] == '-'     &&
-        isxdigit (_input[i + 14]) &&
-        isxdigit (_input[i + 15]) &&
-        isxdigit (_input[i + 16]) &&
-        isxdigit (_input[i + 17]) &&
-        _input[i + 18] == '-'     &&
-        isxdigit (_input[i + 19]) &&
-        isxdigit (_input[i + 20]) &&
-        isxdigit (_input[i + 21]) &&
-        isxdigit (_input[i + 22]) &&
-        _input[i + 23] == '-'     &&
-        isxdigit (_input[i + 24]) &&
-        isxdigit (_input[i + 25]) &&
-        isxdigit (_input[i + 26]) &&
-        isxdigit (_input[i + 27]) &&
-        isxdigit (_input[i + 28]) &&
-        isxdigit (_input[i + 29]) &&
-        isxdigit (_input[i + 30]) &&
-        isxdigit (_input[i + 31]) &&
-        isxdigit (_input[i + 32]) &&
-        isxdigit (_input[i + 33]) &&
-        isxdigit (_input[i + 34]) &&
-        isxdigit (_input[i + 35]))
+    if (isxdigit ((*_input)[i + 0]) &&
+        isxdigit ((*_input)[i + 1]) &&
+        isxdigit ((*_input)[i + 2]) &&
+        isxdigit ((*_input)[i + 3]) &&
+        isxdigit ((*_input)[i + 4]) &&
+        isxdigit ((*_input)[i + 5]) &&
+        isxdigit ((*_input)[i + 6]) &&
+        isxdigit ((*_input)[i + 7]) &&
+        (*_input)[i + 8] == '-'     &&
+        isxdigit ((*_input)[i + 9]) &&
+        isxdigit ((*_input)[i + 10]) &&
+        isxdigit ((*_input)[i + 11]) &&
+        isxdigit ((*_input)[i + 12]) &&
+        (*_input)[i + 13] == '-'     &&
+        isxdigit ((*_input)[i + 14]) &&
+        isxdigit ((*_input)[i + 15]) &&
+        isxdigit ((*_input)[i + 16]) &&
+        isxdigit ((*_input)[i + 17]) &&
+        (*_input)[i + 18] == '-'     &&
+        isxdigit ((*_input)[i + 19]) &&
+        isxdigit ((*_input)[i + 20]) &&
+        isxdigit ((*_input)[i + 21]) &&
+        isxdigit ((*_input)[i + 22]) &&
+        (*_input)[i + 23] == '-'     &&
+        isxdigit ((*_input)[i + 24]) &&
+        isxdigit ((*_input)[i + 25]) &&
+        isxdigit ((*_input)[i + 26]) &&
+        isxdigit ((*_input)[i + 27]) &&
+        isxdigit ((*_input)[i + 28]) &&
+        isxdigit ((*_input)[i + 29]) &&
+        isxdigit ((*_input)[i + 30]) &&
+        isxdigit ((*_input)[i + 31]) &&
+        isxdigit ((*_input)[i + 32]) &&
+        isxdigit ((*_input)[i + 33]) &&
+        isxdigit ((*_input)[i + 34]) &&
+        isxdigit ((*_input)[i + 35]))
     {
-      result = _input.substr (_cursor, 36);
+      result = _input->substr (_cursor, 36);
       _cursor = i + 36;
       return true;
     }
@@ -678,10 +611,10 @@ bool Nibbler::getPartialUUID (std::string& result)
   std::string::size_type i;
   for (i = 0; i < 36 && i < (_length - _cursor); i++)
   {
-    if (_uuid_pattern[i] == 'x' && !isxdigit (_input[_cursor + i]))
+    if (_uuid_pattern[i] == 'x' && !isxdigit ((*_input)[_cursor + i]))
       break;
 
-    else if (_uuid_pattern[i] == '-' && _input[_cursor + i] != '-')
+    else if (_uuid_pattern[i] == '-' && (*_input)[_cursor + i] != '-')
       break;
   }
 
@@ -690,10 +623,10 @@ bool Nibbler::getPartialUUID (std::string& result)
   {
     // Fail if there is another hex digit.
     if (_cursor + i < _length &&
-        isxdigit (_input[_cursor + i]))
+        isxdigit ((*_input)[_cursor + i]))
       return false;
 
-    result = _input.substr (_cursor, i);
+    result = _input->substr (_cursor, i);
     _cursor += i;
 
     return true;
@@ -706,52 +639,52 @@ bool Nibbler::getPartialUUID (std::string& result)
 // 19980119T070000Z =  YYYYMMDDThhmmssZ
 bool Nibbler::getDateISO (time_t& t)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
 
   if (i < _length &&
       _length - i >= 16)
   {
-    if (Lexer::isDigit (_input[i + 0]) &&
-        Lexer::isDigit (_input[i + 1]) &&
-        Lexer::isDigit (_input[i + 2]) &&
-        Lexer::isDigit (_input[i + 3]) &&
-        Lexer::isDigit (_input[i + 4]) &&
-        Lexer::isDigit (_input[i + 5]) &&
-        Lexer::isDigit (_input[i + 6]) &&
-        Lexer::isDigit (_input[i + 7]) &&
-        _input[i + 8] == 'T' &&
-        Lexer::isDigit (_input[i + 9]) &&
-        Lexer::isDigit (_input[i + 10]) &&
-        Lexer::isDigit (_input[i + 11]) &&
-        Lexer::isDigit (_input[i + 12]) &&
-        Lexer::isDigit (_input[i + 13]) &&
-        Lexer::isDigit (_input[i + 14]) &&
-        _input[i + 15] == 'Z')
+    if (Lexer::isDigit ((*_input)[i + 0]) &&
+        Lexer::isDigit ((*_input)[i + 1]) &&
+        Lexer::isDigit ((*_input)[i + 2]) &&
+        Lexer::isDigit ((*_input)[i + 3]) &&
+        Lexer::isDigit ((*_input)[i + 4]) &&
+        Lexer::isDigit ((*_input)[i + 5]) &&
+        Lexer::isDigit ((*_input)[i + 6]) &&
+        Lexer::isDigit ((*_input)[i + 7]) &&
+        (*_input)[i + 8] == 'T' &&
+        Lexer::isDigit ((*_input)[i + 9]) &&
+        Lexer::isDigit ((*_input)[i + 10]) &&
+        Lexer::isDigit ((*_input)[i + 11]) &&
+        Lexer::isDigit ((*_input)[i + 12]) &&
+        Lexer::isDigit ((*_input)[i + 13]) &&
+        Lexer::isDigit ((*_input)[i + 14]) &&
+        (*_input)[i + 15] == 'Z')
     {
       _cursor += 16;
 
-      int year   = (_input[i + 0] - '0') * 1000
-                 + (_input[i + 1] - '0') *  100
-                 + (_input[i + 2] - '0') *   10
-                 + (_input[i + 3] - '0');
+      int year   = ((*_input)[i + 0] - '0') * 1000
+                 + ((*_input)[i + 1] - '0') *  100
+                 + ((*_input)[i + 2] - '0') *   10
+                 + ((*_input)[i + 3] - '0');
 
-      int month  = (_input[i + 4] - '0') * 10
-                 + (_input[i + 5] - '0');
+      int month  = ((*_input)[i + 4] - '0') * 10
+                 + ((*_input)[i + 5] - '0');
 
-      int day    = (_input[i + 6] - '0') * 10
-                 + (_input[i + 7] - '0');
+      int day    = ((*_input)[i + 6] - '0') * 10
+                 + ((*_input)[i + 7] - '0');
 
-      int hour   = (_input[i + 9] - '0') * 10
-                 + (_input[i + 10] - '0');
+      int hour   = ((*_input)[i + 9] - '0') * 10
+                 + ((*_input)[i + 10] - '0');
 
-      int minute = (_input[i + 11] - '0') * 10
-                 + (_input[i + 12] - '0');
+      int minute = ((*_input)[i + 11] - '0') * 10
+                 + ((*_input)[i + 12] - '0');
 
-      int second = (_input[i + 13] - '0') * 10
-                 + (_input[i + 14] - '0');
+      int second = ((*_input)[i + 13] - '0') * 10
+                 + ((*_input)[i + 14] - '0');
 
       // Convert to epoch.
-      struct tm tms = {0};
+      struct tm tms {};
       tms.tm_isdst  = -1;   // Requests that mktime determine summer time effect.
       tms.tm_mon    = month - 1;
       tms.tm_mday   = day;
@@ -775,7 +708,8 @@ bool Nibbler::getDateISO (time_t& t)
 // Parse the longest integer using the next 'limit' characters of 'result'
 // following position 'i' (when strict is true, the number of digits must be
 // equal to limit).
-bool Nibbler::parseDigits(std::string::size_type& i,
+bool Nibbler::parseDigits(
+  std::string::size_type& i,
   int& result,
   unsigned int limit,
   bool strict /* = true */)
@@ -791,15 +725,15 @@ bool Nibbler::parseDigits(std::string::size_type& i,
       // Check that 'f' of them are digits
       unsigned int g;
       for (g = 0; g < f; g++)
-        if (! Lexer::isDigit (_input[i + g]))
+        if (! Lexer::isDigit ((*_input)[i + g]))
             break;
       // Parse the integer when it is the case
       if (g == f)
       {
         if (f == 1)
-          result = _input[i] - '0';
+          result = (*_input)[i] - '0';
         else
-          result = atoi (_input.substr (i, f).c_str ());
+          result = atoi (_input->substr (i, f).c_str ());
         // Update the global cursor before returning
         i += f;
         return true;
@@ -816,7 +750,7 @@ bool Nibbler::parseDigits(std::string::size_type& i,
 #ifdef NIBBLER_FEATURE_DATE
 bool Nibbler::getDate (const std::string& format, time_t& t)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
 
   int month  = -1;   // So we can check later.
   int day    = -1;
@@ -882,12 +816,12 @@ bool Nibbler::getDate (const std::string& format, time_t& t)
     case 'a':
     case 'A':
       if (i + 3 <= _length          &&
-          ! Lexer::isDigit (_input[i + 0]) &&
-          ! Lexer::isDigit (_input[i + 1]) &&
-          ! Lexer::isDigit (_input[i + 2]))
+          ! Lexer::isDigit ((*_input)[i + 0]) &&
+          ! Lexer::isDigit ((*_input)[i + 1]) &&
+          ! Lexer::isDigit ((*_input)[i + 2]))
       {
-        wday = Date::dayOfWeek (_input.substr (i, 3).c_str ());
-        i += (format[f] == 'a') ? 3 : Date::dayName (wday).size ();
+        wday = ISO8601d::dayOfWeek (_input->substr (i, 3).c_str ());
+        i += (format[f] == 'a') ? 3 : ISO8601d::dayName (wday).size ();
       }
       else
         return false;
@@ -896,14 +830,14 @@ bool Nibbler::getDate (const std::string& format, time_t& t)
     case 'b':
     case 'B':
       if (i + 3 <= _length          &&
-          ! Lexer::isDigit (_input[i + 0]) &&
-          ! Lexer::isDigit (_input[i + 1]) &&
-          ! Lexer::isDigit (_input[i + 2]))
+          ! Lexer::isDigit ((*_input)[i + 0]) &&
+          ! Lexer::isDigit ((*_input)[i + 1]) &&
+          ! Lexer::isDigit ((*_input)[i + 2]))
       {
         if (month != -1)
           return false;
-        month = Date::monthOfYear (_input.substr (i, 3).c_str());
-        i += (format[f] == 'b') ? 3 : Date::monthName (month).size ();
+        month = ISO8601d::monthOfYear (_input->substr (i, 3).c_str());
+        i += (format[f] == 'b') ? 3 : ISO8601d::monthName (month).size ();
       }
       else
         return false;
@@ -911,7 +845,7 @@ bool Nibbler::getDate (const std::string& format, time_t& t)
 
     default:
       if (i + 1 <= _length &&
-          _input[i] == format[f])
+          (*_input)[i] == format[f])
         ++i;
       else
         return false;
@@ -925,7 +859,7 @@ bool Nibbler::getDate (const std::string& format, time_t& t)
   // now.
   if (year == -1)
   {
-    Date now = Date ();
+    ISO8601d now;
     year = now.year ();
     if (month == -1)
     {
@@ -956,11 +890,11 @@ bool Nibbler::getDate (const std::string& format, time_t& t)
   second = (second == -1) ? 0 : second;
 
   // Check that values are correct
-  if (! Date::valid (month, day, year, hour, minute, second))
+  if (! ISO8601d::valid (month, day, year, hour, minute, second))
     return false;
 
   // Convert to epoch.
-  struct tm tms = {0};
+  struct tm tms {};
   tms.tm_isdst = -1;   // Requests that mktime determine summer time effect.
   tms.tm_mon   = month - 1;
   tms.tm_mday  = day;
@@ -983,12 +917,11 @@ bool Nibbler::getOneOf (
   const std::vector <std::string>& options,
   std::string& found)
 {
-  std::vector <std::string>::const_iterator option;
-  for (option = options.begin (); option != options.end (); ++option)
+  for (auto& option : options)
   {
-    if (getLiteral (*option))
+    if (getLiteral (option))
     {
-      found = *option;
+      found = option;
       return true;
     }
   }
@@ -1000,18 +933,18 @@ bool Nibbler::getOneOf (
 // A name is a string of alpha-numeric characters.
 bool Nibbler::getName (std::string& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
 
   if (i < _length)
   {
-    if (! Lexer::isDigit (_input[i]) &&
-        ! ispunct (_input[i]) &&
-        ! Lexer::isWhitespace (_input[i]))
+    if (! Lexer::isDigit ((*_input)[i]) &&
+        ! ispunct ((*_input)[i]) &&
+        ! Lexer::isWhitespace ((*_input)[i]))
     {
       ++i;
       while (i < _length &&
-             (_input[i] == '_' || ! ispunct (_input[i])) &&
-             ! Lexer::isWhitespace (_input[i]))
+             ((*_input)[i] == '_' || ! ispunct ((*_input)[i])) &&
+             ! Lexer::isWhitespace ((*_input)[i]))
       {
         ++i;
       }
@@ -1019,7 +952,7 @@ bool Nibbler::getName (std::string& result)
 
     if (i > _cursor)
     {
-      result = _input.substr (_cursor, i - _cursor);
+      result = _input->substr (_cursor, i - _cursor);
       _cursor = i;
       return true;
     }
@@ -1032,20 +965,20 @@ bool Nibbler::getName (std::string& result)
 // A word is a contiguous string of non-space, non-digit, non-punct characters.
 bool Nibbler::getWord (std::string& result)
 {
-  std::string::size_type i = _cursor;
+  auto i = _cursor;
 
   if (i < _length)
   {
-    while (!Lexer::isDigit       (_input[i]) &&
-           !Lexer::isPunctuation (_input[i]) &&
-           !Lexer::isWhitespace  (_input[i]))
+    while (!Lexer::isDigit       ((*_input)[i]) &&
+           !Lexer::isPunctuation ((*_input)[i]) &&
+           !Lexer::isWhitespace  ((*_input)[i]))
     {
       ++i;
     }
 
     if (i > _cursor)
     {
-      result = _input.substr (_cursor, i - _cursor);
+      result = _input->substr (_cursor, i - _cursor);
       _cursor = i;
       return true;
     }
@@ -1071,7 +1004,7 @@ bool Nibbler::skipN (const int quantity /* = 1 */)
 bool Nibbler::skip (char c)
 {
   if (_cursor < _length &&
-      _input[_cursor] == c)
+      (*_input)[_cursor] == c)
   {
     ++_cursor;
     return true;
@@ -1085,7 +1018,7 @@ bool Nibbler::skipAll (char c)
 {
   if (_cursor < _length)
   {
-    std::string::size_type i = _input.find_first_not_of (c, _cursor);
+    auto i = _input->find_first_not_of (c, _cursor);
     if (i == _cursor)
       return false;
 
@@ -1122,7 +1055,7 @@ bool Nibbler::skipRx (const std::string& regex)
 
     RX r (modified_regex, true);
     std::vector <std::string> results;
-    if (r.match (results, _input.substr (_cursor)))
+    if (r.match (results, _input->substr (_cursor)))
     {
       _cursor += results[0].length ();
       return true;
@@ -1146,19 +1079,11 @@ bool Nibbler::backN (const int quantity /*= 1*/)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void Nibbler::getRemainder (std::string& result)
-{
-  if (_cursor < _length)
-    result = _input.substr (_cursor);
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
 bool Nibbler::skipAllOneOf (const std::string& chars)
 {
   if (_cursor < _length)
   {
-    std::string::size_type i = _input.find_first_not_of (chars, _cursor);
+    auto i = _input->find_first_not_of (chars, _cursor);
     if (i == _cursor)
       return false;
 
@@ -1178,7 +1103,7 @@ bool Nibbler::skipAllOneOf (const std::string& chars)
 char Nibbler::next ()
 {
   if (_cursor < _length)
-    return _input[_cursor];
+    return (*_input)[_cursor];
 
   return '\0';
 }
@@ -1196,7 +1121,7 @@ std::string Nibbler::next (const int quantity)
   if (           _cursor  <  _length &&
       (unsigned) quantity <= _length &&
                  _cursor  <= _length - quantity)
-    return _input.substr (_cursor, quantity);
+    return _input->substr (_cursor, quantity);
 
   return "";
 }
@@ -1216,7 +1141,7 @@ std::string::size_type Nibbler::restore ()
 ////////////////////////////////////////////////////////////////////////////////
 const std::string& Nibbler::str () const
 {
-  return _input;
+  return *_input;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1232,7 +1157,7 @@ bool Nibbler::depleted ()
 std::string Nibbler::dump ()
 {
   return std::string ("Nibbler ‹")
-         + _input.substr (_cursor)
+         + _input->substr (_cursor)
          + "›";
 }
 

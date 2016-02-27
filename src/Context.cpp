@@ -33,10 +33,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <Context.h>
-#include <Directory.h>
-#include <File.h>
+#include <FS.h>
 #include <Eval.h>
 #include <Variant.h>
+#include <ISO8601.h>
 #include <text.h>
 #include <util.h>
 #include <main.h>
@@ -118,18 +118,17 @@ Context::Context ()
 ////////////////////////////////////////////////////////////////////////////////
 Context::~Context ()
 {
-  std::map<std::string, Command*>::iterator com;
-  for (com = commands.begin (); com != commands.end (); ++com)
-    delete com->second;
+  for (auto& com : commands)
+    delete com.second;
 
-  std::map<std::string, Column*>::iterator col;
-  for (col = columns.begin (); col != columns.end (); ++col)
-    delete col->second;
+  for (auto& col : columns)
+    delete col.second;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int Context::initialize (int argc, const char** argv)
 {
+  timer_total.start ();
   timer_init.start ();
   int rc = 0;
 
@@ -146,7 +145,7 @@ int Context::initialize (int argc, const char** argv)
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    CLI::getOverride (argc, argv, home_dir, rc_file);
+    CLI2::getOverride (argc, argv, home_dir, rc_file);
 
     char* override = getenv ("TASKRC");
     if (override)
@@ -157,7 +156,7 @@ int Context::initialize (int argc, const char** argv)
 
     config.clear ();
     config.load (rc_file);
-    CLI::applyOverrides (argc, argv);
+    CLI2::applyOverrides (argc, argv);
 
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -170,7 +169,7 @@ int Context::initialize (int argc, const char** argv)
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    CLI::getDataLocation (argc, argv, data_dir);
+    CLI2::getDataLocation (argc, argv, data_dir);
 
     override = getenv ("TASKDATA");
     if (override)
@@ -185,33 +184,25 @@ int Context::initialize (int argc, const char** argv)
 
     ////////////////////////////////////////////////////////////////////////////
     //
-    // [3] Instantiate Command objects and capture entities.
+    // [3] Instantiate Command objects and capture command entities.
     //
     ////////////////////////////////////////////////////////////////////////////
 
     Command::factory (commands);
-    std::map <std::string, Command*>::iterator cmd;
-    for (cmd = commands.begin (); cmd != commands.end (); ++cmd)
-    {
-      cli.entity ("cmd", cmd->first);
-      cli.entity ((cmd->second->read_only () ? "readcmd" : "writecmd"), cmd->first);
-
-      if (cmd->first[0] == '_')
-        cli.entity ("helper", cmd->first);
-    }
+    for (auto& cmd : commands)
+      cli2.entity ("cmd", cmd.first);
 
     ////////////////////////////////////////////////////////////////////////////
     //
-    // [4] Instantiate Column objects and capture entities.
+    // [4] Instantiate Column objects and capture column entities.
     //
     ////////////////////////////////////////////////////////////////////////////
 
     Column::factory (columns);
-    std::map <std::string, Column*>::iterator col;
-    for (col = columns.begin (); col != columns.end (); ++col)
-      cli.entity ("attribute", col->first);
+    for (auto& col : columns)
+      cli2.entity ("attribute", col.first);
 
-    cli.entity ("pseudo", "limit");
+    cli2.entity ("pseudo", "limit");
 
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -220,17 +211,13 @@ int Context::initialize (int argc, const char** argv)
     ////////////////////////////////////////////////////////////////////////////
 
     for (unsigned int i = 0; i < NUM_MODIFIER_NAMES; ++i)
-      cli.entity ("modifier", modifierNames[i]);
+      cli2.entity ("modifier", modifierNames[i]);
 
-    std::vector <std::string> operators;
-    Eval::getOperators (operators);
-    std::vector <std::string>::iterator op;
-    for (op = operators.begin (); op != operators.end (); ++op)
-      cli.entity ("operator", *op);
+    for (auto& op : Eval::getOperators ())
+      cli2.entity ("operator", op);
 
-    Eval::getBinaryOperators (operators);
-    for (op = operators.begin (); op != operators.end (); ++op)
-      cli.entity ("binary_operator", *op);
+    for (auto& op : Eval::getBinaryOperators ())
+      cli2.entity ("binary_operator", op);
 
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -249,29 +236,26 @@ int Context::initialize (int argc, const char** argv)
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    // Scan command line for 'rc:<file>' only.
-    cli.initialize (argc, argv);
-    cli.analyze (true, true);
+    for (int i = 0; i < argc; i++)
+      cli2.add (argv[i]);
+
+    cli2.analyze ();
 
     // Extract a recomposed command line.
     bool foundDefault = false;
     bool foundAssumed = false;
     std::string combined;
-    std::vector <A>::const_iterator a;
-    for (a = cli._args.begin (); a != cli._args.end (); ++a)
+    for (auto& a : cli2._args)
     {
       if (combined.length ())
         combined += ' ';
 
-      if (a->attribute ("canonical") != "")
-        combined += a->attribute ("canonical");
-      else
-        combined += a->attribute ("raw");
+      combined += a.attribute ("raw");
 
-      if (a->hasTag ("DEFAULT"))
+      if (a.hasTag ("DEFAULT"))
         foundDefault = true;
 
-      if (a->hasTag ("ASSUMED"))
+      if (a.hasTag ("ASSUMED"))
         foundAssumed = true;
     }
 
@@ -314,44 +298,40 @@ int Context::initialize (int argc, const char** argv)
     // Dump all debug messages, controlled by rc.debug.
     if (config.getBoolean ("debug"))
     {
-      std::vector <std::string>::iterator d;
-      for (d = debugMessages.begin (); d != debugMessages.end (); ++d)
+      for (auto& d : debugMessages)
         if (color ())
-          nowide::cerr << colorizeDebug (*d) << "\n";
+          nowide::cerr << colorizeDebug (d) << "\n";
         else
-          nowide::cerr << *d << "\n";
+          nowide::cerr << d << "\n";
     }
 
     // Dump all headers, controlled by 'header' verbosity token.
     if (verbose ("header"))
     {
-      std::vector <std::string>::iterator h;
-      for (h = headers.begin (); h != headers.end (); ++h)
+      for (auto& h : headers)
         if (color ())
-          nowide::cerr << colorizeHeader (*h) << "\n";
+          nowide::cerr << colorizeHeader (h) << "\n";
         else
-          nowide::cerr << *h << "\n";
+          nowide::cerr << h << "\n";
     }
 
     // Dump all footnotes, controlled by 'footnote' verbosity token.
     if (verbose ("footnote"))
     {
-      std::vector <std::string>::iterator f;
-      for (f = footnotes.begin (); f != footnotes.end (); ++f)
+      for (auto& f : footnotes)
         if (color ())
-          nowide::cerr << colorizeFootnote (*f) << "\n";
+          nowide::cerr << colorizeFootnote (f) << "\n";
         else
-          nowide::cerr << *f << "\n";
+          nowide::cerr << f << "\n";
     }
 
     // Dump all errors, non-maskable.
     // Colorized as footnotes.
-    std::vector <std::string>::iterator e;
-    for (e = errors.begin (); e != errors.end (); ++e)
+    for (auto& e : errors)
       if (color ())
-        nowide::cerr << colorizeFootnote (*e) << "\n";
+        nowide::cerr << colorizeFootnote (e) << "\n";
       else
-        nowide::cerr << *e << "\n";
+        nowide::cerr << e << "\n";
   }
 
   timer_init.stop ();
@@ -371,6 +351,8 @@ int Context::run ()
     tdb2.commit ();           // Harmless if called when nothing changed.
     hooks.onExit ();          // No chance to update data.
 
+    timer_total.stop ();
+
     std::stringstream s;
     s << "Perf "
       << PACKAGE_STRING
@@ -381,7 +363,7 @@ int Context::run ()
       << "-"
 #endif
       << " "
-      << Date ().toISO ()
+      << ISO8601d ().toISO ()
 
       << " init:"   << timer_init.total ()
       << " load:"   << timer_load.total ()
@@ -391,7 +373,8 @@ int Context::run ()
       << " sort:"   << timer_sort.total ()
       << " render:" << timer_render.total ()
       << " hooks:"  << timer_hooks.total ()
-      << " total:"  << (timer_init.total ()   +
+      << " other:"  << timer_total.total ()   -
+                       (timer_init.total ()   +
                         timer_load.total ()   +
                         timer_gc.total ()     +
                         timer_filter.total () +
@@ -399,6 +382,7 @@ int Context::run ()
                         timer_sort.total ()   +
                         timer_render.total () +
                         timer_hooks.total ())
+      << " total:"  << timer_total.total ()
       << "\n";
     debug (s.str ());
   }
@@ -432,23 +416,21 @@ int Context::run ()
   // Dump all debug messages, controlled by rc.debug.
   if (config.getBoolean ("debug"))
   {
-    std::vector <std::string>::iterator d;
-    for (d = debugMessages.begin (); d != debugMessages.end (); ++d)
+    for (auto& d : debugMessages)
       if (color ())
-        nowide::cerr << colorizeDebug (*d) << "\n";
+        nowide::cerr << colorizeDebug (d) << "\n";
       else
-        nowide::cerr << *d << "\n";
+        nowide::cerr << d << "\n";
   }
 
   // Dump all headers, controlled by 'header' verbosity token.
   if (verbose ("header"))
   {
-    std::vector <std::string>::iterator h;
-    for (h = headers.begin (); h != headers.end (); ++h)
+    for (auto& h : headers)
       if (color ())
-        nowide::cerr << colorizeHeader (*h) << "\n";
+        nowide::cerr << colorizeHeader (h) << "\n";
       else
-        nowide::cerr << *h << "\n";
+        nowide::cerr << h << "\n";
   }
 
   // Dump the report output.
@@ -457,22 +439,20 @@ int Context::run ()
   // Dump all footnotes, controlled by 'footnote' verbosity token.
   if (verbose ("footnote"))
   {
-    std::vector <std::string>::iterator f;
-    for (f = footnotes.begin (); f != footnotes.end (); ++f)
+    for (auto& f : footnotes)
       if (color ())
-        nowide::cerr << colorizeFootnote (*f) << "\n";
+        nowide::cerr << colorizeFootnote (f) << "\n";
       else
-        nowide::cerr << *f << "\n";
+        nowide::cerr << f << "\n";
   }
 
   // Dump all errors, non-maskable.
   // Colorized as footnotes.
-  std::vector <std::string>::iterator e;
-  for (e = errors.begin (); e != errors.end (); ++e)
+  for (auto& e : errors)
     if (color ())
-      nowide::cerr << colorizeError (*e) << "\n";
+      nowide::cerr << colorizeError (e) << "\n";
     else
-      nowide::cerr << *e << "\n";
+      nowide::cerr << e << "\n";
 
   return rc;
 }
@@ -482,7 +462,7 @@ int Context::run ()
 int Context::dispatch (std::string &out)
 {
   // Autocomplete args against keywords.
-  std::string command = cli.getCommand ();
+  std::string command = cli2.getCommand ();
   if (command != "")
   {
     updateXtermTitle ();
@@ -491,9 +471,9 @@ int Context::dispatch (std::string &out)
     Command* c = commands[command];
     assert (c);
 
-    // GC is invoked prior to running any command that displays task IDs, if
-    // possible.
-    if (c->displays_id () && !tdb2.read_only ())
+    // The command know whether they need a GC.
+    if (c->needs_gc () &&
+        ! tdb2.read_only ())
     {
       run_gc = config.getBoolean ("gc");
       tdb2.gc ();
@@ -510,6 +490,21 @@ int Context::dispatch (std::string &out)
       throw std::string ("");
 */
 
+    // This is something that is only needed for write commands with no other
+    // filter processing.
+    if (c->accepts_modifications () &&
+        ! c->accepts_filter ())
+    {
+      cli2.prepareFilter ();
+    }
+
+    // With rc.debug.parser == 2, there are more tree dumps than you might want,
+    // but we need the rc.debug.parser == 1 case covered also, with the final
+    // tree.
+    if (config.getBoolean ("debug") &&
+        config.getInteger ("debug.parser") == 1)
+      debug (cli2.dump ("Parse Tree (before command-specifіc processing)"));
+
     return c->execute (out);
   }
 
@@ -520,7 +515,6 @@ int Context::dispatch (std::string &out)
 ////////////////////////////////////////////////////////////////////////////////
 bool Context::color ()
 {
-#ifdef FEATURE_COLOR
   if (determine_color_use)
   {
     // What the config says.
@@ -550,9 +544,6 @@ bool Context::color ()
 
   // Cached result.
   return use_color;
-#else
-  return false;
-#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -568,7 +559,7 @@ bool Context::color ()
 //      take the place of '0'.
 bool Context::verbose (const std::string& token)
 {
-  if (! verbosity.size ())
+  if (verbosity.empty ())
   {
     verbosity_legacy = config.getBoolean ("verbose");
     split (verbosity, config.get ("verbose"), ',');
@@ -577,29 +568,42 @@ bool Context::verbose (const std::string& token)
     // This odd test is to see if a Boolean-false value is a real one, which
     // means it is not 1/true/T/yes/on, but also should not be one of the
     // valid tokens either.
-    if (!verbosity_legacy               &&
-        verbosity.size ()               &&
-        verbosity[0]      != "nothing"  &&
-        verbosity[0]      != "blank"    &&  // This list must be complete.
-        verbosity[0]      != "header"   &&  //
-        verbosity[0]      != "footnote" &&  //
-        verbosity[0]      != "label"    &&  //
-        verbosity[0]      != "new-id"   &&  //
-        verbosity[0]      != "new-uuid" &&  //
-        verbosity[0]      != "affected" &&  //
-        verbosity[0]      != "edit"     &&  //
-        verbosity[0]      != "special"  &&  //
-        verbosity[0]      != "project"  &&  //
-        verbosity[0]      != "sync"     &&  //
-        verbosity[0]      != "filter")      //
+    if (! verbosity_legacy && ! verbosity.empty ())
     {
-      verbosity.clear ();
+      std::string v = *(verbosity.begin ());
+      if (v != "nothing"  &&
+          v != "blank"    &&  // This list must be complete.
+          v != "header"   &&  //
+          v != "footnote" &&  //
+          v != "label"    &&  //
+          v != "new-id"   &&  //
+          v != "new-uuid" &&  //
+          v != "affected" &&  //
+          v != "edit"     &&  //
+          v != "special"  &&  //
+          v != "project"  &&  //
+          v != "sync"     &&  //
+          v != "filter"   &&  //
+          v != "unwait"   &&  //
+          v != "recur")       //
+      {
+        // This list emulates rc.verbose=off in version 1.9.4.
+        verbosity = {"blank", "label", "new-id", "edit"};
+      }
+    }
 
-      // This list emulates rc.verbose=off in version 1.9.4.
-      verbosity.push_back ("blank");
-      verbosity.push_back ("label");
-      verbosity.push_back ("new-id");
-      verbosity.push_back ("edit");
+    // Some flags imply "footnote" verbosity being active.  Make it so.
+    if (! verbosity.count ("footnote"))
+    {
+      // TODO: Some of these may not use footnotes yet.  They should.
+      for (auto flag : {"affected", "new-id", "new-uuid", "project", "unwait", "recur"})
+      {
+        if (verbosity.count (flag))
+        {
+          verbosity.insert ("footnote");
+          break;
+        }
+      }
     }
   }
 
@@ -609,11 +613,11 @@ bool Context::verbose (const std::string& token)
 
   // rc.verbose=nothing overrides all.
   if (verbosity.size () == 1 &&
-      verbosity[0] == "nothing")
+      *(verbosity.begin ()) == "nothing")
     return false;
 
   // Specific token match.
-  if (std::find (verbosity.begin (), verbosity.end (), token) != verbosity.end ())
+  if (verbosity.count (token))
     return true;
 
   return false;
@@ -623,20 +627,8 @@ bool Context::verbose (const std::string& token)
 const std::vector <std::string> Context::getColumns () const
 {
   std::vector <std::string> output;
-  std::map <std::string, Column*>::const_iterator i;
-  for (i = columns.begin (); i != columns.end (); ++i)
-    output.push_back (i->first);
-
-  return output;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-const std::vector <std::string> Context::getCommands () const
-{
-  std::vector <std::string> output;
-  std::map <std::string, Command*>::const_iterator i;
-  for (i = commands.begin (); i != commands.end (); ++i)
-    output.push_back (i->first);
+  for (auto& col : columns)
+    output.push_back (col.first);
 
   return output;
 }
@@ -651,7 +643,7 @@ void Context::getLimits (int& rows, int& lines)
   lines = 0;
 
   // This is an integer specified as a filter (limit:10).
-  std::string limit = cli.getLimit ();
+  std::string limit = config.get ("limit");
   if (limit != "")
   {
     if (limit == "page")
@@ -672,7 +664,9 @@ void Context::getLimits (int& rows, int& lines)
 // easier, it has been decoupled from Context.
 void Context::staticInitialization ()
 {
-  CLI::minimumMatchLength   = config.getInteger ("abbreviation.minimum");
+  CLI2::minimumMatchLength     = config.getInteger ("abbreviation.minimum");
+  Lexer::minimumMatchLength    = config.getInteger ("abbreviation.minimum");
+  ISO8601d::minimumMatchLength = config.getInteger ("abbreviation.minimum");
 
   Task::defaultProject      = config.get ("default.project");
   Task::defaultDue          = config.get ("default.due");
@@ -680,36 +674,39 @@ void Context::staticInitialization ()
   Task::searchCaseSensitive = Variant::searchCaseSensitive = config.getBoolean ("search.case.sensitive");
   Task::regex               = Variant::searchUsingRegex    = config.getBoolean ("regex");
   Lexer::dateFormat         = Variant::dateFormat          = config.get ("dateformat");
-  Lexer::isoEnabled         = Variant::isoEnabled          = config.getBoolean ("date.iso");
+  ISO8601p::isoEnabled      = ISO8601d::isoEnabled         = config.getBoolean ("date.iso");
 
-  Config::const_iterator rc;
-  for (rc = config.begin (); rc != config.end (); ++rc)
+  TDB2::debug_mode          = config.getBoolean ("debug");
+
+  ISO8601d::weekstart       = config.get ("weekstart");
+
+  for (auto& rc : config)
   {
-    if (rc->first.substr (0, 4) == "uda." &&
-        rc->first.substr (rc->first.length () - 7, 7) == ".values")
+    if (rc.first.substr (0, 4) == "uda." &&
+        rc.first.substr (rc.first.length () - 7, 7) == ".values")
     {
-      std::string name = rc->first.substr (4, rc->first.length () - 7 - 4);
+      std::string name = rc.first.substr (4, rc.first.length () - 7 - 4);
       std::vector <std::string> values;
-      split (values, rc->second, ',');
+      split (values, rc.second, ',');
 
       for (auto r = values.rbegin(); r != values.rend (); ++r)
         Task::customOrder[name].push_back (*r);
     }
   }
 
-  std::map <std::string, Column*>::iterator i;
-  for (i = columns.begin (); i != columns.end (); ++i)
-    Task::attributes[i->first] = i->second->type ();
+  for (auto& col : columns)
+  {
+    Task::attributes[col.first] = col.second->type ();
+    Lexer::attributes[col.first] = col.second->type ();
+  }
 
   Task::urgencyProjectCoefficient     = config.getReal ("urgency.project.coefficient");
   Task::urgencyActiveCoefficient      = config.getReal ("urgency.active.coefficient");
   Task::urgencyScheduledCoefficient   = config.getReal ("urgency.scheduled.coefficient");
   Task::urgencyWaitingCoefficient     = config.getReal ("urgency.waiting.coefficient");
   Task::urgencyBlockedCoefficient     = config.getReal ("urgency.blocked.coefficient");
-  Task::urgencyInheritCoefficient     = config.getReal ("urgency.inherit.coefficient");
   Task::urgencyAnnotationsCoefficient = config.getReal ("urgency.annotations.coefficient");
   Task::urgencyTagsCoefficient        = config.getReal ("urgency.tags.coefficient");
-  Task::urgencyNextCoefficient        = config.getReal ("urgency.next.coefficient");
   Task::urgencyDueCoefficient         = config.getReal ("urgency.due.coefficient");
   Task::urgencyBlockingCoefficient    = config.getReal ("urgency.blocking.coefficient");
   Task::urgencyAgeCoefficient         = config.getReal ("urgency.age.coefficient");
@@ -718,11 +715,10 @@ void Context::staticInitialization ()
   // Tag- and project-specific coefficients.
   std::vector <std::string> all;
   config.all (all);
-  std::vector <std::string>::iterator var;
-  for (var = all.begin (); var != all.end (); ++var)
-    if (var->substr (0, 13) == "urgency.user." ||
-        var->substr (0, 12) == "urgency.uda.")
-      Task::coefficients[*var] = config.getReal (*var);
+  for (auto& var : all)
+    if (var.substr (0, 13) == "urgency.user." ||
+        var.substr (0, 12) == "urgency.uda.")
+      Task::coefficients[var] = config.getReal (var);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -777,45 +773,18 @@ void Context::decomposeSortField (
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Note: The reason some of these are commented out is because the ::clear
-// method is not really "clear" but "clear_some".  Some members do not need to
-// be initialized.  That makes this method something of a misnomer.  So be it.
-//
-// TODO Is this method used anywhere?
-void Context::clear ()
-{
-  tdb2.clear ();
-
-  // Eliminate the command objects.
-  std::map <std::string, Command*>::iterator com;
-  for (com = commands.begin (); com != commands.end (); ++com)
-    delete com->second;
-
-  commands.clear ();
-
-  // Eliminate the column objects.
-  std::map <std::string, Column*>::iterator col;
-  for (col = columns.begin (); col != columns.end (); ++col)
-    delete col->second;
-
-  columns.clear ();
-  clearMessages ();
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // This capability is to answer the question of 'what did I just do to generate
 // this output?'.
 void Context::updateXtermTitle ()
 {
   if (config.getBoolean ("xterm.title") && isatty (STDOUT_FILENO))
   {
-    std::string command = cli.getCommand ();
+    std::string command = cli2.getCommand ();
     std::string title;
 
-    std::vector <A>::const_iterator a;
-    for (a = cli._args.begin (); a != cli._args.end (); ++a)
+    for (auto a = cli2._args.begin (); a != cli2._args.end (); ++a)
     {
-      if (a != cli._args.begin ())
+      if (a != cli2._args.begin ())
         title += ' ';
 
       title += a->attribute ("raw");
@@ -829,22 +798,20 @@ void Context::updateXtermTitle ()
 // This function allows a clean output if the command is a helper subcommand.
 void Context::updateVerbosity ()
 {
-  std::string command = cli.getCommand ();
+  std::string command = cli2.getCommand ();
   if (command != "" &&
       command[0] == '_')
   {
-    verbosity.clear ();
-    verbosity.push_back ("nothing");
+    verbosity = {"nothing"};
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void Context::loadAliases ()
 {
-  std::map <std::string, std::string>::iterator i;
-  for (i = config.begin (); i != config.end (); ++i)
-    if (i->first.substr (0, 6) == "alias.")
-      cli.alias (i->first.substr (6), i->second);
+  for (auto& i : config)
+    if (i.first.substr (0, 6) == "alias.")
+      cli2.alias (i.first.substr (6), i.second);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

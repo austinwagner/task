@@ -51,7 +51,7 @@ json::jtype json::value::type ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string json::value::dump ()
+std::string json::value::dump () const
 {
   return "<value>";
 }
@@ -83,7 +83,7 @@ json::jtype json::string::type ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string json::string::dump ()
+std::string json::string::dump () const
 {
   return std::string ("\"") + _data + "\"";
 }
@@ -109,7 +109,7 @@ json::jtype json::number::type ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string json::number::dump ()
+std::string json::number::dump () const
 {
   return format (_dvalue);
 }
@@ -152,7 +152,7 @@ json::jtype json::literal::type ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string json::literal::dump ()
+std::string json::literal::dump () const
 {
        if (_lvalue == nullvalue)  return "null";
   else if (_lvalue == falsevalue) return "false";
@@ -162,9 +162,8 @@ std::string json::literal::dump ()
 ////////////////////////////////////////////////////////////////////////////////
 json::array::~array ()
 {
-  std::vector <json::value*>::iterator i;
-  for (i = _data.begin (); i != _data.end (); ++i)
-    delete *i;
+  for (auto& i : _data)
+    delete i;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -222,15 +221,12 @@ json::jtype json::array::type ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string json::array::dump ()
+std::string json::array::dump () const
 {
   std::string output;
   output += "[";
 
-  std::vector <json::value*>::iterator i;
-  for (i  = _data.begin ();
-       i != _data.end ();
-       ++i)
+  for (auto i = _data.begin (); i != _data.end (); ++i)
   {
     if (i != _data.begin ())
       output += ",";
@@ -245,9 +241,8 @@ std::string json::array::dump ()
 ////////////////////////////////////////////////////////////////////////////////
 json::object::~object ()
 {
-  std::map <std::string, json::value*>::iterator i;
-  for (i = _data.begin (); i != _data.end (); ++i)
-    delete i->second;
+  for (auto& i : _data)
+    delete i.second;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -336,13 +331,12 @@ json::jtype json::object::type ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string json::object::dump ()
+std::string json::object::dump () const
 {
   std::string output;
   output += "{";
 
-  std::map <std::string, json::value*>::iterator i;
-  for (i = _data.begin (); i != _data.end (); ++i)
+  for (auto i = _data.begin (); i != _data.end (); ++i)
   {
     if (i != _data.begin ())
       output += ",";
@@ -384,9 +378,9 @@ std::string json::encode (const std::string& input)
 {
   std::string output;
 
-  for (std::string::size_type i = 0; i < input.length (); ++i)
+  for (auto& i : input)
   {
-    switch (input[i])
+    switch (i)
     {
     // Simple translations.
     case '"':  output += "\\\"";   break;
@@ -399,7 +393,7 @@ std::string json::encode (const std::string& input)
     case '\t': output += "\\t";    break;
 
     // Default NOP.
-    default:   output += input[i]; break;
+    default:   output += i; break;
     }
   }
 

@@ -25,6 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <cmake.h>
+#include <algorithm>
 #include <Context.h>
 #include <Column.h>
 #include <ColDepends.h>
@@ -62,7 +63,7 @@ extern Context context;
 Column* Column::factory (const std::string& name, const std::string& report)
 {
   // Decompose name into type and style.
-  std::string::size_type dot = name.find ('.');
+  auto dot = name.find ('.');
   std::string column_name;
   std::string column_style;
   if (dot != std::string::npos)
@@ -149,24 +150,22 @@ void Column::uda (std::map <std::string, Column*>& all)
   // For each UDA, instantiate and initialize ColumnUDA().
   std::map <std::string, int> udas;
 
-  Config::const_iterator i;
-  for (i = context.config.begin (); i != context.config.end (); ++i)
+  for (auto& i : context.config)
   {
-    if (i->first.substr (0, 4) == "uda.")
+    if (i.first.substr (0, 4) == "uda.")
     {
       std::string::size_type period = 4;
-      if ((period = i->first.find ('.', period)) != std::string::npos)
-        udas[i->first.substr (4, period - 4)] = 0;
+      if ((period = i.first.find ('.', period)) != std::string::npos)
+        udas[i.first.substr (4, period - 4)] = 0;
     }
   }
 
-  std::map <std::string, int>::iterator uda;
-  for (uda = udas.begin (); uda != udas.end (); ++uda)
+  for (auto& uda : udas)
   {
-    if (all.find (uda->first) != all.end ())
-      throw format (STRING_UDA_COLLISION, uda->first);
+    if (all.find (uda.first) != all.end ())
+      throw format (STRING_UDA_COLLISION, uda.first);
 
-    Column* c = Column::uda (uda->first);
+    Column* c = Column::uda (uda.first);
     all[c->_name] = c;
   }
 }
@@ -213,49 +212,6 @@ Column::Column ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-Column::Column (const Column& other)
-{
-  _name        = other._name;
-  _type        = other._type;
-  _style       = other._style;
-  _label       = other._label;
-  _label       = other._report;
-  _modifiable  = other._modifiable;
-  _uda         = other._uda;
-  _fixed_width = other._fixed_width;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-Column& Column::operator= (const Column& other)
-{
-  if (this != &other)
-  {
-    _name        = other._name;
-    _type        = other._type;
-    _style       = other._style;
-    _label       = other._label;
-    _report      = other._report;
-    _modifiable  = other._modifiable;
-    _uda         = other._uda;
-    _fixed_width = other._fixed_width;
-  }
-
-  return *this;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool Column::operator== (const Column& other) const
-{
-  return _name       == other._name       &&
-         _type       == other._type       &&
-         _style      == other._style      &&
-         _label      == other._label      &&
-         _report     == other._report     &&
-         _modifiable == other._modifiable &&
-         _uda        == other._uda;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 Column::~Column ()
 {
 }
@@ -293,6 +249,16 @@ void Column::renderHeader (
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+void Column::setStyle (const std::string& style)
+{
+  if (style != "default" &&
+      std::find (_styles.begin (), _styles.end (), style) == _styles.end ())
+    throw format (STRING_COLUMN_BAD_FORMAT, _name, style);
+
+  _style = style;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 bool Column::validate (std::string& input)
 {
   return input.length () ? true : false;
@@ -300,44 +266,9 @@ bool Column::validate (std::string& input)
 
 ////////////////////////////////////////////////////////////////////////////////
 // No L10N.
-void Column::measure (const std::string&, unsigned int&, unsigned int&)
-{
-  throw std::string ("Virtual method Column::measure not overridden.");
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// No L10N.
-void Column::measure (Task&, unsigned int&, unsigned int&)
-{
-  throw std::string ("Virtual method Column::measure not overridden.");
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// No L10N.
-void Column::render (std::vector <std::string>&, const std::string&, int, Color&)
-{
-  throw std::string ("Virtual method Column::render not overridden.");
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// No L10N.
-void Column::render (std::vector <std::string>&, Task&, int, Color&)
-{
-  throw std::string ("Virtual method Column::render not overridden.");
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// No L10N.
 bool Column::can_modify ()
 {
   return false;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// No L10N.
-std::string Column::modify (std::string& value)
-{
-  throw std::string ("Virtual method Column::modify not overridden.");
 }
 
 ////////////////////////////////////////////////////////////////////////////////

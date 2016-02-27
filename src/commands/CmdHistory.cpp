@@ -32,6 +32,7 @@
 #include <main.h>
 #include <text.h>
 #include <i18n.h>
+#include <ISO8601.h>
 #include <CmdHistory.h>
 
 extern Context context;
@@ -39,11 +40,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdHistoryMonthly::CmdHistoryMonthly ()
 {
-  _keyword     = "history.monthly";
-  _usage       = "task <filter> history.monthly";
-  _description = STRING_CMD_HISTORY_USAGE_M;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "history.monthly";
+  _usage                 = "task <filter> history.monthly";
+  _description           = STRING_CMD_HISTORY_USAGE_M;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::graphs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,23 +69,23 @@ int CmdHistoryMonthly::execute (std::string& output)
   std::vector <Task> filtered;
   filter.subset (filtered);
 
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
-    Date entry (task->get_date ("entry"));
+    ISO8601d entry (task.get_date ("entry"));
 
-    Date end;
-    if (task->has ("end"))
-      end = Date (task->get_date ("end"));
+    ISO8601d end;
+    if (task.has ("end"))
+      end = ISO8601d (task.get_date ("end"));
 
     time_t epoch = entry.startOfMonth ().toEpoch ();
     groups[epoch] = 0;
 
-    // Every task has an entry date.
-    ++addedGroup[epoch];
+    // Every task has an entry date, but exclude templates.
+    if (task.getStatus () != Task::recurring)
+      ++addedGroup[epoch];
 
     // All deleted tasks have an end date.
-    if (task->getStatus () == Task::deleted)
+    if (task.getStatus () == Task::deleted)
     {
       epoch = end.startOfMonth ().toEpoch ();
       groups[epoch] = 0;
@@ -86,7 +93,7 @@ int CmdHistoryMonthly::execute (std::string& output)
     }
 
     // All completed tasks have an end date.
-    else if (task->getStatus () == Task::completed)
+    else if (task.getStatus () == Task::completed)
     {
       epoch = end.startOfMonth ().toEpoch ();
       groups[epoch] = 0;
@@ -113,16 +120,15 @@ int CmdHistoryMonthly::execute (std::string& output)
 
   int priorYear = 0;
   int row = 0;
-  std::map <time_t, int>::iterator i;
-  for (i = groups.begin (); i != groups.end (); ++i)
+  for (auto& i : groups)
   {
     row = view.addRow ();
 
-    totalAdded     += addedGroup     [i->first];
-    totalCompleted += completedGroup [i->first];
-    totalDeleted   += deletedGroup   [i->first];
+    totalAdded     += addedGroup     [i.first];
+    totalCompleted += completedGroup [i.first];
+    totalDeleted   += deletedGroup   [i.first];
 
-    Date dt (i->first);
+    ISO8601d dt (i.first);
     int m, d, y;
     dt.toMDY (m, d, y);
 
@@ -131,26 +137,26 @@ int CmdHistoryMonthly::execute (std::string& output)
       view.set (row, 0, y);
       priorYear = y;
     }
-    view.set (row, 1, Date::monthName(m));
+    view.set (row, 1, ISO8601d::monthName(m));
 
     int net = 0;
 
-    if (addedGroup.find (i->first) != addedGroup.end ())
+    if (addedGroup.find (i.first) != addedGroup.end ())
     {
-      view.set (row, 2, addedGroup[i->first]);
-      net +=addedGroup[i->first];
+      view.set (row, 2, addedGroup[i.first]);
+      net +=addedGroup[i.first];
     }
 
-    if (completedGroup.find (i->first) != completedGroup.end ())
+    if (completedGroup.find (i.first) != completedGroup.end ())
     {
-      view.set (row, 3, completedGroup[i->first]);
-      net -= completedGroup[i->first];
+      view.set (row, 3, completedGroup[i.first]);
+      net -= completedGroup[i.first];
     }
 
-    if (deletedGroup.find (i->first) != deletedGroup.end ())
+    if (deletedGroup.find (i.first) != deletedGroup.end ())
     {
-      view.set (row, 4, deletedGroup[i->first]);
-      net -= deletedGroup[i->first];
+      view.set (row, 4, deletedGroup[i.first]);
+      net -= deletedGroup[i.first];
     }
 
     Color net_color;
@@ -197,11 +203,17 @@ int CmdHistoryMonthly::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 CmdHistoryAnnual::CmdHistoryAnnual ()
 {
-  _keyword     = "history.annual";
-  _usage       = "task <filter> history.annual";
-  _description = STRING_CMD_HISTORY_USAGE_A;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "history.annual";
+  _usage                 = "task <filter> history.annual";
+  _description           = STRING_CMD_HISTORY_USAGE_A;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::graphs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -219,23 +231,23 @@ int CmdHistoryAnnual::execute (std::string& output)
   std::vector <Task> filtered;
   filter.subset (filtered);
 
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
-    Date entry (task->get_date ("entry"));
+    ISO8601d entry (task.get_date ("entry"));
 
-    Date end;
-    if (task->has ("end"))
-      end = Date (task->get_date ("end"));
+    ISO8601d end;
+    if (task.has ("end"))
+      end = ISO8601d (task.get_date ("end"));
 
     time_t epoch = entry.startOfYear ().toEpoch ();
     groups[epoch] = 0;
 
-    // Every task has an entry date.
-    ++addedGroup[epoch];
+    // Every task has an entry date, but exclude templates.
+    if (task.getStatus () != Task::recurring)
+      ++addedGroup[epoch];
 
     // All deleted tasks have an end date.
-    if (task->getStatus () == Task::deleted)
+    if (task.getStatus () == Task::deleted)
     {
       epoch = end.startOfYear ().toEpoch ();
       groups[epoch] = 0;
@@ -243,7 +255,7 @@ int CmdHistoryAnnual::execute (std::string& output)
     }
 
     // All completed tasks have an end date.
-    else if (task->getStatus () == Task::completed)
+    else if (task.getStatus () == Task::completed)
     {
       epoch = end.startOfYear ().toEpoch ();
       groups[epoch] = 0;
@@ -269,16 +281,15 @@ int CmdHistoryAnnual::execute (std::string& output)
 
   int priorYear = 0;
   int row = 0;
-  std::map <time_t, int>::iterator i;
-  for (i = groups.begin (); i != groups.end (); ++i)
+  for (auto& i : groups)
   {
     row = view.addRow ();
 
-    totalAdded     += addedGroup     [i->first];
-    totalCompleted += completedGroup [i->first];
-    totalDeleted   += deletedGroup   [i->first];
+    totalAdded     += addedGroup     [i.first];
+    totalCompleted += completedGroup [i.first];
+    totalDeleted   += deletedGroup   [i.first];
 
-    Date dt (i->first);
+    ISO8601d dt (i.first);
     int m, d, y;
     dt.toMDY (m, d, y);
 
@@ -290,22 +301,22 @@ int CmdHistoryAnnual::execute (std::string& output)
 
     int net = 0;
 
-    if (addedGroup.find (i->first) != addedGroup.end ())
+    if (addedGroup.find (i.first) != addedGroup.end ())
     {
-      view.set (row, 1, addedGroup[i->first]);
-      net +=addedGroup[i->first];
+      view.set (row, 1, addedGroup[i.first]);
+      net +=addedGroup[i.first];
     }
 
-    if (completedGroup.find (i->first) != completedGroup.end ())
+    if (completedGroup.find (i.first) != completedGroup.end ())
     {
-      view.set (row, 2, completedGroup[i->first]);
-      net -= completedGroup[i->first];
+      view.set (row, 2, completedGroup[i.first]);
+      net -= completedGroup[i.first];
     }
 
-    if (deletedGroup.find (i->first) != deletedGroup.end ())
+    if (deletedGroup.find (i.first) != deletedGroup.end ())
     {
-      view.set (row, 3, deletedGroup[i->first]);
-      net -= deletedGroup[i->first];
+      view.set (row, 3, deletedGroup[i.first]);
+      net -= deletedGroup[i.first];
     }
 
     Color net_color;
@@ -351,11 +362,17 @@ int CmdHistoryAnnual::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 CmdGHistoryMonthly::CmdGHistoryMonthly ()
 {
-  _keyword     = "ghistory.monthly";
-  _usage       = "task <filter> ghistory.monthly";
-  _description = STRING_CMD_GHISTORY_USAGE_M;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "ghistory.monthly";
+  _usage                 = "task <filter> ghistory.monthly";
+  _description           = STRING_CMD_GHISTORY_USAGE_M;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::graphs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -373,23 +390,23 @@ int CmdGHistoryMonthly::execute (std::string& output)
   std::vector <Task> filtered;
   filter.subset (filtered);
 
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
-    Date entry (task->get_date ("entry"));
+    ISO8601d entry (task.get_date ("entry"));
 
-    Date end;
-    if (task->has ("end"))
-      end = Date (task->get_date ("end"));
+    ISO8601d end;
+    if (task.has ("end"))
+      end = ISO8601d (task.get_date ("end"));
 
     time_t epoch = entry.startOfMonth ().toEpoch ();
     groups[epoch] = 0;
 
-    // Every task has an entry date.
-    ++addedGroup[epoch];
+    // Every task has an entry date, but exclude templates.
+    if (task.getStatus () != Task::recurring)
+      ++addedGroup[epoch];
 
     // All deleted tasks have an end date.
-    if (task->getStatus () == Task::deleted)
+    if (task.getStatus () == Task::deleted)
     {
       epoch = end.startOfMonth ().toEpoch ();
       groups[epoch] = 0;
@@ -397,7 +414,7 @@ int CmdGHistoryMonthly::execute (std::string& output)
     }
 
     // All completed tasks have an end date.
-    else if (task->getStatus () == Task::completed)
+    else if (task.getStatus () == Task::completed)
     {
       epoch = end.startOfMonth ().toEpoch ();
       groups[epoch] = 0;
@@ -424,14 +441,13 @@ int CmdGHistoryMonthly::execute (std::string& output)
   // Determine the longest line, and the longest "added" line.
   int maxAddedLine = 0;
   int maxRemovedLine = 0;
-  std::map <time_t, int>::iterator i;
-  for (i = groups.begin (); i != groups.end (); ++i)
+  for (auto& i : groups)
   {
-    if (completedGroup[i->first] + deletedGroup[i->first] > maxRemovedLine)
-      maxRemovedLine = completedGroup[i->first] + deletedGroup[i->first];
+    if (completedGroup[i.first] + deletedGroup[i.first] > maxRemovedLine)
+      maxRemovedLine = completedGroup[i.first] + deletedGroup[i.first];
 
-    if (addedGroup[i->first] > maxAddedLine)
-      maxAddedLine = addedGroup[i->first];
+    if (addedGroup[i.first] > maxAddedLine)
+      maxAddedLine = addedGroup[i.first];
   }
 
   int maxLine = maxAddedLine + maxRemovedLine;
@@ -445,16 +461,15 @@ int CmdGHistoryMonthly::execute (std::string& output)
 
     int priorYear = 0;
     int row = 0;
-    std::map <time_t, int>::iterator i;
-    for (i = groups.begin (); i != groups.end (); ++i)
+    for (auto& i : groups)
     {
       row = view.addRow ();
 
-      totalAdded     += addedGroup[i->first];
-      totalCompleted += completedGroup[i->first];
-      totalDeleted   += deletedGroup[i->first];
+      totalAdded     += addedGroup[i.first];
+      totalCompleted += completedGroup[i.first];
+      totalDeleted   += deletedGroup[i.first];
 
-      Date dt (i->first);
+      ISO8601d dt (i.first);
       int m, d, y;
       dt.toMDY (m, d, y);
 
@@ -463,35 +478,35 @@ int CmdGHistoryMonthly::execute (std::string& output)
         view.set (row, 0, y);
         priorYear = y;
       }
-      view.set (row, 1, Date::monthName(m));
+      view.set (row, 1, ISO8601d::monthName(m));
 
-      unsigned int addedBar     = (widthOfBar *     addedGroup[i->first]) / maxLine;
-      unsigned int completedBar = (widthOfBar * completedGroup[i->first]) / maxLine;
-      unsigned int deletedBar   = (widthOfBar *   deletedGroup[i->first]) / maxLine;
+      unsigned int addedBar     = (widthOfBar *     addedGroup[i.first]) / maxLine;
+      unsigned int completedBar = (widthOfBar * completedGroup[i.first]) / maxLine;
+      unsigned int deletedBar   = (widthOfBar *   deletedGroup[i.first]) / maxLine;
 
       std::string bar = "";
       if (context.color ())
       {
         std::string aBar = "";
-        if (addedGroup[i->first])
+        if (addedGroup[i.first])
         {
-          aBar = format (addedGroup[i->first]);
+          aBar = format (addedGroup[i.first]);
           while (aBar.length () < addedBar)
             aBar = " " + aBar;
         }
 
         std::string cBar = "";
-        if (completedGroup[i->first])
+        if (completedGroup[i.first])
         {
-          cBar = format (completedGroup[i->first]);
+          cBar = format (completedGroup[i.first]);
           while (cBar.length () < completedBar)
             cBar = " " + cBar;
         }
 
         std::string dBar = "";
-        if (deletedGroup[i->first])
+        if (deletedGroup[i.first])
         {
-          dBar = format (deletedGroup[i->first]);
+          dBar = format (deletedGroup[i.first]);
           while (dBar.length () < deletedBar)
             dBar = " " + dBar;
         }
@@ -547,11 +562,17 @@ int CmdGHistoryMonthly::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 CmdGHistoryAnnual::CmdGHistoryAnnual ()
 {
-  _keyword     = "ghistory.annual";
-  _usage       = "task <filter> ghistory.annual";
-  _description = STRING_CMD_GHISTORY_USAGE_A;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "ghistory.annual";
+  _usage                 = "task <filter> ghistory.annual";
+  _description           = STRING_CMD_GHISTORY_USAGE_A;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::graphs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -569,23 +590,23 @@ int CmdGHistoryAnnual::execute (std::string& output)
   std::vector <Task> filtered;
   filter.subset (filtered);
 
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
-    Date entry (task->get_date ("entry"));
+    ISO8601d entry (task.get_date ("entry"));
 
-    Date end;
-    if (task->has ("end"))
-      end = Date (task->get_date ("end"));
+    ISO8601d end;
+    if (task.has ("end"))
+      end = ISO8601d (task.get_date ("end"));
 
     time_t epoch = entry.startOfYear ().toEpoch ();
     groups[epoch] = 0;
 
-    // Every task has an entry date.
-    ++addedGroup[epoch];
+    // Every task has an entry date, but exclude templates.
+    if (task.getStatus () != Task::recurring)
+      ++addedGroup[epoch];
 
     // All deleted tasks have an end date.
-    if (task->getStatus () == Task::deleted)
+    if (task.getStatus () == Task::deleted)
     {
       epoch = end.startOfYear ().toEpoch ();
       groups[epoch] = 0;
@@ -593,7 +614,7 @@ int CmdGHistoryAnnual::execute (std::string& output)
     }
 
     // All completed tasks have an end date.
-    else if (task->getStatus () == Task::completed)
+    else if (task.getStatus () == Task::completed)
     {
       epoch = end.startOfYear ().toEpoch ();
       groups[epoch] = 0;
@@ -619,14 +640,13 @@ int CmdGHistoryAnnual::execute (std::string& output)
   // Determine the longest line, and the longest "added" line.
   int maxAddedLine = 0;
   int maxRemovedLine = 0;
-  std::map <time_t, int>::iterator i;
-  for (i = groups.begin (); i != groups.end (); ++i)
+  for (auto& i : groups)
   {
-    if (completedGroup[i->first] + deletedGroup[i->first] > maxRemovedLine)
-      maxRemovedLine = completedGroup[i->first] + deletedGroup[i->first];
+    if (completedGroup[i.first] + deletedGroup[i.first] > maxRemovedLine)
+      maxRemovedLine = completedGroup[i.first] + deletedGroup[i.first];
 
-    if (addedGroup[i->first] > maxAddedLine)
-      maxAddedLine = addedGroup[i->first];
+    if (addedGroup[i.first] > maxAddedLine)
+      maxAddedLine = addedGroup[i.first];
   }
 
   int maxLine = maxAddedLine + maxRemovedLine;
@@ -640,16 +660,15 @@ int CmdGHistoryAnnual::execute (std::string& output)
 
     int priorYear = 0;
     int row = 0;
-    std::map <time_t, int>::iterator i;
-    for (i = groups.begin (); i != groups.end (); ++i)
+    for (auto& i : groups)
     {
       row = view.addRow ();
 
-      totalAdded     += addedGroup[i->first];
-      totalCompleted += completedGroup[i->first];
-      totalDeleted   += deletedGroup[i->first];
+      totalAdded     += addedGroup[i.first];
+      totalCompleted += completedGroup[i.first];
+      totalDeleted   += deletedGroup[i.first];
 
-      Date dt (i->first);
+      ISO8601d dt (i.first);
       int m, d, y;
       dt.toMDY (m, d, y);
 
@@ -659,33 +678,33 @@ int CmdGHistoryAnnual::execute (std::string& output)
         priorYear = y;
       }
 
-      unsigned int addedBar     = (widthOfBar *     addedGroup[i->first]) / maxLine;
-      unsigned int completedBar = (widthOfBar * completedGroup[i->first]) / maxLine;
-      unsigned int deletedBar   = (widthOfBar *   deletedGroup[i->first]) / maxLine;
+      unsigned int addedBar     = (widthOfBar *     addedGroup[i.first]) / maxLine;
+      unsigned int completedBar = (widthOfBar * completedGroup[i.first]) / maxLine;
+      unsigned int deletedBar   = (widthOfBar *   deletedGroup[i.first]) / maxLine;
 
       std::string bar = "";
       if (context.color ())
       {
         std::string aBar = "";
-        if (addedGroup[i->first])
+        if (addedGroup[i.first])
         {
-          aBar = format (addedGroup[i->first]);
+          aBar = format (addedGroup[i.first]);
           while (aBar.length () < addedBar)
             aBar = " " + aBar;
         }
 
         std::string cBar = "";
-        if (completedGroup[i->first])
+        if (completedGroup[i.first])
         {
-          cBar = format (completedGroup[i->first]);
+          cBar = format (completedGroup[i.first]);
           while (cBar.length () < completedBar)
             cBar = " " + cBar;
         }
 
         std::string dBar = "";
-        if (deletedGroup[i->first])
+        if (deletedGroup[i.first])
         {
-          dBar = format (deletedGroup[i->first]);
+          dBar = format (deletedGroup[i.first]);
           while (dBar.length () < deletedBar)
             dBar = " " + dBar;
         }

@@ -37,38 +37,44 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdLog::CmdLog ()
 {
-  _keyword     = "log";
-  _usage       = "task          log <mods>";
-  _description = STRING_CMD_LOG_USAGE;
-  _read_only   = false;
-  _displays_id = false;
+  _keyword               = "log";
+  _usage                 = "task          log <mods>";
+  _description           = STRING_CMD_LOG_USAGE;
+  _read_only             = false;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = true;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::operation;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int CmdLog::execute (std::string& output)
 {
-  int rc = 0;
-
   // Apply the command line modifications to the new task.
   Task task;
   task.modify (Task::modReplace, true);
   task.setStatus (Task::completed);
 
-  // Recurring tasks get a special status.
+  // Cannot log recurring tasks.
   if (task.has ("recur"))
     throw std::string (STRING_CMD_LOG_NO_RECUR);
 
+  // Cannot log waiting tasks.
   if (task.has ("wait"))
     throw std::string (STRING_CMD_LOG_NO_WAITING);
 
   context.tdb2.add (task);
+
   if (context.verbose ("project"))
     context.footnote (onProjectChange (task));
 
-  if (context.verbose ("affected"))
-    output = std::string (STRING_CMD_LOG_LOGGED) + "\n";
+  if (context.verbose ("new-uuid"))
+    output = format (STRING_CMD_LOG_LOGGED, task.get ("uuid")) + "\n";
 
-  return rc;
+  return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

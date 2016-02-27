@@ -54,16 +54,16 @@ class TestAnnotate(TestCase):
         #
         # 4 tasks
 
-        self.t(("add", "one"))
-        self.t(("add", "two"))
-        self.t(("add", "three"))
-        self.t(("add", "four"))
-        self.t(("1", "annotate", "foo1"))
-        self.t(("1", "annotate", "foo2"))
-        self.t(("1", "annotate", "foo3"))
-        self.t(("2", "annotate", "bar1"))
-        self.t(("2", "annotate", "bar2"))
-        self.t(("3", "annotate", "baz1"))
+        self.t("add one")
+        self.t("add two")
+        self.t("add three")
+        self.t("add four")
+        self.t("1 annotate foo1")
+        self.t("1 annotate foo2")
+        self.t("1 annotate foo3")
+        self.t("2 annotate bar1")
+        self.t("2 annotate bar2")
+        self.t("3 annotate baz1")
 
     def assertTasksExist(self, out):
         self.assertIn("1 one", out)
@@ -78,12 +78,12 @@ class TestAnnotate(TestCase):
         # NOTE: Use 'rrr' to guarantee a unique report name.  Using 'r'
         # conflicts with 'recurring'.
         self.t.config("report.rrr.description", "rrr")
-        self.t.config("report.rrr.columns", "id,description")
-        self.t.config("report.rrr.sort", "id+")
-        self.t.config("dateformat", "m/d/Y")
-        self.t.config("color", "off")
+        self.t.config("report.rrr.columns",     "id,description")
+        self.t.config("report.rrr.sort",        "id+")
+        self.t.config("dateformat",             "m/d/Y")
+        self.t.config("color",                  "off")
 
-        code, out, err = self.t(("rrr",))
+        code, out, err = self.t("rrr")
 
         self.assertTasksExist(out)
 
@@ -106,11 +106,11 @@ class TestAnnotate(TestCase):
         # NOTE: Use 'rrr' to guarantee a unique report name.  Using 'r'
         # conflicts with 'recurring'.
         self.t.config("report.rrr.description", "rrr")
-        self.t.config("report.rrr.columns", "id,description")
-        self.t.config("report.rrr.sort", "id+")
-        self.t.config("dateformat.annotation", "yMD HNS")
+        self.t.config("report.rrr.columns",     "id,description")
+        self.t.config("report.rrr.sort",        "id+")
+        self.t.config("dateformat.annotation",  "yMD HNS")
 
-        code, out, err = self.t(("rrr",))
+        code, out, err = self.t("rrr")
 
         self.assertTasksExist(out)
 
@@ -127,9 +127,59 @@ class TestAnnotate(TestCase):
         self.assertRegexpMatches(out, "three\n.+\d{1,6}\s+\d{1,6}\s+baz1",
                                  msg="dateformat - first  annotation task 3")
 
+class TestAnnotationPropagation(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_annotate_nothing(self):
+        """Test that an error is produced when annotating no tasks"""
+        code, out, err = self.t.runError("999 annotate no way")
+        self.assertIn("No tasks specified.", err)
+
+    def test_annotate_recurring(self):
+        """Test propagation of annotation to recurring siblings"""
+        self.t("add foo due:eom recur:weekly")
+        self.t("list") # GC/handleRecurrence
+        self.t("2 annotate bar", input="y\n")
+        code, out, err = self.t("all rc.verbose:nothing")
+
+        code, out, err = self.t("_get 1.annotations.1.description")
+        self.assertEqual("bar\n", out)
+
+        code, out, err = self.t("_get 2.annotations.1.description")
+        self.assertEqual("bar\n", out)
+
+class TestBug495(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_double_hyphen_annotation(self):
+        """double hyphen mishandled for annotations"""
+        # NOTE: originally Bug #495
+        self.t("add foo")
+        self.t("1 annotate This -- is -- a -- test")
+
+        # Double hyphens preserved except the first ones
+        code, out, err = self.t("_get 1.annotations.1.description")
+        self.assertEqual("This is -- a -- test\n", out)
+
+class TestBug694(TestCase):
+    def setUp(self):
+        self.t = Task()
+
+    def test_annotation_with_due(self):
+        """Add an annotation as well as a due date"""
+        self.t("add one")
+        self.t("1 annotate two due:today")
+
+        code, out, err = self.t("rc.journal.info:off 1 info")
+        self.assertIn("one", out)
+        self.assertIn("two", out)
+        self.assertIn("Due", out)
+
 
 if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

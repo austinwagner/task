@@ -37,11 +37,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdCount::CmdCount ()
 {
-  _keyword     = "count";
-  _usage       = "task <filter> count";
-  _description = STRING_CMD_COUNT_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "count";
+  _usage                 = "task <filter> count";
+  _description           = STRING_CMD_COUNT_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::metadata;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -55,9 +61,8 @@ int CmdCount::execute (std::string& output)
 
   // Find number of matching tasks.  Skip recurring parent tasks.
   int count = 0;
-  std::vector <Task>::iterator it;
-  for (it = filtered.begin (); it != filtered.end (); ++it)
-    if (it->getStatus () != Task::recurring)
+  for (auto& task : filtered)
+    if (task.getStatus () != Task::recurring)
       ++count;
 
   output = format (count) + "\n";

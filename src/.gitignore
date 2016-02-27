@@ -1,6 +1,5 @@
 *.o
 Makefile.in
-tw-*
-args
+debug
 calc
 lex

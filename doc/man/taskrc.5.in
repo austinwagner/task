@@ -1,4 +1,4 @@
-.TH taskrc 5 2015-05-10 "${PACKAGE_STRING}" "User Manuals"
+.TH taskrc 5 2015-10-21 "${PACKAGE_STRING}" "User Manuals"
 
 .SH NAME
 taskrc \- Configuration details for the task(1) command
@@ -267,13 +267,18 @@ control specific occasions when output is generated. This list may contain:
     footnote   Messages that appear after report output
     label      Column labels on tabular reports
     new-id     Provides feedback of any new task IDs
-    new-uuid   Provides feedback of any new task UUIDs
+    new-uuid   Provides feedback of any new task UUIDs. Deprecated, to be
+               merged with new-id.
     affected   Reports 'N tasks affected' and similar
     edit       Used the verbose template for the 'edit' command
     special    Feedback when applying special tags
     project    Feedback about project status changes
     sync       Feedback about sync
     filter     Shows the filter used in the command
+    unwait     Notification when a task leaves the 'waiting' state
+    recur      Notification when a new recurring task instance is created
+
+"affected", "new-id", "new-uuid" "project" and "unwait" imply "footnote".
 
 Note that the "on" setting is equivalent to all the tokens being specified,
 and the "nothing" setting is equivalent to none of the tokens being specified.
@@ -281,7 +286,7 @@ and the "nothing" setting is equivalent to none of the tokens being specified.
 Here are the shortcut equivalents:
 
     verbose=on
-    verbose=blank,header,footnote,label,new-id,affected,edit,special,project,sync
+    verbose=blank,header,footnote,label,new-id,affected,edit,special,project,sync,filter,unwait
 
     verbose=off
     verbose=blank,label,new-id,edit
@@ -392,9 +397,18 @@ Enables or disables access to Taskwarrior internals and task metadata on the
 command line. Defaults to on.
 
 .TP
-.B json.array=off
-Determines whether the query command encloses the JSON output in '[...]' to
-create a properly-formed JSON array. Defaults to off.
+.B json.array=on
+Determines whether the export command encloses the JSON output in '[...]' and
+adds ',' after each exported task object to create a properly-formed JSON
+array.
+With json.array=off, export writes raw JSON objects to STDOUT, one per line.
+Defaults to on.
+
+.TP
+.B json.depends.array=on
+Determines whether the export command encodes dependencies as an array of string
+UUIDs, or one comma-separated string.
+Defaults to on.
 
 .TP
 .B _forcecolor=no
@@ -431,7 +445,7 @@ The character or string to show in the <uda>.indicator column. Defaults to U.
 
 .TP
 .B recurrence=yes
-Controls whether recurrence is enable, and whether recurring tasks continue to
+Controls whether recurrence is enabled, and whether recurring tasks continue to
 generate new task instances. Defaults to 'yes'.
 
 .TP
@@ -493,9 +507,10 @@ Level 1 shows hook calls. Level 2 also shows exit status and I/O.
 
 .TP
 .B debug.parser=0
-Controls the parser diagnostic level. Level 0 means no diagnostics. Level 1
-shows the parse tree. Level 2 shows expression evaluation details. Level 3
-shows parse trees from every phase of the parse.
+Controls the parser diagnostic level. Level 0 shows no diagnostics.
+Level 1 shows the final parse tree.
+Level 2 shows the parse tree from all phases of the parse.
+Level 3 shows expression evaluation details.
 
 .TP
 .B debug.tls=0
@@ -614,17 +629,17 @@ Examples for other values of dateformat.report:
 .RS
 .RS
 .br
-a D b Y (V)   would do an output as "Fri 24 Jul 2009 (30)"
+a D b Y (V)   would emit "Fri 24 Jul 2009 (30)"
 .br
-A, B D, Y     would do an output as "Friday, July 24, 2009"
+A, B D, Y     would emit "Friday, July 24, 2009"
 .br
-wV a Y-M-D    would do an output as "w30 Fri 2009-07-24"
+wV a Y-M-D    would emit "w30 Fri 2009-07-24"
 .br
-yMD.HN        would do an output as "110124.2342"
+yMD.HN        would emit "110124.2342"
 .br
-m/d/Y H:N     would do an output as "1/24/2011 10:42"
+m/d/Y H:N     would emit "1/24/2011 10:42"
 .br
-a D b Y H:N:S would do an output as "Mon 24 Jan 2011 11:19:42"
+a D b Y H:N:S would emit "Mon 24 Jan 2011 11:19:42"
 .RE
 .RE
 
@@ -868,6 +883,22 @@ nothing, for example:
 .RE
 .RE
 
+.RS
+By default, colors produced by rules blend. This has the advantage of
+conveying additional information, by producing combinations that are not used
+by any particular rule directly.
+
+However, color blending can produce highlighting combinations which are not
+desired. In such cases, use the following option to disable this behaviour:
+.RE
+
+.TP
+.B rule.color.merge=yes
+Can be "yes" or "no". When "no", disables merging of colors produced by
+different color rules. Use if your color scheme produces unpleasing
+foreground and background combinations.
+
+
 See the task-color(5) man pages for color details.
 .RE
 
@@ -898,6 +929,11 @@ Colors any task that has the user defined attribute X.
 .TP
 .B color.uda.X.VALUE=on green
 Colors any task that has the user defined attribute X set to VALUE.
+.RE
+
+.TP
+.B color.uda.X.none=on green
+Colors any task that does not have the user defined attribute X.
 .RE
 
 .TP
@@ -1050,10 +1086,6 @@ The urgency calculation uses a polynomial with several terms, each of which
 has a configurable coefficient. Those coefficients are:
 
 .TP
-.B urgency.next.coefficient=15.0
-.RS
-Urgency coefficient for 'next' special tag
-.RE
 .B urgency.blocking.coefficient=8.0
 .RS
 Urgency coefficient for blocking tasks
@@ -1061,10 +1093,6 @@ Urgency coefficient for blocking tasks
 .B urgency.blocked.coefficient=-5.0
 .RS
 Urgency coefficient for blocked tasks
-.RE
-.B urgency.inherit.coefficient=0.0
-.RS
-Urgency inherited from dependency chain
 .RE
 .B urgency.due.coefficient=12.0
 .RS
@@ -1106,6 +1134,10 @@ Maximum age in days. After this number of days has elapsed, the urgency of a tas
 .RS
 Specific tag coefficient.
 .RE
+.B urgency.user.tag.next.coefficient=15.0
+.RS
+Urgency coefficient for tag 'next'.
+.RE
 .B urgency.user.project.<project>.coefficient=...
 .RS
 Specific project coefficient.
@@ -1126,6 +1158,16 @@ Specific value of UDA data.
 The coefficients reflect the relative importance of the various terms in the
 urgency calculation. These are default values, and may be modified to suit your
 preferences, but it is important that you carefully consider any modifications.
+
+.B urgency.inherit=off
+.RS
+Not actually a coefficient. When enabled, blocking tasks inherit
+the highest urgency value found in the tasks they block. This is
+done recursively.
+It is recommended to set urgency.blocking.coefficient and
+urgency.blocked.coefficient to 0.0 in order for this setting to
+be the most useful.
+.RE
 
 .SS DEFAULTS
 
@@ -1224,6 +1266,9 @@ This sort order now specifies that there is a listing break between each
 project. A listing break is simply a blank line, which provides a visual
 grouping.
 
+A special sort value of "none" indicates that no sorting is required, and tasks
+will be presented in the order (if any) in which they are selected.
+
 .TP
 .B report.X.filter
 This adds a filter to the report X so that only tasks matching the filter
@@ -1240,9 +1285,11 @@ section for details on the sequence placeholders.
 .TP
 .B report.X.annotations
 This adds the possibility to control the output of annotations for a task in a
-report. See the
-.B annotations
-variable for details on the possible values. Deprecated.
+report. Deprecated. Use the
+.B description
+column with a format (e.g.,
+\fBdescription.count\fP)
+instead.
 
 .TP
 Taskwarrior comes with a number of predefined reports, which are:
@@ -1376,9 +1423,9 @@ Note that the value are sorted
 .SS CONTEXT
 Context setting is a mechanism which allows the user to set a permanent filter,
 thus avoiding the need to specify one filter repeatedly. More details on usage
-can be found in the task(1) manpage.
+can be found in the task(1) man page.
 
-The current context is stored in the taskrc file, along with definitions for
+The current context is stored in the .taskrc file, along with definitions for
 all user provided contexts.
 
 .TP

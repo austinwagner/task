@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <Context.h>
-#include <Duration.h>
+#include <ISO8601.h>
 #include <main.h>
 #include <text.h>
 #include <util.h>
@@ -45,49 +45,17 @@ extern Context context;
 static void countTasks (const std::vector <Task>&, const std::string&, int&, int&);
 
 ////////////////////////////////////////////////////////////////////////////////
-bool taskDiff (const Task& before, const Task& after)
-{
-  // Attributes are all there is, so figure the different attribute names
-  // between before and after.
-  std::vector <std::string> beforeAtts;
-  Task::const_iterator att;
-  for (att = before.begin (); att != before.end (); ++att)
-    beforeAtts.push_back (att->first);
-
-  std::vector <std::string> afterAtts;
-  for (att = after.begin (); att != after.end (); ++att)
-    afterAtts.push_back (att->first);
-
-  std::vector <std::string> beforeOnly;
-  std::vector <std::string> afterOnly;
-  listDiff (beforeAtts, afterAtts, beforeOnly, afterOnly);
-
-  if (beforeOnly.size () !=
-      afterOnly.size ())
-    return true;
-
-  std::vector <std::string>::iterator name;
-  for (name = beforeAtts.begin (); name != beforeAtts.end (); ++name)
-    if (*name              != "uuid" &&
-        before.get (*name) != after.get (*name))
-      return true;
-
-  return false;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 std::string taskDifferences (const Task& before, const Task& after)
 {
   // Attributes are all there is, so figure the different attribute names
   // between before and after.
   std::vector <std::string> beforeAtts;
-  Task::const_iterator att;
-  for (att = before.begin (); att != before.end (); ++att)
-    beforeAtts.push_back (att->first);
+  for (auto& att : before)
+    beforeAtts.push_back (att.first);
 
   std::vector <std::string> afterAtts;
-  for (att = after.begin (); att != after.end (); ++att)
-    afterAtts.push_back (att->first);
+  for (auto& att : after)
+    afterAtts.push_back (att.first);
 
   std::vector <std::string> beforeOnly;
   std::vector <std::string> afterOnly;
@@ -95,15 +63,14 @@ std::string taskDifferences (const Task& before, const Task& after)
 
   // Now start generating a description of the differences.
   std::stringstream out;
-  std::vector <std::string>::iterator name;
-  for (name = beforeOnly.begin (); name != beforeOnly.end (); ++name)
+  for (auto& name : beforeOnly)
     out << "  - "
-        << format (STRING_FEEDBACK_DELETED, ucFirst (*name))
+        << format (STRING_FEEDBACK_DELETED, ucFirst (name))
         << "\n";
 
-  for (name = afterOnly.begin (); name != afterOnly.end (); ++name)
+  for (auto& name : afterOnly)
   {
-    if (*name == "depends")
+    if (name == "depends")
     {
       std::vector <int> deps_after;
       after.getDependencies (deps_after);
@@ -117,21 +84,21 @@ std::string taskDifferences (const Task& before, const Task& after)
     else
       out << "  - "
           << format (STRING_FEEDBACK_ATT_SET,
-                     ucFirst (*name),
-                     renderAttribute (*name, after.get (*name)))
+                     ucFirst (name),
+                     renderAttribute (name, after.get (name)))
           << "\n";
   }
 
-  for (name = beforeAtts.begin (); name != beforeAtts.end (); ++name)
+  for (auto& name : beforeAtts)
   {
     // Ignore UUID differences, and find values that changed, but are not also
     // in the beforeOnly and afterOnly lists, which have been handled above..
-    if (*name              != "uuid" &&
-        before.get (*name) != after.get (*name) &&
-        std::find (beforeOnly.begin (), beforeOnly.end (), *name) == beforeOnly.end () &&
-        std::find (afterOnly.begin (),  afterOnly.end (),  *name) == afterOnly.end ())
+    if (name              != "uuid" &&
+        before.get (name) != after.get (name) &&
+        std::find (beforeOnly.begin (), beforeOnly.end (), name) == beforeOnly.end () &&
+        std::find (afterOnly.begin (),  afterOnly.end (),  name) == afterOnly.end ())
     {
-      if (*name == "depends")
+      if (name == "depends")
       {
         std::vector <int> deps_before;
         before.getDependencies (deps_before);
@@ -150,9 +117,9 @@ std::string taskDifferences (const Task& before, const Task& after)
       else
         out << "  - "
             << format (STRING_FEEDBACK_ATT_MOD,
-                       ucFirst (*name),
-                       renderAttribute (*name, before.get (*name)),
-                       renderAttribute (*name, after.get (*name)))
+                       ucFirst (name),
+                       renderAttribute (name, before.get (name)),
+                       renderAttribute (name, after.get (name)))
             << "\n";
     }
   }
@@ -177,13 +144,12 @@ std::string taskInfoDifferences (
   // Attributes are all there is, so figure the different attribute names
   // between before and after.
   std::vector <std::string> beforeAtts;
-  Task::const_iterator att;
-  for (att = before.begin (); att != before.end (); ++att)
-    beforeAtts.push_back (att->first);
+  for (auto& att : before)
+    beforeAtts.push_back (att.first);
 
   std::vector <std::string> afterAtts;
-  for (att = after.begin (); att != after.end (); ++att)
-    afterAtts.push_back (att->first);
+  for (auto& att : after)
+    afterAtts.push_back (att.first);
 
   std::vector <std::string> beforeOnly;
   std::vector <std::string> afterOnly;
@@ -191,10 +157,9 @@ std::string taskInfoDifferences (
 
   // Now start generating a description of the differences.
   std::stringstream out;
-  std::vector <std::string>::iterator name;
-  for (name = beforeOnly.begin (); name != beforeOnly.end (); ++name)
+  for (auto& name : beforeOnly)
   {
-    if (*name == "depends")
+    if (name == "depends")
     {
         std::vector <int> deps_before;
         before.getDependencies (deps_before);
@@ -204,27 +169,27 @@ std::string taskInfoDifferences (
         out << format (STRING_FEEDBACK_DEP_DEL, from)
             << "\n";
     }
-    else if (name->substr (0, 11) == "annotation_")
+    else if (name.substr (0, 11) == "annotation_")
     {
-      out << format (STRING_FEEDBACK_ANN_DEL, before.get (*name))
+      out << format (STRING_FEEDBACK_ANN_DEL, before.get (name))
           << "\n";
     }
-    else if (*name == "start")
+    else if (name == "start")
     {
-      out << format (STRING_FEEDBACK_ATT_DEL_DUR, ucFirst (*name),
-                     Duration (current_timestamp - last_timestamp).formatPrecise ())
+      out << format (STRING_FEEDBACK_ATT_DEL_DUR, ucFirst (name),
+                     ISO8601p (current_timestamp - last_timestamp).format ())
           << "\n";
     }
     else
     {
-      out << format (STRING_FEEDBACK_ATT_DEL, ucFirst (*name))
+      out << format (STRING_FEEDBACK_ATT_DEL, ucFirst (name))
           << "\n";
     }
   }
 
-  for (name = afterOnly.begin (); name != afterOnly.end (); ++name)
+  for (auto& name : afterOnly)
   {
-    if (*name == "depends")
+    if (name == "depends")
     {
       std::vector <int> deps_after;
       after.getDependencies (deps_after);
@@ -234,30 +199,31 @@ std::string taskInfoDifferences (
       out << format (STRING_FEEDBACK_DEP_WAS_SET, to)
           << "\n";
     }
-    else if (name->substr (0, 11) == "annotation_")
+    else if (name.substr (0, 11) == "annotation_")
     {
-      out << format (STRING_FEEDBACK_ANN_ADD, after.get (*name))
+      out << format (STRING_FEEDBACK_ANN_ADD, after.get (name))
           << "\n";
     }
     else
     {
-      if (*name == "start")
+      if (name == "start")
           last_timestamp = current_timestamp;
 
       out << format (STRING_FEEDBACK_ATT_WAS_SET,
-                     ucFirst (*name),
-                     renderAttribute (*name, after.get (*name), dateformat))
+                     ucFirst (name),
+                     renderAttribute (name, after.get (name), dateformat))
           << "\n";
     }
   }
 
-  for (name = beforeAtts.begin (); name != beforeAtts.end (); ++name)
-    if (*name              != "uuid" &&
-        *name              != "modified" &&
-        before.get (*name) != after.get (*name) &&
-        before.get (*name) != "" && after.get (*name) != "")
+  for (auto& name : beforeAtts)
+    if (name              != "uuid" &&
+        name              != "modified" &&
+        before.get (name) != after.get (name) &&
+        before.get (name) != "" &&
+        after.get (name)  != "")
     {
-      if (*name == "depends")
+      if (name == "depends")
       {
         std::vector <int> deps_before;
         before.getDependencies (deps_before);
@@ -272,16 +238,16 @@ std::string taskInfoDifferences (
         out << format (STRING_FEEDBACK_DEP_WAS_MOD, from, to)
             << "\n";
       }
-      else if (name->substr (0, 11) == "annotation_")
+      else if (name.substr (0, 11) == "annotation_")
       {
-        out << format (STRING_FEEDBACK_ANN_WAS_MOD, after.get (*name))
+        out << format (STRING_FEEDBACK_ANN_WAS_MOD, after.get (name))
             << "\n";
       }
       else
         out << format (STRING_FEEDBACK_ATT_WAS_MOD,
-                       ucFirst (*name),
-                       renderAttribute (*name, before.get (*name), dateformat),
-                       renderAttribute (*name, after.get (*name), dateformat))
+                       ucFirst (name),
+                       renderAttribute (name, before.get (name), dateformat),
+                       renderAttribute (name, after.get (name), dateformat))
             << "\n";
     }
 
@@ -301,15 +267,11 @@ std::string renderAttribute (const std::string& name, const std::string& value, 
       col->type () == "date" &&
       value != "")
   {
-    Date d ((time_t)strtol (value.c_str (), NULL, 10));
+    ISO8601d d ((time_t)strtol (value.c_str (), NULL, 10));
     if (format == "")
-    {
       return d.toString (context.config.get ("dateformat"));
-    }
-    else
-    {
-      return d.toString (format);
-    }
+
+    return d.toString (format);
   }
 
   return value;
@@ -350,10 +312,50 @@ void feedback_affected (const std::string& effect, const Task& task)
   {
     if (task.id)
       nowide::cout << format (effect, task.id, task.get ("description"))
-                << "\n";
+                   << "\n";
     else
       nowide::cout << format (effect, task.get ("uuid"), task.get ("description"))
-                << "\n";
+                   << "\n";
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Implements feedback and error when adding a reserved tag name.
+void feedback_reserved_tags (const std::string& tag)
+{
+  // Note: This list must match that in Task::hasTag.
+  // Note: This list must match that in CmdInfo::execute.
+  if (tag == "ACTIVE"    ||
+      tag == "ANNOTATED" ||
+      tag == "BLOCKED"   ||
+      tag == "BLOCKING"  ||
+      tag == "CHILD"     ||
+      tag == "COMPLETED" ||
+      tag == "DELETED"   ||
+      tag == "DUE"       ||
+      tag == "DUETODAY"  ||
+      tag == "LATEST"    ||
+      tag == "MONTH"     ||
+      tag == "ORPHAN"    ||
+      tag == "OVERDUE"   ||
+      tag == "PARENT"    ||
+      tag == "PENDING"   ||
+      tag == "PRIORITY"  ||
+      tag == "PROJECT"   ||
+      tag == "READY"     ||
+      tag == "SCHEDULED" ||
+      tag == "TAGGED"    ||
+      tag == "TODAY"     ||
+      tag == "TOMORROW"  ||
+      tag == "UDA"       ||
+      tag == "UNBLOCKED" ||
+      tag == "UNTIL"     ||
+      tag == "WAITING"   ||
+      tag == "WEEK"      ||
+      tag == "YEAR"      ||
+      tag == "YESTERDAY")
+  {
+    throw format (STRING_FEEDBACK_TAG_VIRTUAL, tag);
   }
 }
 
@@ -398,25 +400,24 @@ void feedback_unblocked (const Task& task)
     dependencyGetBlocked (task, blocked);
 
     // Scan all the tasks that were blocked by this task
-    std::vector <Task>::iterator i;
-    for (i = blocked.begin (); i != blocked.end (); ++i)
+    for (auto& i : blocked)
     {
       std::vector <Task> blocking;
-      dependencyGetBlocking (*i, blocking);
+      dependencyGetBlocking (i, blocking);
       if (blocking.size () == 0)
       {
-        if (i->id)
+        if (i.id)
           nowide::cout << format (STRING_FEEDBACK_UNBLOCKED,
-                               i->id,
-                               i->get ("description"))
-                    << "\n";
+                                  i.id,
+                                  i.get ("description"))
+                       << "\n";
         else
         {
-          std::string uuid = i->get ("uuid");
+          std::string uuid = i.get ("uuid");
           nowide::cout << format (STRING_FEEDBACK_UNBLOCKED,
-                               i->get ("uuid"),
-                               i->get ("description"))
-                    << "\n";
+                                  i.get ("uuid"),
+                                  i.get ("description"))
+                       << "\n";
         }
       }
     }
@@ -430,10 +431,9 @@ void feedback_backlog ()
       context.verbose ("sync"))
   {
     std::vector <std::string> lines = context.tdb2.backlog.get_lines ();
-    std::vector <std::string>::iterator line;
-    for (line = lines.begin (); line != lines.end (); ++line)
+    for (auto& line : lines)
     {
-      if ((*line)[0] == '{')
+      if ((line)[0] == '{')
       {
         context.footnote (STRING_FEEDBACK_BACKLOG);
         break;
@@ -519,12 +519,11 @@ static void countTasks (
   int& count_pending,
   int& count_done)
 {
-  std::vector <Task>::const_iterator it;
-  for (it = all.begin (); it != all.end (); ++it)
+  for (auto& it : all)
   {
-    if (it->get ("project") == project)
+    if (it.get ("project") == project)
     {
-      switch (it->getStatus ())
+      switch (it.getStatus ())
       {
       case Task::pending:
       case Task::waiting:

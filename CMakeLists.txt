@@ -1,8 +1,5 @@
 cmake_minimum_required (VERSION 2.8)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0) # Remove when CMake >= 2.8.4 is required
-if(POLICY CMP0037)
-  cmake_policy(SET CMP0037 OLD)
-endif()
 
 include (CheckFunctionExists)
 include (CheckStructHasMember)
@@ -10,9 +7,16 @@ include (CheckStructHasMember)
 set (HAVE_CMAKE true)
 
 project (task)
-set (PROJECT_VERSION "2.4.4")
+set (PROJECT_VERSION "2.5.0")
 
-OPTION(USE_TLS "Build tls support." ON)
+OPTION (ENABLE_SYNC "Enable 'task sync' support" ON)
+
+if (ENABLE_SYNC)
+  set (USE_TLS ON CACHE BOOL "Build gnutls/openssl support." FORCE)
+else (ENABLE_SYNC)
+  set (USE_TLS OFF CACHE BOOL "Build gnutls/openssl support." FORCE)
+  message (WARNING "ENABLE_SYNC=OFF. Not building sync support.")
+endif (ENABLE_SYNC)
 
 message ("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
@@ -149,6 +153,10 @@ if (USE_TLS)
   endif (GNUTLS_FOUND)
 endif (USE_TLS)
 
+if (ENABLE_SYNC AND NOT (GNUTLS_FOUND OR OPENSSL_FOUND))
+  message (FATAL_ERROR "Cannot find GnuTLS or OpenSSL. Use -DENABLE_SYNC=OFF to build Taskwarrior without sync support. See INSTALL for more information.")
+endif (ENABLE_SYNC AND NOT (GNUTLS_FOUND OR OPENSSL_FOUND))
+
 check_function_exists (timegm  HAVE_TIMEGM)
 check_function_exists (get_current_dir_name HAVE_GET_CURRENT_DIR_NAME)
 check_function_exists (wordexp HAVE_WORDEXP)
@@ -247,5 +255,5 @@ set (CPACK_SOURCE_IGNORE_FILES  "CMakeCache" "CMakeFiles" "CPackConfig" "CPackSo
                                 "_CPack_Packages" "cmake_install" "install_manifest" "Makefile$"
                                 "test" "package-config" "misc/*" "src/task$" "src/calc$" "performance"
                                 "src/libtask.a" "src/columns/libcolumns.a" "src/commands/libcommands.a"
-                                "/\\.gitignore" "/\\.git/" "swp$")
+                                "/\\\\.gitignore" "/\\\\.git/" "swp$" "src/lex$")
 include (CPack)

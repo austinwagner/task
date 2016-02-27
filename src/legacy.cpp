@@ -34,12 +34,6 @@
 extern Context context;
 
 ////////////////////////////////////////////////////////////////////////////////
-void legacyAttributeCheck (const std::string& name)
-{
-  // 2013-07-25: Deprecated "fg" and "bg" removed.
-}
-
-////////////////////////////////////////////////////////////////////////////////
 void legacyColumnMap (std::string& name)
 {
   // 2014-01-26: priority_long        --> priority.long        Mapping removed
@@ -63,7 +57,7 @@ void legacyColumnMap (std::string& name)
   }
 
   // If a legacy column was used, complain about it, but modify it anyway.
-  std::map <std::string, std::string>::iterator found = legacyMap.find (name);
+  auto found = legacyMap.find (name);
   if (found != legacyMap.end ())
   {
     context.footnote (format (STRING_LEGACY_PRIORITY, name, found->second));
@@ -95,7 +89,7 @@ void legacySortColumnMap (std::string& name)
   }
 
   // If a legacy column was used, complain about it, but modify it anyway.
-  std::map <std::string, std::string>::iterator found = legacyMap.find (name);
+  auto found = legacyMap.find (name);
   if (found != legacyMap.end ())
   {
     context.footnote (format (STRING_LEGACY_PRIORITY, name, found->second));
@@ -104,36 +98,31 @@ void legacySortColumnMap (std::string& name)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::string legacyCheckForDeprecatedColor ()
-{
-  // 2014-01-26: Color defs containing '_' removed.
-
-  return "";
-}
-
-////////////////////////////////////////////////////////////////////////////////
 std::string legacyCheckForDeprecatedVariables ()
 {
   std::vector <std::string> deprecated;
-  std::map <std::string, std::string>::const_iterator it;
-  for (it = context.config.begin (); it != context.config.end (); ++it)
+  for (auto& it : context.config)
   {
     // 2014-07-04: report.*.limit removed.
 
     // report.*.annotations
-    if (it->first.length () > 19 &&
-        it->first.substr (0, 7) == "report." &&
-        it->first.substr (it->first.length () - 12) == ".annotations")
-      deprecated.push_back (it->first);
+    if (it.first.length () > 19 &&
+        it.first.substr (0, 7) == "report." &&
+        it.first.substr (it.first.length () - 12) == ".annotations")
+      deprecated.push_back (it.first);
 
-    if (it->first == "next"              ||
-        it->first == "annotations"       ||
-        it->first == "export.ical.class")
-      deprecated.push_back (it->first);
+    if (it.first == "next"              ||
+        it.first == "annotations"       ||
+        it.first == "export.ical.class")
+      deprecated.push_back (it.first);
 
     // Deprecated іn 2.4.0.
-    if (it->first == "alias._query")
-      deprecated.push_back (it->first);
+    if (it.first == "alias._query")
+      deprecated.push_back (it.first);
+
+    // Deprecated in 2.5.0.
+    if (it.first == "urgency.inherit.coefficient")
+        deprecated.push_back (it.first);
   }
 
   std::stringstream out;
@@ -142,9 +131,8 @@ std::string legacyCheckForDeprecatedVariables ()
     out << STRING_CONFIG_DEPRECATED_VAR
         << "\n";
 
-    std::vector <std::string>::iterator it2;
-    for (it2 = deprecated.begin (); it2 != deprecated.end (); ++it2)
-      out << "  " << *it2 << "\n";
+    for (auto& dep : deprecated)
+      out << "  " << dep << "\n";
 
     out << "\n";
   }
@@ -156,16 +144,15 @@ std::string legacyCheckForDeprecatedVariables ()
 std::string legacyCheckForDeprecatedColumns ()
 {
   std::vector <std::string> deprecated;
-  std::map <std::string, std::string>::const_iterator it;
-  for (it = context.config.begin (); it != context.config.end (); ++it)
+  for (auto& it : context.config)
   {
-    if (it->first.find ("report") == 0)
+    if (it.first.find ("report") == 0)
     {
-      std::string value = context.config.get (it->first);
+      std::string value = context.config.get (it.first);
       if (value.find ("entry_time") != std::string::npos ||
           value.find ("start_time") != std::string::npos ||
           value.find ("end_time")   != std::string::npos)
-        deprecated.push_back (it->first);
+        deprecated.push_back (it.first);
     }
   }
 
@@ -177,9 +164,8 @@ std::string legacyCheckForDeprecatedColumns ()
     out << STRING_CONFIG_DEPRECATED_COL
         << "\n";
 
-    std::vector <std::string>::iterator it2;
-    for (it2 = deprecated.begin (); it2 != deprecated.end (); ++it2)
-      out << "  " << *it2 << "=" << context.config.get (*it2) << "\n";
+    for (auto& dep : deprecated)
+      out << "  " << dep << "=" << context.config.get (dep) << "\n";
 
     out << "\n";
   }

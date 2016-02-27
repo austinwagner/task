@@ -40,14 +40,19 @@ public:
   Filter ();
   ~Filter ();
 
-  void subset (const std::vector <Task>&, std::vector <Task>&, bool applyContext = true);
-  void subset (std::vector <Task>&, bool applyContext = true);
+  void subset (const std::vector <Task>&, std::vector <Task>&);
+  void subset (std::vector <Task>&);
+  bool hasFilter ();
+  bool hasModifications ();
+  bool hasMiscellaneous ();
   bool pendingOnly ();
   void safety ();
+  void disableSafety ();
 
 private:
-  int _startCount;
-  int _endCount;
+  int  _startCount;
+  int  _endCount;
+  bool _safety;
 };
 
 #endif

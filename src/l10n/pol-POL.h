@@ -105,9 +105,9 @@
 #define STRING_PARSER_ALIAS_NEST     "Limit {1} zagnieżdżonych aliasów osiągnięty"
 #define STRING_PARSER_OVERRIDE_RC    "Nadpisanie konfiguracji rc.{1}:{2}"
 #define STRING_PARSER_UNKNOWN_ATTMOD "Błąd: nierozpoznany atrybut '{1}'."
-#define STRING_PARSER_UUID_AFTER_COMMA "Nierozpoznany UUID po przecinku."
 #define STRING_PARSER_ALTERNATE_RC   "Wczytanie alternatywnego pliku .taskrc {1}"
 #define STRING_PARSER_ALTERNATE_DATA "Alternatywne data.location {1}"
+#define STRING_PARSER_UNEXPECTED_ARG "The '{1}' command does not allow '{2}'."
 
 // Variant
 //
@@ -115,22 +115,16 @@
 // mostly concerned with how various operators interact with the different
 // data types.
 #define STRING_VARIANT_TIME_T        "Nie można utworzyć tego typu z wartością time_t."
-#define STRING_VARIANT_CMP_UNKNOWN   "Nie można porównać nieznanych typów"
-#define STRING_VARIANT_EQ_UNKNOWN    "Nie można powiązać nieznanych typów"
-#define STRING_VARIANT_EXP_UNKNOWN   "Nie można potęgować nieznanych typów"
 #define STRING_VARIANT_EXP_BOOL      "Nie można potęgować wartości Boolowskich"
 #define STRING_VARIANT_EXP_NON_INT   "Nie można potęgować z wykłanikiem nie numerycznym"
 #define STRING_VARIANT_EXP_STRING    "Nie można potęgować ciągów znaków"
 #define STRING_VARIANT_EXP_DATE      "Nie można potęgować dat"
 #define STRING_VARIANT_EXP_DURATION  "Nie można potęgować okresów"
-#define STRING_VARIANT_SUB_UNKNOWN   "Nie można odejmować nieznanch typów"
 #define STRING_VARIANT_SUB_BOOL      "Nie można odejmować od wartości Boolowskich"
 #define STRING_VARIANT_SUB_STRING    "Nie można odejmować ciągów znaków"
 #define STRING_VARIANT_SUB_DATE      "Nie można odejmować dat"
-#define STRING_VARIANT_ADD_UNKNOWN   "Nie można sumować nieznanch typów"
 #define STRING_VARIANT_ADD_BOOL      "Nie można sumować wartości Boolowskich"
 #define STRING_VARIANT_ADD_DATE      "Nie można sumować dat"
-#define STRING_VARIANT_MUL_UNKNOWN   "Nie można mnożyć nieznanch typów"
 #define STRING_VARIANT_MUL_BOOL      "Nie można mnożyć wartości Boolowskich"
 #define STRING_VARIANT_MUL_DATE      "Nie można mnożyć dat"
 #define STRING_VARIANT_MUL_REAL_STR  "Nie można mnożyć wartości rzeczywistych przez ciągi"
@@ -141,7 +135,6 @@
 #define STRING_VARIANT_MUL_DUR_STR   "Nie można mnożyć okresu przez ciąg"
 #define STRING_VARIANT_MUL_DUR_DATE  "Nie można mnożyć okresu przez datę"
 #define STRING_VARIANT_MUL_DUR_DUR   "Nie można mnożyć okresu przez okres"
-#define STRING_VARIANT_DIV_UNKNOWN   "Nie można dzielić nieznanch typów"
 #define STRING_VARIANT_DIV_BOOL      "Nie można dzielić wartości Boolowskich"
 #define STRING_VARIANT_DIV_INT_BOOL  "Nie można dzielić liczb przez wartości Boolowskie"
 #define STRING_VARIANT_DIV_ZERO      "Nie można dzielić przez zero"
@@ -166,11 +159,8 @@
 #define STRING_VARIANT_MOD_REAL_DATE "Nie można uzyskać modulo z wartości rzeczywistych przez datę"
 #define STRING_VARIANT_MOD_REAL_STR  "Nie można uzyskać modulo z wartości rzeczywistych przez ciąg"
 #define STRING_VARIANT_MOD_STR       "Nie można uzyskać modulo z ciągów"
-#define STRING_VARIANT_MOD_UNKNOWN   "Nie można uzyskać modulo z nieznanych typów"
 #define STRING_VARIANT_MOD_ZERO      "Nie można uzyskać modulo z zera"
-#define STRING_VARIANT_RENDER_UNK    "Nie można wypisać wartości nieznanego typu."
 #define STRING_VARIANT_SQRT_NEG      "Nie można wyciągnąć pierwiastka kwadratowego z wartości ujemnej."
-#define STRING_VARIANT_COERCE_UNK    "Nie można rzutować danych z/na nieznaney typ"
 
 // Dates
 //
@@ -240,6 +230,16 @@
 #define STRING_COLUMN_LABEL_UDACOUNT "Licznik Użycia"
 #define STRING_COLUMN_LABEL_ORPHAN   "Osierocone UDA"
 
+#define STRING_COLUMN_LABEL_COMMAND  "Command"
+#define STRING_COLUMN_LABEL_CATEGORY "Category"
+#define STRING_COLUMN_LABEL_RO       "R/W"
+#define STRING_COLUMN_LABEL_SHOWS_ID "ID"
+#define STRING_COLUMN_LABEL_GC       "GC"
+#define STRING_COLUMN_LABEL_CONTEXT  "Context"
+#define STRING_COLUMN_LABEL_FILTER   "Filter"
+#define STRING_COLUMN_LABEL_MODS     "Mods"
+#define STRING_COLUMN_LABEL_MISC     "Misc"
+
 // Column Examples
 #define STRING_COLUMN_EXAMPLES_TAGS  "home @chore next"
 #define STRING_COLUMN_EXAMPLES_PROJ  "dom.ogród"
@@ -271,7 +271,10 @@
 #define STRING_CMD_LOG_USAGE         "Dodaje nowe, ukończone zadanie"
 #define STRING_CMD_LOG_NO_RECUR      "Nie możesz logować zadania cyklicznego."
 #define STRING_CMD_LOG_NO_WAITING    "Nie możesz logować zadania czekającego."
-#define STRING_CMD_LOG_LOGGED        "Zadanie w logu."
+
+//#define STRING_CMD_LOG_LOGGED        "Zadanie w logu."
+#define STRING_CMD_LOG_LOGGED        "Logged task {1}."
+
 #define STRING_CMD_IDS_USAGE_RANGE   "Pokazuje IDki pasujących zadań, w formie zakresu"
 #define STRING_CMD_IDS_USAGE_LIST    "Pokazuje IDki pasujących zadań, w formie listy"
 #define STRING_CMD_IDS_USAGE_ZSH     "Pokazuje IDki i opisy pasujących zadań"
@@ -289,7 +292,6 @@
 #define STRING_CMD_INFO_MODIFIED     "Ostatnio zmodyfikowane"
 #define STRING_CMD_INFO_VIRTUAL_TAGS "Virtual tags"
 #define STRING_CMD_UNDO_USAGE        "Odwraca ostatnią zmianę w zadaniu"
-#define STRING_CMD_UNDO_MODS         "Polecenie cofnij nie pozwala na późniejsze modyfikacje zadania."
 #define STRING_CMD_STATS_USAGE       "Pokazuje statystyki bazy danych zadań"
 #define STRING_CMD_STATS_CATEGORY    "Kategoria"
 #define STRING_CMD_STATS_DATA        "Data"
@@ -310,7 +312,6 @@
 #define STRING_CMD_STATS_AVG_PEND    "Średni czas w toku"
 #define STRING_CMD_STATS_DESC_LEN    "Średnia długość opisu"
 #define STRING_CMD_STATS_CHARS       "{1} znaków"
-#define STRING_CMD_STATS_LAST_SYNC   "Ostatnia synchronizacja z serwerem"
 #define STRING_CMD_STATS_BLOCKED     "Zadania blokowane"
 #define STRING_CMD_STATS_BLOCKING    "Zadania blokujące"
 #define STRING_CMD_REPORTS_USAGE     "Lista wszystkich wspieranych raportów"
@@ -338,6 +339,9 @@
 #define STRING_CMD_GHISTORY_YEAR     "Rok"
 #define STRING_CMD_GHISTORY_MONTH    "Miesiąc"
 #define STRING_CMD_GHISTORY_NUMBER   "Liczba Dodanych/Ukończonych/Usuniętych"
+#define STRING_CMD_UNIQUE_USAGE      "Generates lists of unique attribute values"
+#define STRING_CMD_UNIQUE_MISSING    "An attribute must be specified.  See 'task _columns'."
+#define STRING_CMD_UNIQUE_VALID      "You must specify an attribute or UDA."
 
 #define STRING_CMD_DONE_USAGE        "Oznacza wybrane zadanie jako zakończone"
 #define STRING_CMD_DONE_CONFIRM      "Zakończyć zadanie {1} '{2}'?"
@@ -364,6 +368,7 @@
 #define STRING_CMD_COUNT_USAGE       "Zlicza pasujące zadania"
 #define STRING_CMD_GET_USAGE         "DOM Akcesor"
 #define STRING_CMD_GET_NO_DOM        "Brak zdefiniowanej referencji do DOM."
+#define STRING_CMD_GET_BAD_REF       "'{1}' is not a DOM reference."
 
 #define STRING_CMD_UDAS_NO           "Nie zdefiniowano UDA"
 #define STRING_CMD_UDAS_SUMMARY      "{1} zdefiniowane UDA"
@@ -449,9 +454,9 @@
 
 #define STRING_CMD_IMPORT_USAGE      "Importuje pliki JSON"
 #define STRING_CMD_IMPORT_SUMMARY    "Zaimportowano {1} zadań."
-#define STRING_CMD_IMPORT_NOFILE     "Musisz podać plik do zaimportowania."
 #define STRING_CMD_IMPORT_FILE       "Importowanie '{1}'"
 #define STRING_CMD_IMPORT_MISSING    "File '{1}' not found."
+#define STRING_CMD_IMPORT_UUID_BAD   "Not a valid UUID '{1}'."
 #define STRING_TASK_NO_DESC          "Komentarz nie posiada treści: {1}"
 #define STRING_TASK_NO_ENTRY         "Komentarz nie posiada daty utworzenia: {1}"
 #define STRING_CMD_SYNC_USAGE        "Synchronizuje dane z serwerem zadań"
@@ -511,11 +516,11 @@
 #define STRING_CMD_DIAG_HOOK_ENABLE  "Enabled"
 #define STRING_CMD_DIAG_HOOK_DISABLE "Disabled"
 
+#define STRING_CMD_COMMANDS_USAGE    "Generates a list of all commands, with behavior details"
 #define STRING_CMD_HCOMMANDS_USAGE   "Generuje listę wszystkich poleceń dla funkcji autouzupełniania"
 #define STRING_CMD_ZSHCOMMANDS_USAGE "Generuje listę wszystkich poleceń dla funkcji autouzupełniania w powłoce zsh"
 #define STRING_CMD_ZSHATTS_USAGE     "Generates a list of all attributes, for zsh autocompletion purposes"
 #define STRING_CMD_ALIASES_USAGE     "Generuje listę wszystkich aliasów dla funkcji autouzupełniania"
-#define STRING_CMD_INSTALL_USAGE     "Instaluje dodatki i zewnętrzne skrypty"
 
 #define STRING_CMD_MODIFY_USAGE1     "Modyfikuje istniejące zadanie pod kątem podanych argumentów."
 #define STRING_CMD_MODIFY_NO_DUE     "Nie możesz specyfikować rekurencyjnego zadania bez podania terminu."
@@ -554,7 +559,7 @@
 #define STRING_CMD_CONFIG_NO_NAME    "Podaj nazwę zmiennej w konfiguracji do zmiany."
 #define STRING_CMD_HCONFIG_USAGE     "Wylistuj wszystkie zmienne konfiguracji."
 #define STRING_CMD_CONTEXT_USAGE     "Set and define contexts (default filters)"
-#define STRING_CMD_CONTEXT_DEF_SUCC  "Context '{1}' defined."
+#define STRING_CMD_CONTEXT_DEF_SUCC  "Context '{1}' defined. Use 'task context {1}' to activate."
 #define STRING_CMD_CONTEXT_DEF_FAIL  "Context '{1}' not defined."
 #define STRING_CMD_CONTEXT_DEF_USAG  "Both context name and its definition must be provided."
 #define STRING_CMD_CONTEXT_DEF_ABRT  "Context definiton aborted."
@@ -585,6 +590,7 @@
 #define STRING_CMD_BURN_USAGE_D      "Wyświetla dzienny postęp w postaci wykresu."
 #define STRING_CMD_BURN_TITLE        "Postęp"
 #define STRING_CMD_BURN_TOO_SMALL    "Okno terminal jest za małe do wyświetlenia wykresu."
+#define STRING_CMD_BURN_TOO_LARGE    "Terminal window too large to draw a graph."
 #define STRING_CMD_BURN_DAILY        "Dzienny"
 #define STRING_CMD_BURN_WEEKLY       "Tygodniowy"
 #define STRING_CMD_BURN_MONTHLY      "Miesięczny"
@@ -624,47 +630,26 @@
 #define STRING_DATE_INVALID_FORMAT   "'{1}' nie jest poprawną wartością daty w formacie '{2}'."
 #define STRING_DATE_BAD_WEEKSTART    "Zmienna konfiguracji 'weekstart' może przyjmować tylko wartość 'Sunday' lub 'Monday'."
 
-#define STRING_DATE_JANUARY_LONG     "styczeń"
-#define STRING_DATE_FEBRUARY_LONG    "luty"
-#define STRING_DATE_MARCH_LONG       "marzec"
-#define STRING_DATE_APRIL_LONG       "kwiecień"
-#define STRING_DATE_MAY_LONG         "maj"
-#define STRING_DATE_JUNE_LONG        "czerwiec"
-#define STRING_DATE_JULY_LONG        "lipiec"
-#define STRING_DATE_AUGUST_LONG      "sierpień"
-#define STRING_DATE_SEPTEMBER_LONG   "wrzesień"
-#define STRING_DATE_OCTOBER_LONG     "październik"
-#define STRING_DATE_NOVEMBER_LONG    "listopad"
-#define STRING_DATE_DECEMBER_LONG    "grudzień"
+#define STRING_DATE_JANUARY          "styczeń"
+#define STRING_DATE_FEBRUARY         "luty"
+#define STRING_DATE_MARCH            "marzec"
+#define STRING_DATE_APRIL            "kwiecień"
+#define STRING_DATE_MAY              "maj"
+#define STRING_DATE_JUNE             "czerwiec"
+#define STRING_DATE_JULY             "lipiec"
+#define STRING_DATE_AUGUST           "sierpień"
+#define STRING_DATE_SEPTEMBER        "wrzesień"
+#define STRING_DATE_OCTOBER          "październik"
+#define STRING_DATE_NOVEMBER         "listopad"
+#define STRING_DATE_DECEMBER         "grudzień"
 
-#define STRING_DATE_JANUARY_SHORT    "sty"
-#define STRING_DATE_FEBRUARY_SHORT   "lut"
-#define STRING_DATE_MARCH_SHORT      "mar"
-#define STRING_DATE_APRIL_SHORT      "kwi"
-#define STRING_DATE_MAY_SHORT        "maj"
-#define STRING_DATE_JUNE_SHORT       "cze"
-#define STRING_DATE_JULY_SHORT       "lip"
-#define STRING_DATE_AUGUST_SHORT     "sie"
-#define STRING_DATE_SEPTEMBER_SHORT  "wrz"
-#define STRING_DATE_OCTOBER_SHORT    "paź"
-#define STRING_DATE_NOVEMBER_SHORT   "lis"
-#define STRING_DATE_DECEMBER_SHORT   "gru"
-
-#define STRING_DATE_SUNDAY_LONG      "niedziela"
-#define STRING_DATE_MONDAY_LONG      "poniedziałek"
-#define STRING_DATE_TUESDAY_LONG     "wtorek"
-#define STRING_DATE_WEDNESDAY_LONG   "środa"
-#define STRING_DATE_THURSDAY_LONG    "czwartek"
-#define STRING_DATE_FRIDAY_LONG      "piątek"
-#define STRING_DATE_SATURDAY_LONG    "sobota"
-
-#define STRING_DATE_SUNDAY_SHORT     "nie"
-#define STRING_DATE_MONDAY_SHORT     "pon"
-#define STRING_DATE_TUESDAY_SHORT    "wto"
-#define STRING_DATE_WEDNESDAY_SHORT  "śro"
-#define STRING_DATE_THURSDAY_SHORT   "czw"
-#define STRING_DATE_FRIDAY_SHORT     "pią"
-#define STRING_DATE_SATURDAY_SHORT   "sob"
+#define STRING_DATE_SUNDAY           "niedziela"
+#define STRING_DATE_MONDAY           "poniedziałek"
+#define STRING_DATE_TUESDAY          "wtorek"
+#define STRING_DATE_WEDNESDAY        "środa"
+#define STRING_DATE_THURSDAY         "czwartek"
+#define STRING_DATE_FRIDAY           "piątek"
+#define STRING_DATE_SATURDAY         "sobota"
 
 // dependency
 #define STRING_DEPEND_BLOCKED        "Zadanie {1} jest blokowane przez:"
@@ -674,7 +659,6 @@
 // DOM
 #define STRING_DOM_UNKNOWN           "<nieznane>"
 #define STRING_DOM_UNREC             "DOM: Nie mogę pobrać nierozpoznanej nazwy '{1}'."
-#define STRING_DOM_CANNOT_SET        "DOM: Nie mogę ustawić '{1}'."
 
 // Eval
 #define STRING_EVAL_NO_EXPRESSION    "Brak wyrażenia do przetworzenia."
@@ -685,8 +669,9 @@
 
 // edit
 #define STRING_EDIT_NO_CHANGES       "Nie znaleziono żadnych edycji."
-#define STRING_EDIT_NO_EDITS         "Nie wykonano żadnych edycji"
+#define STRING_EDIT_FAILED           "Editing failed with exit code {1}."
 #define STRING_EDIT_COMPLETE         "Edycja zakończona."
+#define STRING_EDIT_IN_PROGRESS      "Task is already being edited."
 #define STRING_EDIT_LAUNCHING        "Uruchamianie '{1}'..."
 #define STRING_EDIT_CHANGES          "Zmiany wykryte."
 #define STRING_EDIT_UNPARSEABLE      "Taskwarrior nie może wprowadzić twoich zmian. Czy chcesz spróbować jeszcze raz?"
@@ -765,6 +750,9 @@
 #define STRING_INVALID_SORT_COL      "Kolumna '{1}' nie jest poprawnym parametrem sortowania."
 #define STRING_TLS_INIT_FAIL         "Błąd inicjalizacji TLS."
 #define STRING_ERROR_DETAILS         "Zmienna 'calendar.details.report' musi zawierać nazwę raportu."
+#define STRING_ERROR_NO_FILTER       "Command line filters are not supported by this command."
+#define STRING_ERROR_CONFIRM_SIGINT  "Interrupted: No changes made."
+#define STRING_ERROR_BAD_STATUS      "The status '{1}' is not valid."
 
 // Feedback
 #define STRING_FEEDBACK_NO_TASKS     "Brak zadań."
@@ -793,6 +781,7 @@
 #define STRING_FEEDBACK_TAG_NONAG    "Specjalny tag 'nonag' uchroni przed upierdliwością kiedy zadanie jest modyfikowane."
 #define STRING_FEEDBACK_TAG_NOCAL    "Specjalny tag 'nocal' spowoduje nie dodawanie zadania do kalendarza."
 #define STRING_FEEDBACK_TAG_NEXT     "Specjalny tag 'next' podniesie pilność tego zadania co spowoduje wyświetlenie go w raporcie 'next'."
+#define STRING_FEEDBACK_TAG_VIRTUAL  "Virtual tags (including '{1}') are reserved and may not be added or removed."
 #define STRING_FEEDBACK_UNBLOCKED    "Odblokowane {1} '{2}'."
 #define STRING_FEEDBACK_EXPIRED      "Zadanie {1} '{2}' jest przedawnione i zostało usunięte."
 #define STRING_FEEDBACK_BACKLOG      "Wykryto lokalne zmiany. Wymagana synchronizacja."
@@ -888,6 +877,10 @@
 #define STRING_TDB2_UNDO_COMPLETE    "Operacja cofnięcia zakończona."
 #define STRING_TDB2_UNDO_SYNCED      "Nie można cofnąć zmian ponieważ zadanie zostało zsynchronizowane.  Zmodyfikuj zadanie."
 #define STRING_TDB2_DIRTY_EXIT       "Zamykanie z niezapisanymi zmianami w {1}"
+#define STRING_TDB2_UNWAIT           "Un-waiting task '{1}'"
+
+// recur.cpp
+#define STRING_RECUR_CREATE          "Creating recurring task instance '{1}'"
 
 // View
 #define STRING_VIEW_TOO_SMALL        "Raport ma minimalną szerokość {1} i nie mieści się w dostępnej przestrzeni {2}."
@@ -945,21 +938,27 @@
   "  end:            Data ukończenia/usunięcia zadania\n" \
   "  start:          Data wystartowania zadania\n" \
   "  scheduled:      Data zaplanowanego startu zadania\n" \
+  "  modified:       Date task was last modified\n" \
   "  depends:        Inne zadania od których zależy dane zadanie\n" \
   "\n" \
   "Modyfikatory atrybutów zwiększają precyzję filtrów.  Dostępne modyfikatory:\n" \
-  "  before     (synonimy pod, poniżej)\n" \
-  "  after      (synonimy nad, powyżej)\n" \
-  "  none\n" \
-  "  any\n" \
-  "  is         (synonim równe)\n" \
-  "  isnt       (synonim nierówne)\n" \
-  "  has        (synonim zawiera)\n" \
-  "  hasnt\n" \
-  "  startswith (synonim od lewej)\n" \
-  "  endswith   (synonim od prawej)\n" \
-  "  word\n" \
-  "  noword\n" \
+  "\n" \
+  "  Modifiers         Example            Equivalent           Meaning\n" \
+  "  ----------------  -----------------  -------------------  -------------------------\n" \
+  "                    due:today          due = today          Fuzzy match\n" \
+  "  not               due.not:today      due != today         Fuzzy non-match\n" \
+  "  before, below     due.before:today   due < tomorrow       Exact date comparison\n" \
+  "  after, above      due.after:today    due > tomorrow       Exact date comparison\n" \
+  "  none              project.none:      project == ''        Empty\n" \
+  "  any               project.any:       project !== ''       Not empty\n" \
+  "  is, equals        project.is:x       project == x         Exact match\n" \
+  "  isnt              project.isnt:x     project !== x        Exact non-match\n" \
+  "  has, contains     desc.has:Hello     desc ~ Hello         Pattern match\n" \
+  "  hasnt,            desc.hasnt:Hello   desc !~ Hello        Pattern non-match\n" \
+  "  startswith, left  desc.left:Hel      desc ~ '^Hel'        Beginning match\n" \
+  "  endswith, right   desc.right:llo     desc ~ 'llo$'        End match\n" \
+  "  word              desc.word:Hello    desc ~ '\\bHello\\b'   Boundaried word match\n" \
+  "  noword            desc.noword:Hello  desc !~ '\\bHello\\b'  Boundaried word non-match\n" \
   "\n" \
   "Dostępne wyrażenia algebraiczne:\n" \
   "  and  or  xor            Operatory logiczne\n" \

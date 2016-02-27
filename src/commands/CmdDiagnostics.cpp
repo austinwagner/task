@@ -51,11 +51,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdDiagnostics::CmdDiagnostics ()
 {
-  _keyword     = "diagnostics";
-  _usage       = "task          diagnostics";
-  _description = STRING_CMD_DIAG_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "diagnostics";
+  _usage                 = "task          diagnostics";
+  _description           = STRING_CMD_DIAG_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::misc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -259,8 +265,9 @@ int CmdDiagnostics::execute (std::string& output)
     out << "         CA: "
         << context.config.get ("taskd.ca")
         << (File (context.config.get ("taskd.ca")).readable ()
-             ? " (readable)" : " (not readable)")
-        << "\n";
+             ? ", readable, " : ", not readable, ")
+        << File (context.config.get ("taskd.ca")).size ()
+        << " bytes\n";
 
   std::string trust_value = context.config.get ("taskd.trust");
   if (trust_value == "strict" ||
@@ -273,14 +280,16 @@ int CmdDiagnostics::execute (std::string& output)
   out << "Certificate: "
       << context.config.get ("taskd.certificate")
       << (File (context.config.get ("taskd.certificate")).readable ()
-           ? " (readable)" : " (not readable)")
-      << "\n";
+           ? ", readable, " : ", not readable, ")
+      << File (context.config.get ("taskd.certificate")).size ()
+      << " bytes\n";
 
   out << "        Key: "
       << context.config.get ("taskd.key")
       << (File (context.config.get ("taskd.key")).readable ()
-           ? " (readable)" : " (not readable)")
-      << "\n";
+           ? ", readable, " : ", not readable, ")
+      << File (context.config.get ("taskd.key")).size ()
+      << " bytes\n";
 
   out << "    Ciphers: "
       << context.config.get ("taskd.ciphers")
@@ -288,7 +297,7 @@ int CmdDiagnostics::execute (std::string& output)
 
   // Get credentials, but mask out the key.
   std::string credentials = context.config.get ("taskd.credentials");
-  std::string::size_type last_slash = credentials.rfind ('/');
+  auto last_slash = credentials.rfind ('/');
   if (last_slash != std::string::npos)
     credentials = credentials.substr (0, last_slash)
                 + "/"
@@ -308,13 +317,12 @@ int CmdDiagnostics::execute (std::string& output)
   std::vector <std::string> hooks = context.hooks.list ();
   if (hooks.size ())
   {
-    std::vector <std::string>::iterator h;
-    for (h = hooks.begin (); h != hooks.end (); ++h)
+    for (auto& hook : hooks)
     {
-      Path p (*h);
+      Path p (hook);
       std::string name = p.name ();
       out << "             "
-          << *h
+          << hook
           << (p.executable () ? format (" ({1})", STRING_CMD_DIAG_HOOK_EXEC) : format (" ({1})", STRING_CMD_DIAG_HOOK_NO_EXEC))
           << (p.is_link () ? format (" ({1})", STRING_CMD_DIAG_HOOK_SYMLINK) : "")
           << ((name.substr (0, 6) == "on-add" ||
@@ -348,10 +356,9 @@ int CmdDiagnostics::execute (std::string& output)
     std::map <std::string, int> seen;
     std::vector <std::string> dups;
     std::string uuid;
-    std::vector <Task>::iterator i;
-    for (i = all.begin (); i != all.end (); ++i)
+    for (auto& i : all)
     {
-      uuid = i->get ("uuid");
+      uuid = i.get ("uuid");
       if (seen.find (uuid) != seen.end ())
         dups.push_back (uuid);
       else
@@ -364,9 +371,8 @@ int CmdDiagnostics::execute (std::string& output)
 
     if (dups.size ())
     {
-      std::vector <std::string>::iterator d;
-      for (d = dups.begin (); d != dups.end (); ++d)
-        out << "             " << format (STRING_CMD_DIAG_UUID_DUP, *d) << "\n";
+      for (auto& d : dups)
+        out << "             " << format (STRING_CMD_DIAG_UUID_DUP, d) << "\n";
     }
     else
     {

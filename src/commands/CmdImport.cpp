@@ -28,7 +28,7 @@
 #include <iostream>
 #include <sstream>
 #include <Context.h>
-#include <JSON.h>
+#include <Filter.h>
 #include <text.h>
 #include <util.h>
 #include <i18n.h>
@@ -41,64 +41,196 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdImport::CmdImport ()
 {
-  _keyword     = "import";
-  _usage       = "task          import <file> [<file> ...]";
-  _description = STRING_CMD_IMPORT_USAGE;
-  _read_only   = false;
-  _displays_id = false;
+  _keyword               = "import";
+  _usage                 = "task          import [<file> ...]";
+  _description           = STRING_CMD_IMPORT_USAGE;
+  _read_only             = false;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::migration;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int CmdImport::execute (std::string& output)
+int CmdImport::execute (std::string&)
 {
   int rc = 0;
   int count = 0;
 
-  // Use the description as a file name.
-  std::vector <std::string> words = context.cli.getWords ();
-  if (! words.size ())
-    throw std::string (STRING_CMD_IMPORT_NOFILE);
+  Filter filter;
+  if (filter.hasFilter ())
+    throw std::string (STRING_ERROR_NO_FILTER);
 
-  std::vector <std::string>::iterator word;
-  for (word = words.begin (); word != words.end (); ++word)
+  // Get filenames from command line arguments.
+  std::vector <std::string> words = context.cli2.getWords ();
+  if (! words.size () || (words.size () == 1 && words[0] == "-"))
   {
-    File incoming (*word);
-    if (! incoming.exists ())
-      throw format (STRING_CMD_IMPORT_MISSING, *word);
+    nowide::cout << format (STRING_CMD_IMPORT_FILE, "STDIN") << "\n";
 
-    nowide::cout << format (STRING_CMD_IMPORT_FILE, *word) << "\n";
+    std::string json;
+    std::string line;
+    while (std::getline (nowide::cin, line))
+      json += line + "\n";
 
-    // Load the file.
-    std::vector <std::string> lines;
-    incoming.read (lines);
-
-    std::vector <std::string>::iterator line;
-    for (line = lines.begin (); line != lines.end (); ++line)
+    if (nontrivial (json))
+      count = import (json);
+  }
+  else
+  {
+    // Import tasks from all specified files.
+    for (auto& word : words)
     {
-      std::string object = trimLeft (
-                             trimRight (
-                               trim (*line),
-                               "]"),
-                             "[");
-      // Skip blanks.  May be caused by the trim calls above.
-      if (! object.length ())
-        continue;
+      File incoming (word);
+      if (! incoming.exists ())
+        throw format (STRING_CMD_IMPORT_MISSING, word);
 
-      // Parse the whole thing.
-      Task task (object);
+      nowide::cout << format (STRING_CMD_IMPORT_FILE, word) << "\n";
 
-      context.tdb2.add (task);
-      ++count;
-      nowide::cout << "  "
-                << task.get ("uuid")
-                << " "
-                << task.get ("description")
-                << "\n";
+      // Load the file.
+      std::string json;
+      incoming.read (json);
+      if (nontrivial (json))
+        count += import (json);
     }
   }
 
   context.footnote (format (STRING_CMD_IMPORT_SUMMARY, count));
   return rc;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+int CmdImport::import (const std::string& input)
+{
+  int count = 0;
+  try
+  {
+    json::value* root = json::parse (input);
+    if (root)
+    {
+      // Single object parse. Input looks like:
+      //   { ... }
+      if (root->type () == json::j_object)
+      {
+        // For each object element...
+        json::object* root_obj = (json::object*)root;
+        importSingleTask (root_obj);
+        ++count;
+      }
+
+      // Multiple object array. Input looks like:
+      //   [ { ... } , { ... } ]
+      else if (root->type () == json::j_array)
+      {
+        json::array* root_arr = (json::array*)root;
+
+        // For each object element...
+        for (auto& element : root_arr->_data)
+        {
+          // For each object element...
+          json::object* root_obj = (json::object*)element;
+          importSingleTask (root_obj);
+          ++count;
+        }
+      }
+
+      delete root;
+    }
+  }
+
+  // If an exception is caught, then it is because the free-form JSON
+  // objects/array above failed to parse. This is an indication that the input
+  // is an old-style line-by-line set of JSON objects, because both an array of
+  // objects, and a single object have failed to parse..
+  //
+  // Input looks like:
+  //   { ... }
+  //   { ... }
+  catch (std::string& e)
+  {
+    std::vector <std::string> lines;
+    split (lines, input, '\n');
+
+    for (auto& line : lines)
+    {
+      if (line.length ())
+      {
+        json::value* root = json::parse (line);
+        if (root)
+        {
+          importSingleTask ((json::object*) root);
+          ++count;
+          delete root;
+        }
+      }
+    }
+  }
+
+  return count;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+void CmdImport::importSingleTask (json::object* obj)
+{
+  // Parse the whole thing, validate the data.
+  Task task (obj);
+
+  bool hasGeneratedEntry = not task.has ("entry");
+  bool hasExplicitEnd = task.has ("end");
+
+  task.validate ();
+
+  bool hasGeneratedEnd = not hasExplicitEnd and task.has ("end");
+
+  // Check whether the imported task is new or a modified existing task.
+  Task before;
+  if (context.tdb2.get (task.get ("uuid"), before))
+  {
+    // We need to neglect updates from attributes with dynamic defaults
+    // unless they have been explicitly specified on import.
+    //
+    // There are three attributes with dynamic defaults, besides uuid:
+    //   - modified: Ignored in any case.
+    //   - entry: Ignored if generated.
+    //   - end: Ignored if generated.
+
+    // The 'modified' attribute is ignored in any case, since if it
+    // were the only difference between the tasks, it would have been
+    // neglected anyway, since it is bumped on each modification.
+    task.set ("modified", before.get ("modified"));
+
+    // Other generated values are replaced by values from existing task,
+    // so that they are ignored on comparison.
+    if (hasGeneratedEntry)
+      task.set ("entry", before.get ("entry"));
+
+    if (hasGeneratedEnd)
+      task.set ("end", before.get ("end"));
+
+    if (before != task)
+    {
+      CmdModify modHelper;
+      modHelper.checkConsistency (before, task);
+      modHelper.modifyAndUpdate (before, task);
+      nowide::cout << " mod  ";
+    }
+    else
+    {
+      nowide::cout << " skip ";
+    }
+  }
+  else
+  {
+    context.tdb2.add (task);
+    nowide::cout << " add  ";
+  }
+
+  nowide::cout << task.get ("uuid")
+            << " "
+            << task.get ("description")
+            << "\n";
 }
 
 ////////////////////////////////////////////////////////////////////////////////

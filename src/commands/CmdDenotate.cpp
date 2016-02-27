@@ -40,15 +40,21 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdDenotate::CmdDenotate ()
 {
-  _keyword     = "denotate";
-  _usage       = "task <filter> denotate <pattern>";
-  _description = STRING_CMD_DENO_USAGE;
-  _read_only   = false;
-  _displays_id = false;
+  _keyword               = "denotate";
+  _usage                 = "task <filter> denotate <pattern>";
+  _description           = STRING_CMD_DENO_USAGE;
+  _read_only             = false;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::operation;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int CmdDenotate::execute (std::string& output)
+int CmdDenotate::execute (std::string&)
 {
   int rc = 0;
   int count = 0;
@@ -66,75 +72,72 @@ int CmdDenotate::execute (std::string& output)
 
   // Extract all the ORIGINAL MODIFICATION args as simple text patterns.
   std::string pattern = "";
-  std::vector <A>::iterator a;
-  for (a = context.cli._args.begin (); a != context.cli._args.end (); ++a)
+  for (auto& a : context.cli2._args)
   {
-    if (a->hasTag ("ORIGINAL") &&
-        a->hasTag ("MODIFICATION"))
+    if (a.hasTag ("MISCELLANEOUS"))
     {
       if (pattern != "")
         pattern += ' ';
 
-      pattern += a->attribute ("raw");
+      pattern += a.attribute ("raw");
     }
   }
 
   // Accumulated project change notifications.
   std::map <std::string, std::string> projectChanges;
 
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
-    Task before (*task);
+    Task before (task);
 
     std::map <std::string, std::string> annotations;
-    task->getAnnotations (annotations);
+    task.getAnnotations (annotations);
 
     if (annotations.size () == 0)
       throw std::string (STRING_CMD_DENO_NONE);
 
-    std::map <std::string, std::string>::iterator i;
     std::string anno;
     bool match = false;
-    for (i = annotations.begin (); i != annotations.end (); ++i)
+    for (auto i = annotations.begin (); i != annotations.end (); ++i)
     {
       if (i->second == pattern)
       {
         match = true;
         anno = i->second;
         annotations.erase (i);
-        task->setAnnotations (annotations);
+        task.setAnnotations (annotations);
         break;
       }
     }
+
     if (! match)
     {
-      for (i = annotations.begin (); i != annotations.end (); ++i)
+      for (auto i = annotations.begin (); i != annotations.end (); ++i)
       {
-        std::string::size_type loc = find (i->second, pattern, sensitive);
+        auto loc = find (i->second, pattern, sensitive);
         if (loc != std::string::npos)
         {
           anno = i->second;
           annotations.erase (i);
-          task->setAnnotations (annotations);
+          task.setAnnotations (annotations);
           break;
         }
       }
     }
 
-    if (taskDiff (before, *task))
+    if (before != task)
     {
       std::string question = format (STRING_CMD_DENO_CONFIRM,
-                                     task->id,
-                                     task->get ("description"));
+                                     task.id,
+                                     task.get ("description"));
 
-      if (permission (*task, taskDifferences (before, *task) + question, filtered.size ()))
+      if (permission (taskDifferences (before, task) + question, filtered.size ()))
       {
         ++count;
-        context.tdb2.modify (*task);
+        context.tdb2.modify (task);
         feedback_affected (format (STRING_CMD_DENO_FOUND, anno));
         if (context.verbose ("project"))
-          projectChanges[task->get ("project")] = onProjectChange (*task, false);
+          projectChanges[task.get ("project")] = onProjectChange (task, false);
       }
       else
       {
@@ -152,10 +155,9 @@ int CmdDenotate::execute (std::string& output)
   }
 
   // Now list the project changes.
-  std::map <std::string, std::string>::iterator i;
-  for (i = projectChanges.begin (); i != projectChanges.end (); ++i)
-    if (i->first != "")
-      context.footnote (i->second);
+  for (auto& change : projectChanges)
+    if (change.first != "")
+      context.footnote (change.second);
 
   feedback_affected (count == 1 ? STRING_CMD_DENO_1 : STRING_CMD_DENO_N, count);
   return rc;

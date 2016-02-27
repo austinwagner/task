@@ -37,39 +37,61 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdGet::CmdGet ()
 {
-  _keyword     = "_get";
-  _usage       = "task          _get <DOM> [<DOM> ...]";
-  _description = STRING_CMD_GET_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "_get";
+  _usage                 = "task          _get <DOM> [<DOM> ...]";
+  _description           = STRING_CMD_GET_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::internal;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Rely on the Lexer to correctly identify DOM references, then jsut iterate
+// over those.
+//
+// It is an error to specify no DOM references.
+// It is not an error for a DOM reference to resolve to a blank value.
 int CmdGet::execute (std::string& output)
 {
-  // Obtain the arguments from the description.  That way, things like '--'
-  // have already been handled.
-  std::vector <std::string> words = context.cli.getWords ();
-  if (words.size () == 0)
-    throw std::string (STRING_CMD_GET_NO_DOM);
-
-  bool found = false;
   std::vector <std::string> results;
-  std::vector <std::string>::iterator word;
-  for (word = words.begin (); word != words.end (); ++word)
+  for (auto& arg : context.cli2._args)
   {
-    Task t;
-    Variant result;
-    if (context.dom.get (*word, t, result))
+    switch (arg._lextype)
     {
-      results.push_back ((std::string) result);
-      found = true;
+    case Lexer::Type::dom:
+      {
+        Task t;
+        Variant result;
+        if (context.dom.get (arg.attribute ("raw"), t, result))
+          results.push_back ((std::string) result);
+        else
+          results.push_back ("");
+      }
+      break;
+
+    // Look for non-refs to complain about.
+    case Lexer::Type::word:
+    case Lexer::Type::identifier:
+      if (! arg.hasTag ("BINARY") &&
+          ! arg.hasTag ("CMD"))
+        throw format (STRING_CMD_GET_BAD_REF, arg.attribute ("raw"));
+
+    default:
+      break;
     }
   }
 
+  if (results.size () == 0)
+    throw std::string (STRING_CMD_GET_NO_DOM);
+
   join (output, " ", results);
   output += "\n";
-  return found ? 0 : 1;
+  return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

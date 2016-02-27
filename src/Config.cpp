@@ -32,9 +32,8 @@
 #include <sys/stat.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include <Directory.h>
-#include <Date.h>
-#include <File.h>
+#include <ISO8601.h>
+#include <FS.h>
 #include <Timer.h>
 #include <JSON.h>
 #include <Config.h>
@@ -75,11 +74,8 @@ std::string Config::_defaults =
   "reserved.lines=1                               # Assume a 1-line prompt\n"
   "\n"
   "# Miscellaneous\n"
-  "verbose=yes                                    # Provide maximal feedback\n"
-  "#verbose=no                                    # Provide regular feedback\n"
-  "#verbose=nothing                               # Provide no feedback\n"
   "#                                              # Comma-separated list.  May contain any subset of:\n"
-  "#verbose=blank,header,footnote,label,new-id,new-uuid,affected,edit,special,project,sync,filter\n"
+  "verbose=blank,header,footnote,label,new-id,new-uuid,affected,edit,special,project,sync,unwait,recur\n"
   "confirmation=yes                               # Confirmation on delete, big changes\n"
   "recurrence=yes                                 # Enable recurrence\n"
   "recurrence.confirmation=prompt                 # Confirmation for propagating changes among recurring tasks (yes/no/prompt)\n"
@@ -90,11 +86,7 @@ std::string Config::_defaults =
   "column.padding=1                               # Spaces between each column in a report\n"
   "bulk=3                                         # 3 or more tasks considered a bulk change and is confirmed\n"
   "nag=You have more urgent tasks.                # Nag message to keep you honest\n"                      // TODO
-#ifdef CYGWIN
-  "search.case.sensitive=no                       # Case-insensitive regex searches are broken under Cygwin\n"
-#else
   "search.case.sensitive=yes                      # Setting to no allows case insensitive searches\n"
-#endif
   "active.indicator=*                             # What to show as an active task indicator\n"
   "tag.indicator=+                                # What to show as a tag indicator\n"
   "dependency.indicator=D                         # What to show as a dependency indicator\n"
@@ -106,7 +98,8 @@ std::string Config::_defaults =
   "xterm.title=no                                 # Sets xterm title for some commands\n"
   "expressions=infix                              # Prefer infix over postfix expressions\n"
   "dom=on                                         # Support DOM access\n"
-  "json.array=off                                 # Enclose JSON output in [ ]\n"
+  "json.array=on                                  # Enclose JSON output in [ ]\n"
+  "json.depends.array=on                          # Encode dependencies as a JSON array\n"
   "abbreviation.minimum=2                         # Shortest allowed abbreviation\n"
   "\n"
   "# Dates\n"
@@ -118,7 +111,7 @@ std::string Config::_defaults =
   "dateformat.annotation=                         # Preferred display date format for annotations\n"
   "date.iso=yes                                   # Enable ISO date support\n"
   "weekstart="
-             STRING_DATE_SUNDAY_LONG
+             STRING_DATE_SUNDAY
                   "                               # Sunday or Monday only\n"
   "displayweeknumber=yes                          # Show week numbers on calendar\n"
   "due=7                                          # Task is considered due in 7 days\n"
@@ -143,7 +136,7 @@ std::string Config::_defaults =
   "dependency.confirmation=on                     # Should dependency chain repair be confirmed?\n"
   "\n"
   "# Urgency Coefficients\n"
-  "urgency.next.coefficient=15.0                  # Urgency coefficient for 'next' special tag\n"
+  "urgency.user.tag.next.coefficient=15.0         # Urgency coefficient for 'next' special tag\n"
   "urgency.due.coefficient=12.0                   # Urgency coefficient for due dates\n"
   "urgency.blocking.coefficient=8.0               # Urgency coefficient for blocking tasks\n"
   "urgency.active.coefficient=4.0                 # Urgency coefficient for active tasks\n"
@@ -153,8 +146,8 @@ std::string Config::_defaults =
   "urgency.tags.coefficient=1.0                   # Urgency coefficient for tags\n"
   "urgency.project.coefficient=1.0                # Urgency coefficient for projects\n"
   "urgency.blocked.coefficient=-5.0               # Urgency coefficient for blocked tasks\n"
-  "urgency.inherit.coefficient=0.0                # Urgency coefficient for blocked tasks inheriting from blocking tasks\n"
   "urgency.waiting.coefficient=-3.0               # Urgency coefficient for waiting status\n"
+  "urgency.inherit=off                            # Recursively inherit highest urgency value from blocked tasks\n"
   "urgency.age.max=365                            # Maximum age in days\n"
   "\n"
   "#urgency.user.project.foo.coefficient=5.0      # Urgency coefficients for 'foo' project\n"
@@ -168,6 +161,7 @@ std::string Config::_defaults =
   "rule.precedence.color=deleted,completed,active,keyword.,tag.,project.,overdue,scheduled,due.today,due,blocked,blocking,recurring,tagged,uda.\n"
   "\n"
   "# General decoration\n"
+  "rule.color.merge=yes\n"
   "color.label=\n"
   "color.label.sort=\n"
   "color.alternate=on gray2\n"
@@ -242,6 +236,7 @@ std::string Config::_defaults =
   "rule.precedence.color=deleted,completed,active,keyword.,tag.,project.,overdue,scheduled,due.today,due,blocked,blocking,recurring,tagged,uda.\n"
   "\n"
   "# General decoration\n"
+  "rule.color.merge=yes\n"
   "color.label=\n"
   "color.label.sort=\n"
   "color.alternate=\n"
@@ -341,6 +336,7 @@ std::string Config::_defaults =
   "list.all.tags=no                               # Include old tag names in 'tags' command\n"
   "print.empty.columns=no                         # Print columns which have no data for any task\n"
   "debug=no                                       # Display diagnostics\n"
+  "sugar=yes                                      # Syntactic sugar\n"
   "obfuscate=no                                   # Obfuscate data for error reporting\n"
   "fontunderline=yes                              # Uses underlines rather than -------\n"
   "shell.prompt=task>                             # Prompt used by the shell command\n"
@@ -386,19 +382,19 @@ std::string Config::_defaults =
   "report.minimal.description=Minimal details of tasks\n"
   "report.minimal.labels=ID,Project,Tags,Description\n"
   "report.minimal.columns=id,project,tags.count,description.count\n"
-  "report.minimal.filter=(status:pending or status:waiting)\n"
+  "report.minimal.filter=status:pending or status:waiting\n"
   "report.minimal.sort=project+/,description+\n"
   "\n"
   "report.newest.description=Newest tasks\n"
   "report.newest.labels=ID,Active,Created,Age,Mod,D,P,Project,Tags,R,Wait,Sch,Due,Until,Description\n"
   "report.newest.columns=id,start.age,entry,entry.age,modified.age,depends.indicator,priority,project,tags,recur.indicator,wait.remaining,scheduled.countdown,due,until.age,description\n"
-  "report.newest.filter=(status:pending or status:waiting)\n"
+  "report.newest.filter=status:pending or status:waiting\n"
   "report.newest.sort=entry-\n"
   "\n"
   "report.oldest.description=Oldest tasks\n"
   "report.oldest.labels=ID,Active,Created,Age,Mod,D,P,Project,Tags,R,Wait,Sch,Due,Until,Description\n"
   "report.oldest.columns=id,start.age,entry,entry.age,modified.age,depends.indicator,priority,project,tags,recur.indicator,wait.remaining,scheduled.countdown,due,until.age,description\n"
-  "report.oldest.filter=(status:pending or status:waiting)\n"
+  "report.oldest.filter=status:pending or status:waiting\n"
   "report.oldest.sort=entry+\n"
   "\n"
   "report.overdue.description=Overdue tasks\n"
@@ -409,12 +405,12 @@ std::string Config::_defaults =
   "\n"
   "report.active.description=Active tasks\n"
   "report.active.labels=ID,Started,Active,Age,D,P,Project,Tags,Recur,W,Sch,Due,Until,Description\n"
-  "report.active.columns=id,start,start.age,entry.age,depends.indicator,priority,project,tags,recur,wait.indicator,scheduled.remaining,due,until,description\n"
+  "report.active.columns=id,start,start.age,entry.age,depends.indicator,priority,project,tags,recur,wait,scheduled.remaining,due,until,description\n"
   "report.active.filter=status:pending and +ACTIVE\n"
   "report.active.sort=project+,start+\n"
   "\n"
   "report.completed.description=Completed tasks\n"
-  "report.completed.labels=ID,UUID,Created,Completed,took,Deps,P,Project,Tags,R,Due,Description\n"
+  "report.completed.labels=ID,UUID,Created,Completed,Age,Deps,P,Project,Tags,R,Due,Description\n"
   "report.completed.columns=id,uuid.short,entry,end,entry.age,depends,priority,project,tags,recur.indicator,due,description\n"
   "report.completed.filter=status:completed\n"
   "report.completed.sort=end+\n"
@@ -426,7 +422,7 @@ std::string Config::_defaults =
   "report.recurring.sort=due+,urgency-,entry+\n"
   "\n"
   "report.waiting.description=Waiting (hidden) tasks\n"
-  "report.waiting.labels=ID,A,Age,D,P,Project,Tags,R,Wait,for,Sched,Due,Until,Description\n"
+  "report.waiting.labels=ID,A,Age,D,P,Project,Tags,R,Wait,Remaining,Sched,Due,Until,Description\n"
   "report.waiting.columns=id,start.active,entry.age,depends.indicator,priority,project,tags,recur.indicator,wait,wait.remaining,scheduled,due,until,description\n"
   "report.waiting.filter=+WAITING\n"
   "report.waiting.sort=due+,wait+,entry+\n"
@@ -462,7 +458,7 @@ std::string Config::_defaults =
   "\n"
   "report.blocking.description=Blocking tasks\n"
   "report.blocking.labels=ID,UUID,A,Deps,Project,Tags,R,W,Sch,Due,Until,Description,Urg\n"
-  "report.blocking.columns=id,uuid.short,start.active,depends,project,tags,recur,wait.indicator,scheduled.remaining,due.remaining,until.remaining,description.count,urgency\n"
+  "report.blocking.columns=id,uuid.short,start.active,depends,project,tags,recur,wait,scheduled.remaining,due.remaining,until.remaining,description.count,urgency\n"
   "report.blocking.sort=urgency-,due+,entry+\n"
   "report.blocking.filter= status:pending +BLOCKING\n"
   "\n";
@@ -527,13 +523,10 @@ void Config::parse (const std::string& input, int nest /* = 1 */)
   split (lines, input, "\n");
 
   // Parse each line.
-  std::vector <std::string>::iterator it;
-  for (it = lines.begin (); it != lines.end (); ++it)
+  for (auto& line : lines)
   {
-    std::string line = *it;
-
     // Remove comments.
-    std::string::size_type pound = line.find ("#"); // no i18n
+    auto pound = line.find ("#"); // no i18n
     if (pound != std::string::npos)
       line = line.substr (0, pound);
 
@@ -542,7 +535,7 @@ void Config::parse (const std::string& input, int nest /* = 1 */)
     // Skip empty lines.
     if (line.length () > 0)
     {
-      std::string::size_type equal = line.find ("="); // no i18n
+      auto equal = line.find ("="); // no i18n
       if (equal != std::string::npos)
       {
         std::string key   = trim (line.substr (0, equal), " \t"); // no i18n
@@ -552,7 +545,7 @@ void Config::parse (const std::string& input, int nest /* = 1 */)
       }
       else
       {
-        std::string::size_type include = line.find ("include"); // no i18n.
+        auto include = line.find ("include"); // no i18n.
         if (include != std::string::npos)
         {
           Path included (trim (line.substr (include + 7), " \t"));
@@ -577,10 +570,10 @@ void Config::parse (const std::string& input, int nest /* = 1 */)
 void Config::createDefaultRC (const std::string& rc, const std::string& data)
 {
   // Override data.location in the defaults.
-  std::string::size_type loc = _defaults.find ("data.location=~/.task");
+  auto loc = _defaults.find ("data.location=~/.task");
   //                                      loc+0^          +14^   +21^
 
-  Date now;
+  ISO8601d now;
   std::stringstream contents;
   contents << "# [Created by "
            << PACKAGE_STRING
@@ -640,20 +633,20 @@ void Config::clear ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const bool Config::has (const std::string& key)
+bool Config::has (const std::string& key)
 {
   return (*this).find (key) != (*this).end ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Return the configuration value given the specified key.
-const std::string Config::get (const std::string& key)
+std::string Config::get (const std::string& key)
 {
   return (*this)[key];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const int Config::getInteger (const std::string& key)
+int Config::getInteger (const std::string& key)
 {
   if ((*this).find (key) != (*this).end ())
     return strtoimax ((*this)[key].c_str (), NULL, 10);
@@ -662,8 +655,13 @@ const int Config::getInteger (const std::string& key)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const double Config::getReal (const std::string& key)
+double Config::getReal (const std::string& key)
 {
+  //NOTE: Backwards compatible handling of next coefficient.
+  //TODO: Remove.
+  if (key == "urgency.user.tag.next.coefficient" and has("urgency.next.coefficient"))
+    return getReal("urgency.next.coefficient");
+
   if ((*this).find (key) != (*this).end ())
     return strtod ((*this)[key].c_str (), NULL);
 
@@ -671,7 +669,7 @@ const double Config::getReal (const std::string& key)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const bool Config::getBoolean (const std::string& key)
+bool Config::getBoolean (const std::string& key)
 {
   if ((*this).find (key) != (*this).end ())
   {
@@ -713,9 +711,8 @@ void Config::set (const std::string& key, const std::string& value)
 // Provide a vector of all configuration keys.
 void Config::all (std::vector<std::string>& items) const
 {
-  std::map <std::string, std::string>::const_iterator it;
-  for (it = this->begin (); it != this->end (); ++it)
-    items.push_back (it->first);
+  for (auto& it : *this)
+    items.push_back (it.first);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

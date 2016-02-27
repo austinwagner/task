@@ -1,4 +1,4 @@
-.TH task 1 2015-05-10 "${PACKAGE_STRING}" "User Manuals"
+.TH task 1 2015-10-21 "${PACKAGE_STRING}" "User Manuals"
 
 .SH NAME
 task \- A command line todo manager.
@@ -67,12 +67,12 @@ The parentheses isolate the logical term from any default command filter or
 implicit report filter which would be combined with an implicit 'and'.
 
 A filter may target specific tasks using ID or UUID numbers.  To specify
-multiple tasks use one of these forms (comma or space-separated list of ID
-numbers, UUID numbers or ID ranges):
+multiple tasks use one of these forms (space-separated list of ID numbers,
+UUID numbers or ID ranges):
 
-  task 1,2,3                                    delete
+  task 1 2 3                                    delete
   task 1-3                                      info
-  task 1,2-5,19                                 modify pri:H
+  task 1 2-5 19                                 modify pri:H
   task 4-7 ebeeab00-ccf8-464b-8b58-f7f2d606edfb info
 
 .SH MODIFICATIONS
@@ -162,6 +162,10 @@ custom reports.  If a substring is provided, only matching column names are
 shown.
 
 .TP
+.B task commands
+Shows all the supported commands, with some details of each.
+
+.TP
 .B task <filter> completed
 Shows all tasks matching the filter that are completed.
 
@@ -212,8 +216,8 @@ an alias to 'history.monthly'.
 .TP
 .B task <filter> ids
 Applies the filter then extracts only the task IDs and presents them as
-a range, for example: 1-4,12.  This is useful as input to a task command,
-to achieve this:
+a space-separated list.  This is useful as input to a task command, to achieve
+this:
 
   task $(task project:Home ids) modify priority:H
 
@@ -345,9 +349,17 @@ In general, this is not the recommended method of modifying tasks, but is
 provided for exceptional circumstances.  Use carefully.
 
 .TP
-.B task import <file> [<file> ...]
-Imports tasks in the JSON format.  The standard task release comes with a few
-example scripts, such as:
+.B task import [<file> ...]
+Imports tasks in the JSON format.  Can be used to add new tasks, or update
+existing ones.  Tasks are identified by their UUID.
+
+If no file or "-" is specified, import tasks from STDIN.
+
+Setting rc.recurrence.confirmation to an appropriate level is recommended
+if import is to be used in automated workflows.  See taskrc(5).
+
+For importing other file formats, the standard task release comes with a
+few example scripts, such as:
 
   import-todo.sh.pl
   import-yaml.pl
@@ -446,7 +458,7 @@ Outputs a list of available contexts along with their definitions.
 
 .TP
 .B task context none
-Unsets the currently active context, if any was set.
+Clears the currently active context, if any was set.
 
 .TP
 .B task context show
@@ -496,9 +508,10 @@ Shows a report of aggregated task status by project.
 
 .TP
 .B task <filter> tags
-Show a list of all tags used.  Any special tags used are highlighted.  Note that
+Show a list of all tags used. Any special tags used are highlighted. Note that
 virtual tags are not listed - they don't really exist, and are just a convenient
-notation for other task metadata.
+notation for other task metadata. It is an error to attempt to add or remove a
+virtual tag.
 
 .TP
 .B task timesheet [weeks]
@@ -537,6 +550,7 @@ Lists all available context variables, for completion purposes.
 .TP
 .B task <filter> _ids
 Shows only the IDs of matching tasks, in the form of a list.
+Deprecated in favor of _unique.
 
 .TP
 .B task _show
@@ -544,9 +558,17 @@ Shows the combined defaults and overrides of the configuration settings, for use
 by third-party applications.
 
 .TP
+.B task <filter> _unique <attribute>
+Reports a unique set of attribute values. For example, to see all the active
+projects:
+
+  task +PENDING _unique projects
+
+.TP
 .B task <filter> _uuids
 Shows only the UUIDs of matching tasks among all tasks (even deleted and
 completed tasks), in the form of a list.
+Deprecated in favor of _unique.
 
 .TP
 .B task _udas
@@ -555,10 +577,12 @@ Shows only defined UDA names, in the form of a list.
 .TP
 .B task <filter> _projects
 Shows only a list of all project names used.
+Deprecated in favor of _unique.
 
 .TP
 .B task <filter> _tags
 Shows only a list of all tags used, for autocompletion purposes.
+Deprecated in favor of _unique.
 
 .TP
 .B task <filter> _urgency
@@ -601,6 +625,16 @@ the reference from being interpreted as an override.
 Note that if the DOM reference is not valid, or the reference evaluates to a
 missing value, the command exits with 1.
 
+Additionally, some components of the attributes of particular types may be
+extracted by DOM references.
+
+  $ task _get 2.due.year
+  2015
+
+For a full list of supported attribute-specific DOM references, consult
+the online documentation at:
+<http://taskwarrior.org/docs/dom.html>
+
 .SH ATTRIBUTES AND METADATA
 
 .TP
@@ -632,33 +666,41 @@ There are also virtual tags, which represent task metadata in tag form.  These
 tags do not exist, but can be used to filter tasks.  The supported virtual tags
 are:
 
-    BLOCKED      Matches if the task is blocked
-    UNBLOCKED    Matches if the task is not blocked
-    BLOCKING     Matches if the task is blocking
-    YESTERDAY    Matches if the task was due sometime yesterday
-    DUE          Matches if the task is due
-    DUETODAY     Matches if the task is due today
-    TODAY        Matches if the task is due today
-    TOMORROW     Matches if the task is due sometime tomorrow
-    WEEK         Matches if the task is due this week
-    MONTH        Matches if the task is due this month
-    YEAR         Matches if the task is due this year
-    OVERDUE      Matches if the task is overdue
     ACTIVE       Matches if the task is started
-    SCHEDULED    Matches if the task is scheduled
-    READY        Matches if the task is actionable
-    PARENT       Matches if the task is a parent
-    CHILD        Matches if the task has a parent
-    UNTIL        Matches if the task expires
-    WAITING      Matches if the task is waiting
     ANNOTATED    Matches if the task has annotations
-    TAGGED       Matches if the task has tags
-    PENDING      Matches if the task has pending status
+    BLOCKED      Matches if the task is blocked
+    BLOCKING     Matches if the task is blocking
+    CHILD        Matches if the task has a parent
     COMPLETED    Matches if the task has completed status
     DELETED      Matches if the task has deleted status
+    DUE          Matches if the task is due
+    DUETODAY     Matches if the task is due today
+    LATEST       Matches if the task is the newest added task
+    MONTH        Matches if the task is due this month
+    ORPHAN       Matches if the task has any orphaned UDA values
+    OVERDUE      Matches if the task is overdue
+    PARENT       Matches if the task is a parent
+    PENDING      Matches if the task has pending status
+    PRIORITY     Matches if the task has a priority
+    PROJECT      Matches if the task has a project
+    READY        Matches if the task is actionable
+    SCHEDULED    Matches if the task is scheduled
+    TAGGED       Matches if the task has tags
+    TODAY        Matches if the task is due today
+    TOMORROW     Matches if the task is due sometime tomorrow
+    UDA          Matches if the task has any UDA values
+    UNBLOCKED    Matches if the task is not blocked
+    UNTIL        Matches if the task expires
+    WAITING      Matches if the task is waiting
+    WEEK         Matches if the task is due this week
+    YEAR         Matches if the task is due this year
+    YESTERDAY    Matches if the task was due sometime yesterday
+
+.\" If you update the above list, update src/commands/CmdInfo.cpp and src/commands/CmdTags.cpp as well.
 
 You can use +BLOCKED to filter blocked tasks, or -BLOCKED for unblocked tasks.
-Similarly, -BLOCKED is equivalent to +UNBLOCKED.
+Similarly, -BLOCKED is equivalent to +UNBLOCKED. It is an error to attempt to
+add or remove a virtual tag.
 
 .TP
 .B project:<project-name>
@@ -693,7 +735,9 @@ to 25 lines.
 
 .TP
 .B wait:<wait-date>
-Date until task becomes pending.
+When a task is given a wait date, it is hidden from most reports by changing
+its status to 'waiting'. When that date is passed, the status is changed back
+to 'pending', and the task becomes visible.
 
 .TP
 .B depends:<id1,id2 ...>
@@ -711,7 +755,7 @@ For report purposes, specifies the date that a task was created.
 Attribute modifiers improve filters.  Supported modifiers are:
 
 .RS
-.B before     (synonyms under, below)
+.B  before     (synonyms under, below)
 .br
 .B  after      (synonyms over, above)
 .br
@@ -829,14 +873,33 @@ modifier.
 
 You can use the following operators in filter expressions:
 
-  and  or  xor            Logical operators
-  <  <=  =  !=  >=  >     Relational operators
-  (  )                    Precedence
+  and  or  xor  !               Logical operators
+  <  <=  =  ==  !=  !==  >=  >  Relational operators
+  (  )                          Precedence
 
 For example:
 
   task due.before:eom priority.not:L list
-  task '( due < eom or priority != L )'  list
+  task '( due < eom or priority != L )' list
+  task '! ( project:Home or project:Garden )' list
+
+The
+.I =
+operator tests for approximate equality.  Dates compare
+equal if they are on the same day (hour and minutes are ignored).
+Strings compare equal if the left operand starts with the right operand.
+The
+.I ==
+operator tests for exact equality.  The
+.I !=
+and
+.I !==
+operators are the negation of
+.I =
+and
+.I ==
+respectively.  The negation operator is
+.IR ! .
 
 Note that the parentheses are required when using a logical operator other than
 the 'and' operator.  The reason is that some reports contain filters that must
@@ -897,7 +960,7 @@ task ... due:7/14/2008
 
 .TP
 ISO-8601
-task ... due:20130314T223000Z
+task ... due:2013-03-14T22:30:00Z
 
 .TP
 Relative wording

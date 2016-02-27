@@ -32,7 +32,7 @@ import unittest
 # Ensure python finds the local simpletap module
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from basetest import Task, TestCase, Taskd, ServerTestCase  # noqa
+from basetest import Task, TestCase
 
 
 class TestAbbreviation(TestCase):
@@ -40,40 +40,40 @@ class TestAbbreviation(TestCase):
         self.t = Task()
         self.t.config("abbreviation.minimum", "1")
 
-        self.t(("add", "project:home", "priority:H", "hasattributes"))
-        self.t(("add", "noattributes"))
+        self.t("add project:home priority:H hasattributes")
+        self.t("add noattributes")
 
-    def verify_attibute(self, expr):
-        code, out, err = self.t(("list", expr))
+    def verify_attribute(self, expr):
+        code, out, err = self.t("list {0}".format(expr))
 
-        self.assertIn("hasattributes", out, msg=expr + " hasattributes")
-        self.assertNotIn("noattributes", out, msg=expr + " noattributes")
+        self.assertIn("hasattributes", out)
+        self.assertNotIn("noattributes", out)
 
     def test_attribute_abbreviations(self):
         "Test project attribute abbrevations"
 
-        self.verify_attibute("project:home")
-        self.verify_attibute("projec:home")
-        self.verify_attibute("proje:home")
-        self.verify_attibute("proj:home")
-        self.verify_attibute("pro:home")
+        self.verify_attribute("project:home")
+        self.verify_attribute("projec:home")
+        self.verify_attribute("proje:home")
+        self.verify_attribute("proj:home")
+        self.verify_attribute("pro:home")
 
     def test_uda_abbreviations(self):
         "Test uda attribute abbrevations"
         # NOTE This will be an UDA when TW-1541 is closed, for now it's just
         # one more attribute
 
-        self.verify_attibute("priority:H")
-        self.verify_attibute("priorit:H")
-        self.verify_attibute("priori:H")
-        self.verify_attibute("prior:H")
-        self.verify_attibute("prio:H")
-        self.verify_attibute("pri:H")
+        self.verify_attribute("priority:H")
+        self.verify_attribute("priorit:H")
+        self.verify_attribute("priori:H")
+        self.verify_attribute("prior:H")
+        self.verify_attribute("prio:H")
+        self.verify_attribute("pri:H")
 
     def verify_command(self, cmd):
-        code, out, err = self.t((cmd,))
+        code, out, err = self.t(cmd)
 
-        self.assertIn("MIT license", out, msg=cmd)
+        self.assertIn("MIT license", out)
 
     def test_command_abbreviations(self):
         "Test version command abbrevations"
@@ -91,4 +91,4 @@ if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

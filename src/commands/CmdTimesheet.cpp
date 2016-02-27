@@ -28,8 +28,9 @@
 #include <sstream>
 #include <stdlib.h>
 #include <Context.h>
+#include <Filter.h>
 #include <ViewText.h>
-#include <Date.h>
+#include <ISO8601.h>
 #include <main.h>
 #include <i18n.h>
 #include <text.h>
@@ -40,11 +41,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdTimesheet::CmdTimesheet ()
 {
-  _keyword     = "timesheet";
-  _usage       = "task          timesheet [weeks]";
-  _description = STRING_CMD_TIMESHEET_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "timesheet";
+  _usage                 = "task          timesheet [weeks]";
+  _description           = STRING_CMD_TIMESHEET_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::graphs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -57,29 +64,29 @@ int CmdTimesheet::execute (std::string& output)
   std::vector <Task> all = context.tdb2.all_tasks ();
 
   // What day of the week does the user consider the first?
-  int weekStart = Date::dayOfWeek (context.config.get ("weekstart"));
+  int weekStart = ISO8601d::dayOfWeek (context.config.get ("weekstart"));
   if (weekStart != 0 && weekStart != 1)
     throw std::string (STRING_DATE_BAD_WEEKSTART);
 
   // Determine the date of the first day of the most recent report.
-  Date today;
-  Date start;
+  ISO8601d today;
+  ISO8601d start;
   start -= (((today.dayOfWeek () - weekStart) + 7) % 7) * 86400;
 
   // Roll back to midnight.
-  start = Date (start.month (), start.day (), start.year ());
-  Date end = start + (7 * 86400);
+  start = ISO8601d (start.month (), start.day (), start.year ());
+  ISO8601d end = start + (7 * 86400);
 
   // Determine how many reports to run.
   int quantity = 1;
-  std::vector <std::string> words = context.cli.getWords ();
+  std::vector <std::string> words = context.cli2.getWords ();
   if (words.size () == 1)
     quantity = strtol (words[0].c_str (), NULL, 10);;
 
   std::stringstream out;
   for (int week = 0; week < quantity; ++week)
   {
-    Date endString (end);
+    ISO8601d endString (end);
     endString -= 86400;
 
     std::string title = start.toString (context.config.get ("dateformat"))
@@ -102,43 +109,41 @@ int CmdTimesheet::execute (std::string& output)
     Color label (context.config.get ("color.label"));
     completed.colorHeader (label);
 
-    std::vector <Task>::iterator task;
-    for (task = all.begin (); task != all.end (); ++task)
+    for (auto& task : all)
     {
       // If task completed within range.
-      if (task->getStatus () == Task::completed)
+      if (task.getStatus () == Task::completed)
       {
-        Date compDate (task->get_date ("end"));
+        ISO8601d compDate (task.get_date ("end"));
         if (compDate >= start && compDate < end)
         {
           Color c;
           if (context.color ())
-            autoColorize (*task, c);
+            autoColorize (task, c);
 
           int row = completed.addRow ();
           std::string format = context.config.get ("dateformat.report");
           if (format == "")
             format = context.config.get ("dateformat");
-          completed.set (row, 1, task->get ("project"), c);
+          completed.set (row, 1, task.get ("project"), c);
 
-          if(task->has ("due"))
+          if(task.has ("due"))
           {
-            Date dt (task->get_date ("due"));
+            ISO8601d dt (task.get_date ("due"));
             completed.set (row, 2, dt.toString (format));
           }
 
-          std::string description = task->get ("description");
+          std::string description = task.get ("description");
           int indent = context.config.getInteger ("indent.annotation");
 
           std::map <std::string, std::string> annotations;
-          task->getAnnotations (annotations);
-          std::map <std::string, std::string>::iterator ann;
-          for (ann = annotations.begin (); ann != annotations.end (); ++ann)
+          task.getAnnotations (annotations);
+          for (auto& ann : annotations)
             description += "\n"
                          + std::string (indent, ' ')
-                         + Date (ann->first.substr (11)).toString (context.config.get ("dateformat"))
+                         + ISO8601d (ann.first.substr (11)).toString (context.config.get ("dateformat"))
                          + " "
-                         + ann->second;
+                         + ann.second;
 
           completed.set (row, 3, description, c);
         }
@@ -160,43 +165,42 @@ int CmdTimesheet::execute (std::string& output)
     started.add (Column::factory ("string",       STRING_COLUMN_LABEL_DESC));
     started.colorHeader (label);
 
-    for (task = all.begin (); task != all.end (); ++task)
+    for (auto& task : all)
     {
       // If task started within range, but not completed withing range.
-      if (task->getStatus () == Task::pending &&
-          task->has ("start"))
+      if (task.getStatus () == Task::pending &&
+          task.has ("start"))
       {
-        Date startDate (task->get_date ("start"));
+        ISO8601d startDate (task.get_date ("start"));
         if (startDate >= start && startDate < end)
         {
           Color c;
           if (context.color ())
-            autoColorize (*task, c);
+            autoColorize (task, c);
 
           int row = started.addRow ();
           std::string format = context.config.get ("dateformat.report");
           if (format == "")
             format = context.config.get ("dateformat");
-          started.set (row, 1, task->get ("project"), c);
+          started.set (row, 1, task.get ("project"), c);
 
-          if(task->has ("due"))
+          if (task.has ("due"))
           {
-            Date dt (task->get_date ("due"));
+            ISO8601d dt (task.get_date ("due"));
             started.set (row, 2, dt.toString (format));
           }
 
-          std::string description = task->get ("description");
+          std::string description = task.get ("description");
           int indent = context.config.getInteger ("indent.annotation");
 
           std::map <std::string, std::string> annotations;
-          task->getAnnotations (annotations);
-          std::map <std::string, std::string>::iterator ann;
-          for (ann = annotations.begin (); ann != annotations.end (); ++ann)
+          task.getAnnotations (annotations);
+          for (auto& ann : annotations)
             description += "\n"
                          + std::string (indent, ' ')
-                         + Date (ann->first.substr (11)).toString (context.config.get ("dateformat"))
+                         + ISO8601d (ann.first.substr (11)).toString (context.config.get ("dateformat"))
                          + " "
-                         + ann->second;
+                         + ann.second;
 
           started.set (row, 3, description, c);
         }

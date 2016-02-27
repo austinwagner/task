@@ -40,11 +40,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdTags::CmdTags ()
 {
-  _keyword     = "tags";
-  _usage       = "task <filter> tags";
-  _description = STRING_CMD_TAGS_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "tags";
+  _usage                 = "task <filter> tags";
+  _description           = STRING_CMD_TAGS_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::metadata;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -54,15 +60,11 @@ int CmdTags::execute (std::string& output)
   std::stringstream out;
 
   // Get all the tasks.
-  std::vector <Task> tasks = context.tdb2.pending.get_tasks ();
+  auto tasks = context.tdb2.pending.get_tasks ();
 
   if (context.config.getBoolean ("list.all.tags"))
-  {
-    std::vector <Task> extra = context.tdb2.completed.get_tasks ();
-    std::vector <Task>::iterator task;
-    for (task = extra.begin (); task != extra.end (); ++task)
-      tasks.push_back (*task);
-  }
+    for (auto& task : context.tdb2.completed.get_tasks ())
+      tasks.push_back (task);
 
   int quantity = tasks.size ();
 
@@ -74,18 +76,16 @@ int CmdTags::execute (std::string& output)
   // Scan all the tasks for their project name, building a map using project
   // names as keys.
   std::map <std::string, int> unique;
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
     std::vector <std::string> tags;
-    task->getTags (tags);
+    task.getTags (tags);
 
-    std::vector <std::string>::iterator tag;
-    for (tag = tags.begin (); tag != tags.end (); ++tag)
-      if (unique.find (*tag) != unique.end ())
-        unique[*tag]++;
+    for (auto& tag : tags)
+      if (unique.find (tag) != unique.end ())
+        unique[tag]++;
       else
-        unique[*tag] = 1;
+        unique[tag] = 1;
   }
 
   if (unique.size ())
@@ -101,19 +101,18 @@ int CmdTags::execute (std::string& output)
 
     Color bold ("bold");
     bool special = false;
-    std::map <std::string, int>::iterator i;
-    for (i = unique.begin (); i != unique.end (); ++i)
+    for (auto& i : unique)
     {
       // Highlight the special tags.
       special = (context.color () &&
-                 (i->first == "nocolor" ||
-                  i->first == "nonag"   ||
-                  i->first == "nocal"   ||
-                  i->first == "next")) ? true : false;
+                 (i.first == "nocolor" ||
+                  i.first == "nonag"   ||
+                  i.first == "nocal"   ||
+                  i.first == "next")) ? true : false;
 
       int row = view.addRow ();
-      view.set (row, 0, i->first,  special ? bold : Color ());
-      view.set (row, 1, i->second, special ? bold : Color ());
+      view.set (row, 0, i.first,  special ? bold : Color ());
+      view.set (row, 1, i.second, special ? bold : Color ());
     }
 
     out << optionalBlankLine ()
@@ -145,26 +144,28 @@ int CmdTags::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 CmdCompletionTags::CmdCompletionTags ()
 {
-  _keyword     = "_tags";
-  _usage       = "task <filter> _tags";
-  _description = STRING_CMD_COMTAGS_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "_tags";
+  _usage                 = "task <filter> _tags";
+  _description           = STRING_CMD_COMTAGS_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = false;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::internal;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int CmdCompletionTags::execute (std::string& output)
 {
   // Get all the tasks.
-  std::vector <Task> tasks = context.tdb2.pending.get_tasks ();
+  auto tasks = context.tdb2.pending.get_tasks ();
 
   if (context.config.getBoolean ("complete.all.tags"))
-  {
-    std::vector <Task> extra = context.tdb2.completed.get_tasks ();
-    std::vector <Task>::iterator task;
-    for (task = extra.begin (); task != extra.end (); ++task)
-      tasks.push_back (*task);
-  }
+    for (auto& task : context.tdb2.completed.get_tasks ())
+      tasks.push_back (task);
 
   // Apply filter.
   Filter filter;
@@ -174,27 +175,51 @@ int CmdCompletionTags::execute (std::string& output)
   // Scan all the tasks for their tags, building a map using tag
   // names as keys.
   std::map <std::string, int> unique;
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
     std::vector <std::string> tags;
-    task->getTags (tags);
+    task.getTags (tags);
 
-    std::vector <std::string>::iterator tag;
-    for (tag = tags.begin (); tag != tags.end (); ++tag)
-      unique[*tag] = 0;
+    for (auto& tag : tags)
+      unique[tag] = 0;
   }
 
-  // add built-in tags to map
-  unique["nocolor"] = 0;
-  unique["nonag"]   = 0;
-  unique["nocal"]   = 0;
-  unique["next"]    = 0;
+  // Add built-in tags to map.
+  unique["nocolor"]   = 0;
+  unique["nonag"]     = 0;
+  unique["nocal"]     = 0;
+  unique["next"]      = 0;
+  unique["ACTIVE"]    = 0;
+  unique["ANNOTATED"] = 0;
+  unique["BLOCKED"]   = 0;
+  unique["BLOCKING"]  = 0;
+  unique["CHILD"]     = 0;
+  unique["COMPLETED"] = 0;
+  unique["DELETED"]   = 0;
+  unique["DUE"]       = 0;
+  unique["DUETODAY"]  = 0;
+  unique["MONTH"]     = 0;
+  unique["ORPHAN"]    = 0;
+  unique["OVERDUE"]   = 0;
+  unique["PARENT"]    = 0;
+  unique["PENDING"]   = 0;
+  unique["READY"]     = 0;
+  unique["SCHEDULED"] = 0;
+  unique["TAGGED"]    = 0;
+  unique["TODAY"]     = 0;
+  unique["TOMORROW"]  = 0;
+  unique["UDA"]       = 0;
+  unique["UNBLOCKED"] = 0;
+  unique["UNTIL"]     = 0;
+  unique["WAITING"]   = 0;
+  unique["WEEK"]      = 0;
+  unique["YEAR"]      = 0;
+  unique["YESTERDAY"] = 0;
+  // If you update the above list, update src/commands/CmdInfo.cpp and src/commands/CmdTags.cpp as well.
 
   std::stringstream out;
-  std::map <std::string, int>::iterator it;
-  for (it = unique.begin (); it != unique.end (); ++it)
-    out << it->first << "\n";
+  for (auto& it : unique)
+    out << it.first << "\n";
 
   output = out.str ();
   return 0;

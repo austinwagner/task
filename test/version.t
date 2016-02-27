@@ -52,14 +52,14 @@ class TestVersion(TestCase):
 
     def test_copyright_up_to_date(self):
         """Copyright is current"""
-        code, out, err = self.t(("version",))
+        code, out, err = self.t("version")
 
         expected = "Copyright \(C\) \d{4} - %d" % (datetime.now().year,)
         self.assertRegexpMatches(out, expected)
 
     def slurp(self, file="../CMakeLists.txt"):
         number = "\.".join(["[0-9]+"] * 3)
-        ver = re.compile("^set \(PROJECT_VERSION \"({0})\"\)$".format(number))
+        ver = re.compile("^set \(PROJECT_VERSION \"({0}.+)\"\)$".format(number))
         with open(file) as fh:
             for line in fh:
                 if "PROJECT_VERSION" in line:
@@ -70,7 +70,7 @@ class TestVersion(TestCase):
 
     def test_version(self):
         """version command outputs expected version and license"""
-        code, out, err = self.t(("version",))
+        code, out, err = self.t("version")
 
         expected = "task {0}".format(self.slurp())
         self.assertIn(expected, out)
@@ -84,7 +84,7 @@ class TestVersion(TestCase):
 
     def test_under_version(self):
         """_version outputs expected version and syntax"""
-        code, out, err = self.t(("_version",))
+        code, out, err = self.t("_version")
 
         # version = "x.x.x (git-hash)" or simply "x.x.x"
         # corresponding to "compiled from git" or "compiled from tarball"
@@ -106,14 +106,17 @@ class TestVersion(TestCase):
         """Task binary matches the current git commit"""
         expected = "Commit: {0}".format(self.slurp_git())
 
-        args = ("diag",)
-
-        code, out, err = self.t(args)
+        code, out, err = self.t.diag()
         self.assertIn(expected, out)
+
+    def test_version_option(self):
+        """Verify that  'task --version' returnes something valid"""
+        code, out, err = self.t("--version")
+        self.assertRegexpMatches(out, r'^\d\.\d+\.\d+(\.\w+)?$')
 
 
 if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

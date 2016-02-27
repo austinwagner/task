@@ -36,6 +36,7 @@
 #include <string>
 #include <vector>
 #include <time.h>
+#include <memory>
 
 class Nibbler
 {
@@ -56,10 +57,6 @@ public:
   bool getUntilEOL (std::string&);
   bool getUntilEOS (std::string&);
 
-/*
-  bool getAllOneOf (const std::string&, std::string&);
-*/
-
   bool getN (const int, std::string&);
   bool getQuoted (char, std::string&, bool quote = false);
   bool getDigit (int&);
@@ -71,7 +68,6 @@ public:
   bool getUnsignedInt (int&);
   bool getNumber (std::string&);
   bool getNumber (double&);
-  bool getUnsignedNumber (double&);
   bool getLiteral (const std::string&);
 #ifdef NIBBLER_FEATURE_REGEX
   bool getRx (const std::string&, std::string&);
@@ -98,8 +94,6 @@ public:
 
   bool backN (const int quantity = 1);
 
-  void getRemainder (std::string&);
-
   char next ();
   std::string next (const int quantity);
 
@@ -113,7 +107,7 @@ public:
   std::string dump ();
 
 private:
-  std::string _input;
+  std::shared_ptr<std::string> _input;
   std::string::size_type _length;
   std::string::size_type _cursor;
   std::string::size_type _saved;

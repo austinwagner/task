@@ -32,7 +32,7 @@
 #include <i18n.h>
 #include <main.h>
 #include <Context.h>
-#include <Directory.h>
+#include <FS.h>
 #include <ViewText.h>
 #include <CmdShow.h>
 
@@ -41,11 +41,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdShow::CmdShow ()
 {
-  _keyword     = "show";
-  _usage       = "task          show [all | substring]";
-  _description = STRING_CMD_SHOW;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "show";
+  _usage                 = "task          show [all | substring]";
+  _description           = STRING_CMD_SHOW;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::config;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,7 +62,7 @@ int CmdShow::execute (std::string& output)
 
   // Obtain the arguments from the description.  That way, things like '--'
   // have already been handled.
-  std::vector <std::string> words = context.cli.getWords ();
+  std::vector <std::string> words = context.cli2.getWords ();
   if (words.size () > 1)
     throw std::string (STRING_CMD_SHOW_ARGS);
 
@@ -162,6 +168,7 @@ int CmdShow::execute (std::string& output)
     " journal.time.start.annotation"
     " journal.time.stop.annotation"
     " json.array"
+    " json.depends.array"
     " list.all.projects"
     " list.all.tags"
     " locking"
@@ -176,9 +183,11 @@ int CmdShow::execute (std::string& output)
     " regex"
     " reserved.lines"
     " row.padding"
+    " rule.color.merge"
     " rule.precedence.color"
     " search.case.sensitive"
     " shell.prompt"
+    " sugar"
     " summary.all.projects"
     " tag.indicator"
     " taskd.server"
@@ -194,14 +203,13 @@ int CmdShow::execute (std::string& output)
     " urgency.annotations.coefficient"
     " urgency.blocked.coefficient"
     " urgency.blocking.coefficient"
-    " urgency.inherit.coefficient"
     " urgency.due.coefficient"
-    " urgency.next.coefficient"
     " urgency.project.coefficient"
     " urgency.tags.coefficient"
     " urgency.waiting.coefficient"
     " urgency.age.coefficient"
     " urgency.age.max"
+    " urgency.inherit"
     " verbose"
     " weekstart"
     " xterm.title"
@@ -213,33 +221,32 @@ int CmdShow::execute (std::string& output)
   recognized += "_forcecolor ";
 
   std::vector <std::string> unrecognized;
-  Config::const_iterator i;
-  for (i = context.config.begin (); i != context.config.end (); ++i)
+  for (auto& i : context.config)
   {
     // Disallow partial matches by tacking a leading and trailing space on each
     // variable name.
-    std::string pattern = " " + i->first + " ";
+    std::string pattern = " " + i.first + " ";
     if (recognized.find (pattern) == std::string::npos)
     {
       // These are special configuration variables, because their name is
       // dynamic.
-      if (i->first.substr (0, 14) != "color.keyword."        &&
-          i->first.substr (0, 14) != "color.project."        &&
-          i->first.substr (0, 10) != "color.tag."            &&
-          i->first.substr (0, 10) != "color.uda."            &&
-          i->first.substr (0,  8) != "context."              &&
-          i->first.substr (0,  8) != "holiday."              &&
-          i->first.substr (0,  7) != "report."               &&
-          i->first.substr (0,  6) != "alias."                &&
-          i->first.substr (0,  5) != "hook."                 &&
-          i->first.substr (0,  4) != "uda."                  &&
-          i->first.substr (0,  8) != "default."              &&
-          i->first.substr (0, 21) != "urgency.user.project." &&
-          i->first.substr (0, 17) != "urgency.user.tag."     &&
-          i->first.substr (0, 21) != "urgency.user.keyword." &&
-          i->first.substr (0, 12) != "urgency.uda.")
+      if (i.first.substr (0, 14) != "color.keyword."        &&
+          i.first.substr (0, 14) != "color.project."        &&
+          i.first.substr (0, 10) != "color.tag."            &&
+          i.first.substr (0, 10) != "color.uda."            &&
+          i.first.substr (0,  8) != "context."              &&
+          i.first.substr (0,  8) != "holiday."              &&
+          i.first.substr (0,  7) != "report."               &&
+          i.first.substr (0,  6) != "alias."                &&
+          i.first.substr (0,  5) != "hook."                 &&
+          i.first.substr (0,  4) != "uda."                  &&
+          i.first.substr (0,  8) != "default."              &&
+          i.first.substr (0, 21) != "urgency.user.project." &&
+          i.first.substr (0, 17) != "urgency.user.tag."     &&
+          i.first.substr (0, 21) != "urgency.user.keyword." &&
+          i.first.substr (0, 12) != "urgency.uda.")
       {
-        unrecognized.push_back (i->first);
+        unrecognized.push_back (i.first);
       }
     }
   }
@@ -249,9 +256,9 @@ int CmdShow::execute (std::string& output)
   Config default_config;
   default_config.setDefaults ();
 
-  for (i = context.config.begin (); i != context.config.end (); ++i)
-    if (i->second != default_config.get (i->first))
-      default_values.push_back (i->first);
+  for (auto& i : context.config)
+    if (i.second != default_config.get (i.first))
+      default_values.push_back (i.first);
 
   // Create output view.
   ViewText view;
@@ -278,35 +285,35 @@ int CmdShow::execute (std::string& output)
     section = "";
 
   std::string::size_type loc;
-  for (i = context.config.begin (); i != context.config.end (); ++i)
+  for (auto& i : context.config)
   {
-    loc = i->first.find (section, 0);
+    loc = i.first.find (section, 0);
     if (loc != std::string::npos)
     {
       // Look for unrecognized.
       Color color;
-      if (std::find (unrecognized.begin (), unrecognized.end (), i->first) != unrecognized.end ())
+      if (std::find (unrecognized.begin (), unrecognized.end (), i.first) != unrecognized.end ())
       {
         issue_error = true;
         color = error;
       }
-      else if (std::find (default_values.begin (), default_values.end (), i->first) != default_values.end ())
+      else if (std::find (default_values.begin (), default_values.end (), i.first) != default_values.end ())
       {
         issue_warning = true;
         color = warning;
       }
 
-      std::string value = i->second;
+      std::string value = i.second;
       int row = view.addRow ();
-      view.set (row, 0, i->first, color);
+      view.set (row, 0, i.first, color);
       view.set (row, 1, value, color);
 
-      if (default_config[i->first] != value &&
-          default_config[i->first] != "")
+      if (default_config[i.first] != value &&
+          default_config[i.first] != "")
       {
         row = view.addRow ();
         view.set (row, 0, std::string ("  ") + STRING_CMD_SHOW_CONF_DEFAULT, color);
-        view.set (row, 1, default_config[i->first], color);
+        view.set (row, 1, default_config[i.first], color);
       }
     }
   }
@@ -318,7 +325,7 @@ int CmdShow::execute (std::string& output)
 
   if (issue_warning)
   {
-    out << STRING_CMD_SHOW_DIFFER;
+    out << STRING_CMD_SHOW_DIFFER << "\n";
 
     if (context.color ())
       out << "  "
@@ -331,9 +338,8 @@ int CmdShow::execute (std::string& output)
   {
     out << STRING_CMD_SHOW_UNREC << "\n";
 
-    std::vector <std::string>::iterator i;
-    for (i = unrecognized.begin (); i != unrecognized.end (); ++i)
-      out << "  " << *i << "\n";
+    for (auto& i : unrecognized)
+      out << "  " << i << "\n";
 
     if (context.color ())
       out << "\n" << format (STRING_CMD_SHOW_DIFFER_COLOR, error.colorize ("color"));
@@ -342,7 +348,6 @@ int CmdShow::execute (std::string& output)
   }
 
   out << legacyCheckForDeprecatedVariables ();
-  out << legacyCheckForDeprecatedColor ();
   out << legacyCheckForDeprecatedColumns ();
 
   // TODO Check for referenced but missing theme files.
@@ -395,6 +400,7 @@ CmdShowRaw::CmdShowRaw ()
   _description = STRING_CMD_SHOWRAW;
   _read_only   = true;
   _displays_id = false;
+  _category    = Command::Category::internal;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -408,10 +414,9 @@ int CmdShowRaw::execute (std::string& output)
   std::sort (all.begin (), all.end ());
 
   // Display them all.
-  std::vector <std::string>::iterator i;
   std::stringstream out;
-  for (i = all.begin (); i != all.end (); ++i)
-    out << *i << '=' << context.config.get (*i) << "\n";
+  for (auto& i : all)
+    out << i << '=' << context.config.get (i) << "\n";
 
   output = out.str ();
   return 0;

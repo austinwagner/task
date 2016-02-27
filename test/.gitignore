@@ -3,19 +3,13 @@
 *.data
 *.log
 *.runlog
-_run_all_parallel.txt
-_run_all_serial.txt
-_run_all_parallel_rc1
 autocomplete.t
+col.t
 color.t
 config.t
-date.t
 dates.t
-directory.t
-dom.t
-duration.t
 eval.t
-file.t
+fs.t
 i18n.t
 iso8601d.t
 iso8601p.t
@@ -24,7 +18,6 @@ lexer.t
 list.t
 msg.t
 nibbler.t
-path.t
 rx.t
 t.t
 t2.t
@@ -59,5 +52,3 @@ variant_xor.t
 view.t
 
 json_test
-
-run_all

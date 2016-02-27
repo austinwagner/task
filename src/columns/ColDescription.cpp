@@ -27,7 +27,7 @@
 #include <cmake.h>
 #include <stdlib.h>
 #include <Context.h>
-#include <Date.h>
+#include <ISO8601.h>
 #include <ColDescription.h>
 #include <text.h>
 #include <utf8.h>
@@ -44,38 +44,36 @@ ColumnDescription::ColumnDescription ()
   _style = "combined";
   _label = STRING_COLUMN_LABEL_DESC;
 
-  _styles.push_back ("combined");
-  _styles.push_back ("desc");
-  _styles.push_back ("oneline");
-  _styles.push_back ("truncated");
-  _styles.push_back ("count");
-  _styles.push_back ("truncated_count");
+  _styles = {"combined",
+             "desc",
+             "oneline",
+             "truncated",
+             "count",
+             "truncated_count"};
 
   _dateformat = context.config.get ("dateformat.annotation");
   if (_dateformat == "")
     _dateformat = context.config.get ("dateformat");
 
-  std::string t  = Date ().toString (_dateformat);
+  std::string t  = ISO8601d ().toString (_dateformat);
   std::string d  = STRING_COLUMN_EXAMPLES_DESC;
   std::string a1 = STRING_COLUMN_EXAMPLES_ANNO1;
   std::string a2 = STRING_COLUMN_EXAMPLES_ANNO2;
   std::string a3 = STRING_COLUMN_EXAMPLES_ANNO3;
   std::string a4 = STRING_COLUMN_EXAMPLES_ANNO4;
 
-  _examples.push_back (d
-                       + "\n  " + t + " " + a1
-                       + "\n  " + t + " " + a2
-                       + "\n  " + t + " " + a3
-                       + "\n  " + t + " " + a4);
-  _examples.push_back (d);
-  _examples.push_back (d
-                       + " " + t + " " + a1
-                       + " " + t + " " + a2
-                       + " " + t + " " + a3
-                       + " " + t + " " + a4);
-  _examples.push_back (d.substr (0, 20) + "...");
-  _examples.push_back (d + " [4]");
-  _examples.push_back (d.substr (0, 20) + "... [4]");
+  _examples = {d + "\n  " + t + " " + a1
+                 + "\n  " + t + " " + a2
+                 + "\n  " + t + " " + a3
+                 + "\n  " + t + " " + a4,
+               d,
+               d + " " + t + " " + a1
+                 + " " + t + " " + a2
+                 + " " + t + " " + a3
+                 + " " + t + " " + a4,
+               d.substr (0, 20) + "...",
+               d + " [4]",
+               d.substr (0, 20) + "... [4]"};
 
   _hyphenate = context.config.getBoolean ("hyphenate");
 
@@ -85,12 +83,6 @@ ColumnDescription::ColumnDescription ()
 ////////////////////////////////////////////////////////////////////////////////
 ColumnDescription::~ColumnDescription ()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool ColumnDescription::validate (std::string& value)
-{
-  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -110,16 +102,15 @@ void ColumnDescription::measure (Task& task, unsigned int& minimum, unsigned int
 
     if (task.annotation_count)
     {
-      unsigned int min_anno = _indent + Date::length (_dateformat);
+      unsigned int min_anno = _indent + ISO8601d::length (_dateformat);
       if (min_anno > minimum)
         minimum = min_anno;
 
       std::map <std::string, std::string> annos;
       task.getAnnotations (annos);
-      std::map <std::string, std::string>::iterator i;
-      for (i = annos.begin (); i != annos.end (); i++)
+      for (auto& i : annos)
       {
-        unsigned int len = min_anno + 1 + utf8_width (i->second);
+        unsigned int len = min_anno + 1 + utf8_width (i.second);
         if (len > maximum)
           maximum = len;
       }
@@ -141,12 +132,11 @@ void ColumnDescription::measure (Task& task, unsigned int& minimum, unsigned int
 
     if (task.annotation_count)
     {
-      unsigned int min_anno = Date::length (_dateformat);
+      auto min_anno = ISO8601d::length (_dateformat);
       std::map <std::string, std::string> annos;
       task.getAnnotations (annos);
-      std::map <std::string, std::string>::iterator i;
-      for (i = annos.begin (); i != annos.end (); i++)
-        maximum += min_anno + 1 + utf8_width (i->second);
+      for (auto& i : annos)
+        maximum += min_anno + 1 + utf8_width (i.second);
     }
   }
 
@@ -195,20 +185,18 @@ void ColumnDescription::render (
     task.getAnnotations (annos);
     if (annos.size ())
     {
-      std::map <std::string, std::string>::iterator i;
-      for (i = annos.begin (); i != annos.end (); i++)
+      for (auto& i : annos)
       {
-        Date dt (strtol (i->first.substr (11).c_str (), NULL, 10));
-        description += "\n" + std::string (_indent, ' ') + dt.toString (_dateformat) + " " + i->second;
+        ISO8601d dt (strtol (i.first.substr (11).c_str (), NULL, 10));
+        description += "\n" + std::string (_indent, ' ') + dt.toString (_dateformat) + " " + i.second;
       }
     }
 
     std::vector <std::string> raw;
     wrapText (raw, description, width, _hyphenate);
 
-    std::vector <std::string>::iterator i;
-    for (i = raw.begin (); i != raw.end (); ++i)
-      lines.push_back (color.colorize (leftJustify (*i, width)));
+    for (auto& i : raw)
+      lines.push_back (color.colorize (leftJustify (i, width)));
   }
 
   // This is a description
@@ -217,9 +205,8 @@ void ColumnDescription::render (
     std::vector <std::string> raw;
     wrapText (raw, description, width, _hyphenate);
 
-    std::vector <std::string>::iterator i;
-    for (i = raw.begin (); i != raw.end (); ++i)
-      lines.push_back (color.colorize (leftJustify (*i, width)));
+    for (auto& i : raw)
+      lines.push_back (color.colorize (leftJustify (i, width)));
   }
 
   // This is a description <date> <anno> ...
@@ -229,20 +216,18 @@ void ColumnDescription::render (
     task.getAnnotations (annos);
     if (annos.size ())
     {
-      std::map <std::string, std::string>::iterator i;
-      for (i = annos.begin (); i != annos.end (); i++)
+      for (auto& i : annos)
       {
-        Date dt (atoi (i->first.substr (11).c_str ()));
-        description += " " + dt.toString (_dateformat) + " " + i->second;
+        ISO8601d dt (strtol (i.first.substr (11).c_str (), NULL, 10));
+        description += " " + dt.toString (_dateformat) + " " + i.second;
       }
     }
 
     std::vector <std::string> raw;
     wrapText (raw, description, width, _hyphenate);
 
-    std::vector <std::string>::iterator i;
-    for (i = raw.begin (); i != raw.end (); ++i)
-      lines.push_back (color.colorize (leftJustify (*i, width)));
+    for (auto& i : raw)
+      lines.push_back (color.colorize (leftJustify (i, width)));
   }
 
   // This is a des...
@@ -267,9 +252,8 @@ void ColumnDescription::render (
     std::vector <std::string> raw;
     wrapText (raw, description, width, _hyphenate);
 
-    std::vector <std::string>::iterator i;
-    for (i = raw.begin (); i != raw.end (); ++i)
-      lines.push_back (color.colorize (leftJustify (*i, width)));
+    for (auto& i : raw)
+      lines.push_back (color.colorize (leftJustify (i, width)));
   }
 
   // This is a des... [2]
@@ -292,7 +276,6 @@ void ColumnDescription::render (
       lines.push_back (color.colorize (description.substr (0, width - len_annos - 3) + "..." + annos_count));
     else
       lines.push_back (color.colorize (leftJustify (description + annos_count, width)));
-
   }
 }
 

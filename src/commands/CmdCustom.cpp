@@ -43,15 +43,21 @@ extern Context context;
 
 ////////////////////////////////////////////////////////////////////////////////
 CmdCustom::CmdCustom (
-  const std::string& k,
-  const std::string& u,
-  const std::string& d)
+  const std::string& keyword,
+  const std::string& usage,
+  const std::string& description)
 {
-  _keyword     = k;
-  _usage       = u;
-  _description = d;
-  _read_only   = true;
-  _displays_id = true;
+  _keyword               = keyword;
+  _usage                 = usage;
+  _description           = description;
+  _read_only             = true;
+  _displays_id           = true;
+  _needs_gc              = true;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Category::report;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -64,8 +70,6 @@ int CmdCustom::execute (std::string& output)
   std::string reportLabels  = context.config.get ("report." + _keyword + ".labels");
   std::string reportSort    = context.config.get ("report." + _keyword + ".sort");
   std::string reportFilter  = context.config.get ("report." + _keyword + ".filter");
-  if (reportFilter != "")
-    reportFilter = "( " + reportFilter + " )";
 
   std::vector <std::string> columns;
   split (columns, reportColumns, ',');
@@ -79,10 +83,13 @@ int CmdCustom::execute (std::string& output)
 
   std::vector <std::string> sortOrder;
   split (sortOrder, reportSort, ',');
-  validateSortColumns (sortOrder);
+  if (sortOrder.size () != 0 &&
+      sortOrder[0] != "none")
+    validateSortColumns (sortOrder);
 
-  // Prepend the argument list with those from the report filter.
-  context.cli.addRawFilter (reportFilter);
+  // Add the report filter to any existing filter.
+  if (reportFilter != "")
+    context.cli2.addFilter (reportFilter);
 
   // Apply filter.
   handleRecurrence ();
@@ -90,12 +97,30 @@ int CmdCustom::execute (std::string& output)
   std::vector <Task> filtered;
   filter.subset (filtered);
 
-  // Sort the tasks.
   std::vector <int> sequence;
-  for (unsigned int i = 0; i < filtered.size (); ++i)
-    sequence.push_back (i);
+  if (sortOrder.size () &&
+      sortOrder[0] == "none")
+  {
+    // Assemble a sequence vector that represents the tasks listed in
+    // context.cli2._uuid_ranges, in the order in which they appear. This
+    // equates to no sorting, just a specified order.
+    sortOrder.clear ();
+    for (auto& i : context.cli2._uuid_list)
+      for (unsigned int t = 0; t < filtered.size (); ++t)
+        if (filtered[t].get ("uuid") == i)
+          sequence.push_back (t);
+  }
+  else
+  {
+    // There is a sortOrder, so sorting will take place, which means the initial
+    // order of sequence is ascending.
+    for (unsigned int i = 0; i < filtered.size (); ++i)
+      sequence.push_back (i);
 
-  sort_tasks (filtered, sequence, reportSort);
+    // Sort the tasks.
+    if (sortOrder.size ())
+      sort_tasks (filtered, sequence, reportSort);
+  }
 
   // Configure the view.
   ViewTask view;
@@ -104,27 +129,33 @@ int CmdCustom::execute (std::string& output)
   view.extraPadding (context.config.getInteger ("row.padding"));
   view.intraPadding (context.config.getInteger ("column.padding"));
 
-  Color label (context.config.get ("color.label"));
-  view.colorHeader (label);
+  if (context.color ())
+  {
+    Color label (context.config.get ("color.label"));
+    view.colorHeader (label);
 
-  Color label_sort (context.config.get ("color.label.sort"));
-  view.colorSortHeader (label_sort);
+    Color label_sort (context.config.get ("color.label.sort"));
+    view.colorSortHeader (label_sort);
 
-  Color alternate (context.config.get ("color.alternate"));
-  view.colorOdd (alternate);
-  view.intraColorOdd (alternate);
+    // If an alternating row color is specified, notify the table.
+    Color alternate (context.config.get ("color.alternate"));
+    if (alternate.nontrivial ())
+    {
+      view.colorOdd (alternate);
+      view.intraColorOdd (alternate);
+    }
+  }
 
   // Capture columns that are sorted.
   std::vector <std::string> sortColumns;
 
   // Add the break columns, if any.
-  std::vector <std::string>::iterator so;
-  for (so = sortOrder.begin (); so != sortOrder.end (); ++so)
+  for (auto& so : sortOrder)
   {
     std::string name;
     bool ascending;
     bool breakIndicator;
-    context.decomposeSortField (*so, name, ascending, breakIndicator);
+    context.decomposeSortField (so, name, ascending, breakIndicator);
 
     if (breakIndicator)
       view.addBreak (name);
@@ -211,17 +242,15 @@ int CmdCustom::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 void CmdCustom::validateReportColumns (std::vector <std::string>& columns)
 {
-  std::vector <std::string>::iterator i;
-  for (i = columns.begin (); i != columns.end (); ++i)
-    legacyColumnMap (*i);
+  for (auto& col : columns)
+    legacyColumnMap (col);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void CmdCustom::validateSortColumns (std::vector <std::string>& columns)
 {
-  std::vector <std::string>::iterator i;
-  for (i = columns.begin (); i != columns.end (); ++i)
-    legacySortColumnMap (*i);
+  for (auto& col : columns)
+    legacySortColumnMap (col);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

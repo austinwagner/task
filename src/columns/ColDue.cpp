@@ -28,8 +28,6 @@
 #include <stdlib.h>
 #include <Context.h>
 #include <ColDue.h>
-#include <Date.h>
-#include <Duration.h>
 #include <text.h>
 #include <i18n.h>
 
@@ -40,10 +38,6 @@ ColumnDue::ColumnDue ()
 {
   _name      = "due";
   _label     = STRING_COLUMN_LABEL_DUE;
-
-  Date now;
-  now += 125;
-  _examples.push_back (Duration (now - Date ()).formatCompact ());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,17 +46,11 @@ ColumnDue::~ColumnDue ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool ColumnDue::validate (std::string& value)
-{
-  return ColumnDate::validate (value);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // Overriden so that style <----> label are linked.
 // Note that you can not determine which gets called first.
 void ColumnDue::setStyle (const std::string& value)
 {
-  _style = value;
+  Column::setStyle (value);
 
   if (_style == "countdown" && _label == STRING_COLUMN_LABEL_DUE)
     _label = STRING_COLUMN_LABEL_COUNT;

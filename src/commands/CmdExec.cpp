@@ -36,18 +36,24 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdExec::CmdExec ()
 {
-  _keyword     = "execute";
-  _usage       = "task          execute <external command>";
-  _description = STRING_CMD_EXEC_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "execute";
+  _usage                 = "task          execute <external command>";
+  _description           = STRING_CMD_EXEC_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::misc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int CmdExec::execute (std::string& output)
+int CmdExec::execute (std::string&)
 {
   std::string command_line;
-  join (command_line, " ", context.cli.getWords ());
+  join (command_line, " ", context.cli2.getWords ());
   return system (command_line.c_str ());
 }
 

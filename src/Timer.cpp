@@ -142,54 +142,11 @@ void Timer::subtract (unsigned long value)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-HighResTimer::HighResTimer ()
+unsigned long Timer::now ()
 {
-#ifndef WINDOWS
-  _start.tv_sec = 0;
-  _start.tv_usec = 0;
-
-  _stop.tv_sec = 0;
-  _stop.tv_usec = 0;
-#endif
-}
-
-////////////////////////////////////////////////////////////////////////////////
-HighResTimer::~HighResTimer ()
-{
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void HighResTimer::start ()
-{
-#ifdef WINDOWS
-  QueryPerformanceCounter(&_start);
-#else
-  gettimeofday (&_start, NULL);
-#endif
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void HighResTimer::stop ()
-{
-#ifdef WINDOWS
-  QueryPerformanceCounter(&_stop);
-#else
-  gettimeofday(&_stop, NULL);
-#endif
-}
-
-////////////////////////////////////////////////////////////////////////////////
-double HighResTimer::total () const
-{
-#ifdef WINDOWS
-  if (_stop.QuadPart > 0)
-    return (_stop.QuadPart - _start.QuadPart) / QpcFreq::value();
-#else
-  if (_stop.tv_sec > 0 || _stop.tv_usec > 0)
-    return (_stop.tv_sec  - _start.tv_sec) +
-           (_stop.tv_usec - _start.tv_usec) / 1000000.0;
-#endif
-  return 0.0;
+  struct timeval now;
+  gettimeofday (&now, NULL);
+  return now.tv_sec * 1000000 + now.tv_usec;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

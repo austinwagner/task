@@ -39,11 +39,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdColor::CmdColor ()
 {
-  _keyword     = "colors";
-  _usage       = "task          colors [sample | legend]";
-  _description = STRING_CMD_COLOR_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "colors";
+  _usage                 = "task          colors [sample | legend]";
+  _description           = STRING_CMD_COLOR_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::misc;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -51,13 +57,11 @@ int CmdColor::execute (std::string& output)
 {
   int rc = 0;
 
-#ifdef FEATURE_COLOR
   // Get the non-attribute, non-fancy command line arguments.
   bool legend = false;
-  std::vector <std::string> words = context.cli.getWords ();
-  std::vector <std::string>::iterator word;
-  for (word = words.begin (); word != words.end (); ++word)
-    if (closeEnough ("legend", *word))
+  std::vector <std::string> words = context.cli2.getWords ();
+  for (auto& word : words)
+    if (closeEnough ("legend", word))
       legend = true;
 
   std::stringstream out;
@@ -74,19 +78,18 @@ int CmdColor::execute (std::string& output)
       view.add (Column::factory ("string", STRING_CMD_COLOR_COLOR));
       view.add (Column::factory ("string", STRING_CMD_COLOR_DEFINITION));
 
-      Config::const_iterator item;
-      for (item = context.config.begin (); item != context.config.end (); ++item)
+      for (auto& item : context.config)
       {
         // Skip items with 'color' in their name, that are not referring to
         // actual colors.
-        if (item->first != "_forcecolor" &&
-            item->first != "color"       &&
-            item->first.find ("color") == 0)
+        if (item.first != "_forcecolor" &&
+            item.first != "color"       &&
+            item.first.find ("color") == 0)
         {
-          Color color (context.config.get (item->first));
+          Color color (context.config.get (item.first));
           int row = view.addRow ();
-          view.set (row, 0, item->first, color);
-          view.set (row, 1, item->second, color);
+          view.set (row, 0, item.first, color);
+          view.set (row, 1, item.second, color);
         }
       }
 
@@ -106,7 +109,7 @@ int CmdColor::execute (std::string& output)
       Color six    ("red on color173");
 
       std::string swatch;
-      for (word = words.begin (); word != words.end (); ++word)
+      for (auto word = words.begin (); word != words.end (); ++word)
       {
         if (word != words.begin ())
           swatch += " ";
@@ -259,10 +262,6 @@ int CmdColor::execute (std::string& output)
   }
 
   output = out.str ();
-#else
-  output = "Color not supported.\n";
-#endif
-
   return rc;
 }
 

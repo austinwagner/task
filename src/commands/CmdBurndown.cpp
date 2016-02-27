@@ -32,8 +32,7 @@
 #include <math.h>
 #include <Context.h>
 #include <Filter.h>
-#include <Date.h>
-#include <Duration.h>
+#include <ISO8601.h>
 #include <main.h>
 #include <i18n.h>
 #include <text.h>
@@ -154,10 +153,10 @@ public:
 private:
   void generateBars ();
   void optimizeGrid ();
-  Date quantize (const Date&);
+  ISO8601d quantize (const ISO8601d&);
 
-  Date increment (const Date&);
-  Date decrement (const Date&);
+  ISO8601d increment (const ISO8601d&);
+  ISO8601d decrement (const ISO8601d&);
   void maxima ();
   void yLabels (std::vector <int>&);
   void calculateRates (std::vector <time_t>&);
@@ -175,7 +174,7 @@ public:
   int _estimated_bars;            // Estimated bar count
   int _actual_bars;               // Calculated bar count
   std::map <time_t, Bar> _bars;   // Epoch-indexed set of bars
-  Date _earliest;                 // Date of earliest estimated bar
+  ISO8601d _earliest;             // Date of earliest estimated bar
   int _carryover_done;            // Number of 'done' tasks prior to chart range
   char _period;                   // D, W, M
   std::string _title;             // Additional description
@@ -211,7 +210,7 @@ Chart::Chart (char type)
   _fix_rate = 0.0;
 
   // Set the title.
-  std::vector <std::string> words = context.cli.getWords ();
+  std::vector <std::string> words = context.cli2.getWords ();
   std::string filter;
   join (filter, " ", words);
   _title = "(" + filter + ")";
@@ -228,14 +227,13 @@ void Chart::scan (std::vector <Task>& tasks)
   generateBars ();
 
   // Not quantized, so that "while (xxx < now)" is inclusive.
-  Date now;
+  ISO8601d now;
 
   time_t epoch;
-  std::vector <Task>::iterator task;
-  for (task = tasks.begin (); task != tasks.end (); ++task)
+  for (auto& task : tasks)
   {
     // The entry date is when the counting starts.
-    Date from = quantize (Date (task->get_date ("entry")));
+    ISO8601d from = quantize (ISO8601d (task.get_date ("entry")));
     epoch = from.toEpoch ();
 
     if (_bars.find (epoch) != _bars.end ())
@@ -243,24 +241,26 @@ void Chart::scan (std::vector <Task>& tasks)
 
     // e-->   e--s-->
     // ppp>   pppsss>
-    Task::status status = task->getStatus ();
+    Task::status status = task.getStatus ();
     if (status == Task::pending ||
         status == Task::waiting)
     {
-      if (task->has ("start"))
+      if (task.has ("start"))
       {
-        Date start = quantize (Date (task->get_date ("start")));
+        ISO8601d start = quantize (ISO8601d (task.get_date ("start")));
         while (from < start)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._pending;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._pending;
           from = increment (from);
         }
 
         while (from < now)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._started;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._started;
           from = increment (from);
         }
       }
@@ -269,7 +269,8 @@ void Chart::scan (std::vector <Task>& tasks)
         while (from < now)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._pending;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._pending;
           from = increment (from);
         }
       }
@@ -280,7 +281,7 @@ void Chart::scan (std::vector <Task>& tasks)
     else if (status == Task::completed)
     {
       // Truncate history so it starts at 'earliest' for completed tasks.
-      Date end = quantize (Date (task->get_date ("end")));
+      ISO8601d end = quantize (ISO8601d (task.get_date ("end")));
       epoch = end.toEpoch ();
 
       if (_bars.find (epoch) != _bars.end ())
@@ -294,44 +295,49 @@ void Chart::scan (std::vector <Task>& tasks)
         continue;
       }
 
-      if (task->has ("start"))
+      if (task.has ("start"))
       {
-        Date start = quantize (Date (task->get_date ("start")));
+        ISO8601d start = quantize (ISO8601d (task.get_date ("start")));
         while (from < start)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._pending;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._pending;
           from = increment (from);
         }
 
         while (from < end)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._started;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._started;
           from = increment (from);
         }
 
         while (from < now)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._done;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._done;
           from = increment (from);
         }
       }
       else
       {
-        Date end = quantize (Date (task->get_date ("end")));
+        ISO8601d end = quantize (ISO8601d (task.get_date ("end")));
         while (from < end)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._pending;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._pending;
           from = increment (from);
         }
 
         while (from < now)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._done;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._done;
           from = increment (from);
         }
       }
@@ -342,7 +348,7 @@ void Chart::scan (std::vector <Task>& tasks)
     else if (status == Task::deleted)
     {
       // Skip old deleted tasks.
-      Date end = quantize (Date (task->get_date ("end")));
+      ISO8601d end = quantize (ISO8601d (task.get_date ("end")));
       epoch = end.toEpoch ();
       if (_bars.find (epoch) != _bars.end ())
         ++_bars[epoch]._removed;
@@ -350,30 +356,33 @@ void Chart::scan (std::vector <Task>& tasks)
       if (end < _earliest)
         continue;
 
-      if (task->has ("start"))
+      if (task.has ("start"))
       {
-        Date start = quantize (Date (task->get_date ("start")));
+        ISO8601d start = quantize (ISO8601d (task.get_date ("start")));
         while (from < start)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._pending;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._pending;
           from = increment (from);
         }
 
         while (from < end)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._started;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._started;
           from = increment (from);
         }
       }
       else
       {
-        Date end = quantize (Date (task->get_date ("end")));
+        ISO8601d end = quantize (ISO8601d (task.get_date ("end")));
         while (from < end)
         {
           epoch = from.toEpoch ();
-          if (_bars.find (epoch) != _bars.end ()) ++_bars[epoch]._pending;
+          if (_bars.find (epoch) != _bars.end ())
+            ++_bars[epoch]._pending;
           from = increment (from);
         }
       }
@@ -409,6 +418,12 @@ std::string Chart::render ()
       _graph_width < 2)        // A single-bar graph is useless.
   {
     return std::string (STRING_CMD_BURN_TOO_SMALL) + "\n";
+  }
+
+  else if (_graph_height > 1000 || // each line is a string allloc
+           _graph_width  > 1000)
+  {
+    return std::string (STRING_CMD_BURN_TOO_LARGE) + "\n";
   }
 
   if (_max_value == 0)
@@ -476,16 +491,14 @@ std::string Chart::render ()
 
   // Draw x-axis labels.
   std::vector <time_t> bars_in_sequence;
-  std::map <time_t, Bar>::iterator it;
-  for (it = _bars.begin (); it != _bars.end (); ++it)
-    bars_in_sequence.push_back (it->first);
+  for (auto& bar : _bars)
+    bars_in_sequence.push_back (bar.first);
 
   std::sort (bars_in_sequence.begin (), bars_in_sequence.end ());
-  std::vector <time_t>::iterator seq;
   std::string _major_label;
-  for (seq = bars_in_sequence.begin (); seq != bars_in_sequence.end (); ++seq)
+  for (auto& seq : bars_in_sequence)
   {
-    Bar bar = _bars[*seq];
+    Bar bar = _bars[seq];
 
     // If it fits within the allowed space.
     if (bar._offset < _actual_bars)
@@ -500,15 +513,15 @@ std::string Chart::render ()
   }
 
   // Draw bars.
-  for (seq = bars_in_sequence.begin (); seq != bars_in_sequence.end (); ++seq)
+  for (auto& seq : bars_in_sequence)
   {
-    Bar bar = _bars[*seq];
+    Bar bar = _bars[seq];
 
     // If it fits within the allowed space.
     if (bar._offset < _actual_bars)
     {
-      int pending = ( bar._pending                                            * _graph_height) / _labels[2];
-      int started = ((bar._pending + bar._started)                             * _graph_height) / _labels[2];
+      int pending = ( bar._pending                                               * _graph_height) / _labels[2];
+      int started = ((bar._pending + bar._started)                               * _graph_height) / _labels[2];
       int done    = ((bar._pending + bar._started + bar._done + _carryover_done) * _graph_height) / _labels[2];
 
       for (int b = 0; b < pending; ++b)
@@ -587,7 +600,7 @@ void Chart::optimizeGrid ()
   std::string::size_type ws;
   while ((ws = _grid.find (" \n")) != std::string::npos)
   {
-    std::string::size_type non_ws = ws;
+    auto non_ws = ws;
     while (_grid[non_ws] == ' ')
       --non_ws;
 
@@ -596,7 +609,7 @@ void Chart::optimizeGrid ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-Date Chart::quantize (const Date& input)
+ISO8601d Chart::quantize (const ISO8601d& input)
 {
   if (_period == 'D') return input.startOfDay ();
   if (_period == 'W') return input.startOfWeek ();
@@ -606,7 +619,7 @@ Date Chart::quantize (const Date& input)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-Date Chart::increment (const Date& input)
+ISO8601d Chart::increment (const ISO8601d& input)
 {
   // Move to the next period.
   int d = input.day ();
@@ -618,7 +631,7 @@ Date Chart::increment (const Date& input)
   switch (_period)
   {
   case 'D':
-    if (++d > Date::daysInMonth (m, y))
+    if (++d > ISO8601d::daysInMonth (m, y))
     {
       d = 1;
 
@@ -632,7 +645,7 @@ Date Chart::increment (const Date& input)
 
   case 'W':
     d += 7;
-    days = Date::daysInMonth (m, y);
+    days = ISO8601d::daysInMonth (m, y);
     if (d > days)
     {
       d -= days;
@@ -655,11 +668,11 @@ Date Chart::increment (const Date& input)
     break;
   }
 
-  return Date (m, d, y, 0, 0, 0);
+  return ISO8601d (m, d, y, 0, 0, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-Date Chart::decrement (const Date& input)
+ISO8601d Chart::decrement (const ISO8601d& input)
 {
   // Move to the previous period.
   int d = input.day ();
@@ -677,7 +690,7 @@ Date Chart::decrement (const Date& input)
         --y;
       }
 
-      d = Date::daysInMonth (m, y);
+      d = ISO8601d::daysInMonth (m, y);
     }
     break;
 
@@ -691,7 +704,7 @@ Date Chart::decrement (const Date& input)
         y--;
       }
 
-      d += Date::daysInMonth (m, y);
+      d += ISO8601d::daysInMonth (m, y);
     }
     break;
 
@@ -705,7 +718,7 @@ Date Chart::decrement (const Date& input)
     break;
   }
 
-  return Date (m, d, y, 0, 0, 0);
+  return ISO8601d (m, d, y, 0, 0, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -715,12 +728,12 @@ void Chart::generateBars ()
   Bar bar;
 
   // Determine the last bar date.
-  Date cursor;
+  ISO8601d cursor;
   switch (_period)
   {
-  case 'D': cursor = Date ().startOfDay ();   break;
-  case 'W': cursor = Date ().startOfWeek ();  break;
-  case 'M': cursor = Date ().startOfMonth (); break;
+  case 'D': cursor = ISO8601d ().startOfDay ();   break;
+  case 'W': cursor = ISO8601d ().startOfWeek ();  break;
+  case 'M': cursor = ISO8601d ().startOfMonth (); break;
   }
 
   // Iterate and determine all the other bar dates.
@@ -732,7 +745,7 @@ void Chart::generateBars ()
     {
     case 'D': // month/day
       {
-        std::string month = Date::monthName (cursor.month ());
+        std::string month = ISO8601d::monthName (cursor.month ());
         bar._major_label = month.substr (0, 3);
 
         sprintf (str, "%02d", cursor.day ());
@@ -774,13 +787,12 @@ void Chart::maxima ()
   _max_value = 0;
   _max_label = 1;
 
-  std::map <time_t, Bar>::iterator it;
-  for (it = _bars.begin (); it != _bars.end (); it++)
+  for (auto& bar : _bars)
   {
     // Determine _max_label.
-    int total = it->second._pending +
-                it->second._started +
-                it->second._done    +
+    int total = bar.second._pending +
+                bar.second._started +
+                bar.second._done    +
                 _carryover_done;
 
     // Determine _max_value.
@@ -923,8 +935,8 @@ void Chart::calculateRates (std::vector <time_t>& sequence)
     int current_pending = _bars[sequence.back ()]._pending;
     int remaining_days = (int) (current_pending / (_fix_rate - _find_rate));
 
-    Date now;
-    Duration delta (remaining_days * 86400);
+    ISO8601d now;
+    ISO8601p delta (remaining_days * 86400);
     now += delta;
 
     // Prefer dateformat.report over dateformat.
@@ -1003,11 +1015,17 @@ unsigned Chart::burndown_size (unsigned ntasks)
 ////////////////////////////////////////////////////////////////////////////////
 CmdBurndownMonthly::CmdBurndownMonthly ()
 {
-  _keyword     = "burndown.monthly";
-  _usage       = "task <filter> burndown.monthly";
-  _description = STRING_CMD_BURN_USAGE_M;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "burndown.monthly";
+  _usage                 = "task <filter> burndown.monthly";
+  _description           = STRING_CMD_BURN_USAGE_M;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::graphs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1031,11 +1049,17 @@ int CmdBurndownMonthly::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 CmdBurndownWeekly::CmdBurndownWeekly ()
 {
-  _keyword     = "burndown.weekly";
-  _usage       = "task <filter> burndown.weekly";
-  _description = STRING_CMD_BURN_USAGE_W;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "burndown.weekly";
+  _usage                 = "task <filter> burndown.weekly";
+  _description           = STRING_CMD_BURN_USAGE_W;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::graphs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1059,11 +1083,17 @@ int CmdBurndownWeekly::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 CmdBurndownDaily::CmdBurndownDaily ()
 {
-  _keyword     = "burndown.daily";
-  _usage       = "task <filter> burndown.daily";
-  _description = STRING_CMD_BURN_USAGE_D;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "burndown.daily";
+  _usage                 = "task <filter> burndown.daily";
+  _description           = STRING_CMD_BURN_USAGE_D;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::graphs;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

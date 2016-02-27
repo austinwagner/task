@@ -27,6 +27,7 @@
 #include <cmake.h>
 #include <iostream>
 #include <vector>
+#include <string.h>
 #include <test.h>
 #include <Lexer.h>
 #include <Context.h>
@@ -34,13 +35,19 @@
 Context context;
 
 ////////////////////////////////////////////////////////////////////////////////
-int main (int argc, char** argv)
+int main (int, char**)
 {
-  UnitTest t (789);
+  UnitTest t (1208);
 
   std::vector <std::pair <std::string, Lexer::Type>> tokens;
   std::string token;
   Lexer::Type type;
+
+  // Feed in some attributes and types, so that the Lexer knows what a DOM
+  // reference is.
+  Lexer::attributes["due"]         = "date";
+  Lexer::attributes["tags"]        = "string";
+  Lexer::attributes["description"] = "string";
 
   // White space detection.
   t.notok (Lexer::isWhitespace (0x0041), "U+0041 (A) ! isWhitespace");
@@ -71,7 +78,7 @@ int main (int argc, char** argv)
   t.ok (Lexer::isWhitespace (0x205F), "U+205F isWhitespace");
   t.ok (Lexer::isWhitespace (0x3000), "U+3000 isWhitespace");
 
-  // static bool Lexer::isBoundary(int, int);
+  // static bool Lexer::isBoundary (int, int);
   t.ok    (Lexer::isBoundary (' ', 'a'), "' ' --> 'a' = isBoundary");
   t.ok    (Lexer::isBoundary ('a', ' '), "'a' --> ' ' = isBoundary");
   t.ok    (Lexer::isBoundary (' ', '+'), "' ' --> '+' = isBoundary");
@@ -79,6 +86,29 @@ int main (int argc, char** argv)
   t.notok (Lexer::isBoundary ('3', '4'), "'3' --> '4' = isBoundary");
   t.ok    (Lexer::isBoundary ('(', '('), "'(' --> '(' = isBoundary");
   t.notok (Lexer::isBoundary ('r', 'd'), "'r' --> 'd' = isBoundary");
+
+  // static bool Lexer::wasQuoted (const std::string&);
+  t.notok (Lexer::wasQuoted (""),        "'' --> !wasQuoted");
+  t.notok (Lexer::wasQuoted ("foo"),     "'foo' --> !wasQuoted");
+  t.ok    (Lexer::wasQuoted ("a b"),     "'a b' --> wasQuoted");
+  t.ok    (Lexer::wasQuoted ("(a)"),     "'(a)' --> wasQuoted");
+
+  // static bool Lexer::dequote (std::string&, const std::string& quotes = "'\"");
+  token = "foo";
+  Lexer::dequote (token);
+  t.is (token, "foo", "dequote foo --> foo");
+
+  token = "'foo'";
+  Lexer::dequote (token);
+  t.is (token, "foo", "dequote 'foo' --> foo");
+
+  token = "'o\\'clock'";
+  Lexer::dequote (token);
+  t.is (token, "o\\'clock", "dequote 'o\\'clock' --> o\\'clock");
+
+  token = "abba";
+  Lexer::dequote (token, "a");
+  t.is (token, "bb", "dequote 'abba' (a) --> bb");
 
   // Should result in no tokens.
   Lexer l0 ("");
@@ -99,7 +129,7 @@ int main (int argc, char** argv)
   }
 
   t.is (tokens[0].first,                     "one",           "tokens[0] = 'one'"); // 30
-  t.is (Lexer::typeName (tokens[0].second),  "dom",           "tokens[0] = dom");
+  t.is (Lexer::typeName (tokens[0].second),  "identifier",    "tokens[0] = identifier");
   t.is (tokens[1].first,                     "'two 'three''", "tokens[1] = 'two 'three''");
   t.is (Lexer::typeName (tokens[1].second),  "string",        "tokens[1] = string");
   t.is (tokens[2].first,                     "+",             "tokens[2] = '+'");
@@ -125,15 +155,14 @@ int main (int argc, char** argv)
   t.is (tokens[12].first,                    "1.2e-3.4",      "tokens[12] = '1.2e-3.4'");
   t.is (Lexer::typeName (tokens[12].second), "number",        "tokens[12] = number");
   t.is (tokens[13].first,                    "foo.bar",       "tokens[13] = 'foo.bar'");
-  t.is (Lexer::typeName (tokens[13].second), "dom",           "tokens[13] = dom");
+  t.is (Lexer::typeName (tokens[13].second), "identifier",    "tokens[13] = identifier");
   t.is (tokens[14].first,                    "and",           "tokens[14] = 'and'"); // 60
   t.is (Lexer::typeName (tokens[14].second), "op",            "tokens[14] = op");
   t.is (tokens[15].first,                    "'€'",           "tokens[15] = \\u20ac --> ''€''");
   t.is (Lexer::typeName (tokens[15].second), "string",        "tokens[15] = string");
 
-  // Test for ISO-8601 dates (favoring dates in ambiguous cases).
-  Lexer l3 ("1 12 123 1234 12345 123456 1234567 12345678");
-  l3.ambiguity (true);
+  // Test for numbers that are no longer ISO-8601 dates.
+  Lexer l3 ("1 12 123 1234 12345 123456 1234567");
   tokens.clear ();
   while (l3.token (token, type))
   {
@@ -141,51 +170,21 @@ int main (int argc, char** argv)
     tokens.push_back (std::pair <std::string, Lexer::Type> (token, type));
   }
 
-  t.is ((int)tokens.size (),     8,                         "7 tokens");
+  t.is ((int)tokens.size (),     7,                         "7 tokens");
   t.is (tokens[0].first,         "1",                       "tokens[0] == '1'");
   t.is ((int) tokens[0].second,  (int) Lexer::Type::number, "tokens[0] == Type::number");
   t.is (tokens[1].first,         "12",                      "tokens[1] == '12'");
-  t.is ((int) tokens[1].second,  (int) Lexer::Type::date,   "tokens[1] == Type::date");
+  t.is ((int) tokens[1].second,  (int) Lexer::Type::number, "tokens[1] == Type::date");
   t.is (tokens[2].first,         "123",                     "tokens[2] == '123'");
   t.is ((int) tokens[2].second,  (int) Lexer::Type::number, "tokens[2] == Type::number"); // 70
   t.is (tokens[3].first,         "1234",                    "tokens[3] == '1234'");
-  t.is ((int) tokens[3].second,  (int) Lexer::Type::date,   "tokens[3] == Type::date");
+  t.is ((int) tokens[3].second,  (int) Lexer::Type::number, "tokens[3] == Type::date");
   t.is (tokens[4].first,         "12345",                   "tokens[4] == '12345'");
   t.is ((int) tokens[4].second,  (int) Lexer::Type::number, "tokens[4] == Type::number");
   t.is (tokens[5].first,         "123456",                  "tokens[5] == '123456'");
-  t.is ((int) tokens[5].second,  (int) Lexer::Type::date,   "tokens[5] == Type::date");
+  t.is ((int) tokens[5].second,  (int) Lexer::Type::number, "tokens[5] == Type::date");
   t.is (tokens[6].first,         "1234567",                 "tokens[6] == '1234567'");
   t.is ((int) tokens[6].second,  (int) Lexer::Type::number, "tokens[6] == Type::number");
-  t.is (tokens[7].first,         "12345678",                "tokens[7] == '12345678'");
-  t.is ((int) tokens[7].second,  (int) Lexer::Type::number, "tokens[7] == Type::number"); // 80
-
-  // Test for ISO-8601 dates (favoring numbers in ambiguous cases).
-  Lexer l4 ("1 12 123 1234 12345 123456 1234567 12345678");
-  l4.ambiguity (false);
-  tokens.clear ();
-  while (l4.token (token, type))
-  {
-    std::cout << "# «" << token << "» " << Lexer::typeName (type) << "\n";
-    tokens.push_back (std::pair <std::string, Lexer::Type> (token, type));
-  }
-
-  t.is ((int)tokens.size (),       8,                           "8 tokens");
-  t.is (tokens[0].first,           "1",                         "tokens[0] == '1'");
-  t.is ((int) tokens[0].second,    (int) Lexer::Type::number,   "tokens[0] == Type::number");
-  t.is (tokens[1].first,           "12",                        "tokens[1] == '12'");
-  t.is ((int) tokens[1].second,    (int) Lexer::Type::number,   "tokens[1] == Type::number");
-  t.is (tokens[2].first,           "123",                       "tokens[2] == '123'"); // 90
-  t.is ((int) tokens[2].second,    (int) Lexer::Type::number,   "tokens[2] == Type::number");
-  t.is (tokens[3].first,           "1234",                      "tokens[3] == '1234'");
-  t.is ((int) tokens[3].second,    (int) Lexer::Type::number,   "tokens[3] == Type::number");
-  t.is (tokens[4].first,           "12345",                     "tokens[4] == '12345'");
-  t.is ((int) tokens[4].second,    (int) Lexer::Type::number,   "tokens[4] == Type::number");
-  t.is (tokens[5].first,           "123456",                    "tokens[5] == '123456'");
-  t.is ((int) tokens[5].second,    (int) Lexer::Type::number,   "tokens[5] == Type::number");
-  t.is (tokens[6].first,           "1234567",                   "tokens[6] == '1234567'");
-  t.is ((int) tokens[6].second,    (int) Lexer::Type::number,   "tokens[6] == Type::number");
-  t.is (tokens[7].first,           "12345678",                  "tokens[7] == '12345678'"); // 100
-  t.is ((int) tokens[7].second,    (int) Lexer::Type::number,   "tokens[7] == Type::number");
 
   // void split (std::vector<std::string>&, const std::string&);
   std::string unsplit = " ( A or B ) ";
@@ -210,6 +209,105 @@ int main (int argc, char** argv)
   t.is (items[5], "b",             "split '  +-* a+b 12.3e4 'c d'' -> [5] 'b'");
   t.is (items[6], "12.3e4",        "split '  +-* a+b 12.3e4 'c d'' -> [6] '12.3e4'");
   t.is (items[7], "'c d'",         "split '  +-* a+b 12.3e4 'c d'' -> [7] ''c d''");
+
+  // static bool decomposePair (const std::string&, std::string&, std::string&, std::string&, std::string&);
+  // 2 * 4 * 2 * 5 = 80 tests.
+  std::string outName, outMod, outValue, outSep;
+  for (auto& name : {"name"})
+  {
+    for (auto& mod : {"", "mod"})
+    {
+      for (auto& sep : {":", "=", "::", ":="})
+      {
+        for (auto& value : {"", "value", "a:b", "a::b", "a=b", "a:=b"})
+        {
+          std::string input = std::string ("name") + (strlen (mod) ? "." : "") + mod + sep + value;
+          t.ok (Lexer::decomposePair (input, outName, outMod, outSep, outValue), "decomposePair '" + input + "' --> true");
+          t.is (name,  outName,  "  '" + input + "' --> name '"  + name  + "'");
+          t.is (mod,   outMod,   "  '" + input + "' --> mod '"   + mod   + "'");
+          t.is (value, outValue, "  '" + input + "' --> value '" + value + "'");
+          t.is (sep,   outSep,   "  '" + input + "' --> sep '"   + sep   + "'");
+        }
+      }
+    }
+  }
+
+  // static bool readWord (const std::string&, const std::string&, std::string::size_type&, std::string&);
+  std::string::size_type cursor = 0;
+  std::string word;
+  t.ok (Lexer::readWord ("'one two'", "'\"", cursor, word), "readWord ''one two'' --> true");
+  t.is (word, "'one two'",                                  "  word '" + word + "'");
+  t.is ((int)cursor, 9,                                     "  cursor");
+
+  // Unterminated quoted string is invalid.
+  cursor = 0;
+  t.notok (Lexer::readWord ("'one", "'\"", cursor, word),   "readWord ''one' --> false");
+
+  // static bool readWord (const std::string&, std::string::size_type&, std::string&);
+  cursor = 0;
+  t.ok (Lexer::readWord ("input", cursor, word),            "readWord 'input' --> true");
+  t.is (word, "input",                                      "  word '" + word + "'");
+  t.is ((int)cursor, 5,                                     "  cursor");
+
+  cursor = 0;
+  t.ok (Lexer::readWord ("one\\ two", cursor, word),        "readWord 'one\\ two' --> true");
+  t.is (word, "one two",                                    "  word '" + word + "'");
+  t.is ((int)cursor, 8,                                     "  cursor");
+
+  cursor = 0;
+  t.ok (Lexer::readWord ("\\u20A43", cursor, word),         "readWord '\\u20A43' --> true");
+  t.is (word, "₤3",                                         "  word '" + word + "'");
+  t.is ((int)cursor, 7,                                     "  cursor");
+
+  cursor = 0;
+  t.ok (Lexer::readWord ("U+20AC4", cursor, word),          "readWord '\\u20AC4' --> true");
+  t.is (word, "€4",                                         "  word '" + word + "'");
+  t.is ((int)cursor, 7,                                     "  cursor");
+
+  std::string text = "one 'two' three\\ four";
+  cursor = 0;
+  t.ok (Lexer::readWord (text, cursor, word),               "readWord \"one 'two' three\\ four\" --> true");
+  t.is (word, "one",                                        "  word '" + word + "'");
+  cursor++;
+  t.ok (Lexer::readWord (text, cursor, word),               "readWord \"one 'two' three\\ four\" --> true");
+  t.is (word, "'two'",                                      "  word '" + word + "'");
+  cursor++;
+  t.ok (Lexer::readWord (text, cursor, word),               "readWord \"one 'two' three\\ four\" --> true");
+  t.is (word, "three four",                                 "  word '" + word + "'");
+
+  text = "one     ";
+  cursor = 0;
+  t.ok (Lexer::readWord (text, cursor, word),               "readWord \"one     \" --> true");
+  t.is (word, "one",                                        "  word '" + word + "'");
+
+  // bool isLiteral (const std::string&, bool, bool);
+  Lexer l4 ("one.two");
+  t.notok (l4.isLiteral("zero", false, false),              "isLiteral 'one.two' --> false");
+  t.ok    (l4.isLiteral("one",  false, false),              "isLiteral 'one.two' --> 'one'");
+  t.ok    (l4.isLiteral(".",    false, false),              "isLiteral 'one.two' --> '.'");
+  t.ok    (l4.isLiteral("two",  false, true),               "isLiteral 'one.two' --> 'two'");
+
+  Lexer l5 ("wonder");
+  t.notok (l5.isLiteral ("wonderful", false, false),        "isLiteral 'wonderful' != 'wonder' without abbreviation");
+  t.ok    (l5.isLiteral ("wonderful", true,  false),        "isLiteral 'wonderful' == 'wonder' with abbreviation");
+
+  // bool isOneOf (const std::string&, bool, bool);
+  Lexer l6 ("Grumpy.");
+  std::vector <std::string> dwarves = {"Sneezy", "Doc", "Bashful", "Grumpy", "Happy", "Sleepy", "Dopey"};
+  t.notok (l6.isOneOf (dwarves, false, true),               "isOneof ('Grumpy', true) --> false");
+  t.ok    (l6.isOneOf (dwarves, false, false),              "isOneOf ('Grumpy', false) --> true");
+
+  // static std::string::size_type commonLength (const std::string&, const std::string&);
+  t.is ((int)Lexer::commonLength ("", ""),           0, "commonLength '' : '' --> 0");
+  t.is ((int)Lexer::commonLength ("a", "a"),         1, "commonLength 'a' : 'a' --> 1");
+  t.is ((int)Lexer::commonLength ("abcde", "abcde"), 5, "commonLength 'abcde' : 'abcde' --> 5");
+  t.is ((int)Lexer::commonLength ("abc", ""),        0, "commonLength 'abc' : '' --> 0");
+  t.is ((int)Lexer::commonLength ("abc", "def"),     0, "commonLength 'abc' : 'def' --> 0");
+  t.is ((int)Lexer::commonLength ("foobar", "foo"),  3, "commonLength 'foobar' : 'foo' --> 3");
+  t.is ((int)Lexer::commonLength ("foo", "foobar"),  3, "commonLength 'foo' : 'foobar' --> 3");
+
+  // static std::string::size_type commonLength (const std::string&, std::string::size_type, const std::string&, std::string::size_type);
+  t.is ((int)Lexer::commonLength ("wonder", 0, "prowonderbread", 3), 6, "'wonder'+0 : 'prowonderbread'+3 --> 6");
 
   // Test all Lexer types.
   #define NO {"",Lexer::Type::word}
@@ -241,19 +339,32 @@ int main (int argc, char** argv)
     { "/long/path/to/file.txt",                       { { "/long/path/to/file.txt",                       Lexer::Type::path         }, NO, NO, NO, NO }, },
 
     // Word
-    { "9th",                                          { { "9th",                                          Lexer::Type::word         }, NO, NO, NO, NO }, },
-    { "10th",                                         { { "10th",                                         Lexer::Type::word         }, NO, NO, NO, NO }, },
+    { "1.foo.bar",                                    { { "1.foo.bar",                                    Lexer::Type::word         }, NO, NO, NO, NO }, },
+
+    // Identifier
+    { "foo",                                          { { "foo",                                          Lexer::Type::identifier   }, NO, NO, NO, NO }, },
+    { "Çirçös",                                       { { "Çirçös",                                       Lexer::Type::identifier   }, NO, NO, NO, NO }, },
+    { "☺",                                            { { "☺",                                            Lexer::Type::identifier   }, NO, NO, NO, NO }, },
+    { "name",                                         { { "name",                                         Lexer::Type::identifier   }, NO, NO, NO, NO }, },
+    { "f1",                                           { { "f1",                                           Lexer::Type::identifier   }, NO, NO, NO, NO }, },
+    { "foo.bar",                                      { { "foo.bar",                                      Lexer::Type::identifier   }, NO, NO, NO, NO }, },
+    { "a1a1a1a1_a1a1_a1a1_a1a1_a1a1a1a1a1a1",         { { "a1a1a1a1_a1a1_a1a1_a1a1_a1a1a1a1a1a1",         Lexer::Type::identifier   }, NO, NO, NO, NO }, },
+
+    // Word that starts wih 'or', which is an operator, but should be ignored.
+    { "ordinary",                                     { { "ordinary",                                     Lexer::Type::identifier   }, NO, NO, NO, NO }, },
 
     // DOM
-    { "foo",                                          { { "foo",                                          Lexer::Type::dom          }, NO, NO, NO, NO }, },
-    { "Çirçös",                                       { { "Çirçös",                                       Lexer::Type::dom          }, NO, NO, NO, NO }, },
-    { "☺",                                            { { "☺",                                            Lexer::Type::dom          }, NO, NO, NO, NO }, },
-    { "name",                                         { { "name",                                         Lexer::Type::dom          }, NO, NO, NO, NO }, },
-    { "f1",                                           { { "f1",                                           Lexer::Type::dom          }, NO, NO, NO, NO }, },
-    { "foo.bar",                                      { { "foo.bar",                                      Lexer::Type::dom          }, NO, NO, NO, NO }, },
-    { "1.foo.bar",                                    { { "1.foo.bar",                                    Lexer::Type::dom          }, NO, NO, NO, NO }, },
-    { "a360fc44-315c-4366-b70c-ea7e7520b749.foo.bar", { { "a360fc44-315c-4366-b70c-ea7e7520b749.foo.bar", Lexer::Type::dom          }, NO, NO, NO, NO }, },
-    { "today",                                        { { "today",                                        Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "due",                                          { { "due",                                          Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "123.tags",                                     { { "123.tags",                                     Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "123.tags.PENDING",                             { { "123.tags.PENDING",                             Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "123.description",                              { { "123.description",                              Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "123.annotations.1.description",                { { "123.annotations.1.description",                Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "123.annotations.1.entry",                      { { "123.annotations.1.entry",                      Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "123.annotations.1.entry.year",                 { { "123.annotations.1.entry.year",                 Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "a360fc44-315c-4366-b70c-ea7e7520b749.due",     { { "a360fc44-315c-4366-b70c-ea7e7520b749.due",     Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "12345678-1234-1234-1234-123456789012.due",     { { "12345678-1234-1234-1234-123456789012.due",     Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "system.os",                                    { { "system.os",                                    Lexer::Type::dom          }, NO, NO, NO, NO }, },
+    { "rc.foo",                                       { { "rc.foo",                                       Lexer::Type::dom          }, NO, NO, NO, NO }, },
 
     // URL
     { "http://tasktools.org",                         { { "http://tasktools.org",                         Lexer::Type::url          }, NO, NO, NO, NO }, },
@@ -275,18 +386,29 @@ int main (int argc, char** argv)
     { "1.2e-3.4",                                     { { "1.2e-3.4",                                     Lexer::Type::number       }, NO, NO, NO, NO }, },
     { "0x2f",                                         { { "0x2f",                                         Lexer::Type::hex          }, NO, NO, NO, NO }, },
 
+    // Set (1,2,4-7,9)
+    { "1,2",                                          { { "1,2",                                          Lexer::Type::set          }, NO, NO, NO, NO }, },
+    { "1-2",                                          { { "1-2",                                          Lexer::Type::set          }, NO, NO, NO, NO }, },
+    { "1-2,4",                                        { { "1-2,4",                                        Lexer::Type::set          }, NO, NO, NO, NO }, },
+    { "1-2,4,6-8",                                    { { "1-2,4,6-8",                                    Lexer::Type::set          }, NO, NO, NO, NO }, },
+    { "1-2,4,6-8,10-12",                              { { "1-2,4,6-8,10-12",                              Lexer::Type::set          }, NO, NO, NO, NO }, },
+
     // Pair
     { "name:value",                                   { { "name:value",                                   Lexer::Type::pair         }, NO, NO, NO, NO }, },
-    { "desc.cont:pattern",                            { { "desc.cont:pattern",                            Lexer::Type::pair         }, NO, NO, NO, NO }, },
-    { "desc.any:",                                    { { "desc.any:",                                    Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "name=value",                                   { { "name=value",                                   Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "name:=value",                                  { { "name:=value",                                  Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "name.mod:value",                               { { "name.mod:value",                               Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "name.mod=value",                               { { "name.mod=value",                               Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "name:",                                        { { "name:",                                        Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "name=",                                        { { "name=",                                        Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "name.mod:",                                    { { "name.mod:",                                    Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "name.mod=",                                    { { "name.mod=",                                    Lexer::Type::pair         }, NO, NO, NO, NO }, },
     { "pro:'P 1'",                                    { { "pro:'P 1'",                                    Lexer::Type::pair         }, NO, NO, NO, NO }, },
-    { "pro:PROJECT",                                  { { "pro:PROJECT",                                  Lexer::Type::pair         }, NO, NO, NO, NO }, },
-    { "due:'eow - 2d'",                               { { "due:'eow - 2d'",                               Lexer::Type::pair         }, NO, NO, NO, NO }, },
-
-    // RC override
     { "rc:x",                                         { { "rc:x",                                         Lexer::Type::pair         }, NO, NO, NO, NO }, },
     { "rc.name:value",                                { { "rc.name:value",                                Lexer::Type::pair         }, NO, NO, NO, NO }, },
     { "rc.name=value",                                { { "rc.name=value",                                Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "rc.name:=value",                               { { "rc.name:=value",                               Lexer::Type::pair         }, NO, NO, NO, NO }, },
+    { "due:='eow - 2d'",                              { { "due:='eow - 2d'",                              Lexer::Type::pair         }, NO, NO, NO, NO }, },
 
     // Operator - complete set
     { "^",                                            { { "^",                                            Lexer::Type::op           }, NO, NO, NO, NO }, },
@@ -316,25 +438,28 @@ int main (int argc, char** argv)
     { "(",                                            { { "(",                                            Lexer::Type::op           }, NO, NO, NO, NO }, },
     { ")",                                            { { ")",                                            Lexer::Type::op           }, NO, NO, NO, NO }, },
 
-      // Word that starts wih 'or', which is an operator, but should be ignored.
-    { "ordinary",                                     { { "ordinary",                                     Lexer::Type::dom          }, NO, NO, NO, NO }, },
-
     // UUID
+    { "ffffffff-ffff-ffff-ffff-ffffffffffff",         { { "ffffffff-ffff-ffff-ffff-ffffffffffff",         Lexer::Type::uuid         }, NO, NO, NO, NO }, },
+    { "00000000-0000-0000-0000-0000000",              { { "00000000-0000-0000-0000-0000000",              Lexer::Type::uuid         }, NO, NO, NO, NO }, },
+    { "00000000-0000-0000-0000",                      { { "00000000-0000-0000-0000",                      Lexer::Type::uuid         }, NO, NO, NO, NO }, },
+    { "00000000-0000-0000",                           { { "00000000-0000-0000",                           Lexer::Type::uuid         }, NO, NO, NO, NO }, },
+    { "00000000-0000",                                { { "00000000-0000",                                Lexer::Type::uuid         }, NO, NO, NO, NO }, },
+    { "00000000",                                     { { "00000000",                                     Lexer::Type::uuid         }, NO, NO, NO, NO }, },
     { "a360fc44-315c-4366-b70c-ea7e7520b749",         { { "a360fc44-315c-4366-b70c-ea7e7520b749",         Lexer::Type::uuid         }, NO, NO, NO, NO }, },
     { "a360fc44-315c-4366-b70c-ea7e752",              { { "a360fc44-315c-4366-b70c-ea7e752",              Lexer::Type::uuid         }, NO, NO, NO, NO }, },
     { "a360fc44-315c-4366-b70c",                      { { "a360fc44-315c-4366-b70c",                      Lexer::Type::uuid         }, NO, NO, NO, NO }, },
     { "a360fc44-315c-4366",                           { { "a360fc44-315c-4366",                           Lexer::Type::uuid         }, NO, NO, NO, NO }, },
     { "a360fc44-315c",                                { { "a360fc44-315c",                                Lexer::Type::uuid         }, NO, NO, NO, NO }, },
     { "a360fc44",                                     { { "a360fc44",                                     Lexer::Type::uuid         }, NO, NO, NO, NO }, },
-    { "a360fc44,b7f8c869",                            { { "a360fc44",                                     Lexer::Type::uuid         },
-                                                        { ",",                                            Lexer::Type::list         },
-                                                        { "b7f8c869",                                     Lexer::Type::uuid         },         NO, NO }, },
 
     // Date
     { "2015-W01",                                     { { "2015-W01",                                     Lexer::Type::date         }, NO, NO, NO, NO }, },
     { "2015-02-17",                                   { { "2015-02-17",                                   Lexer::Type::date         }, NO, NO, NO, NO }, },
-    { "20131129T225800Z",                             { { "20131129T225800Z",                             Lexer::Type::date         }, NO, NO, NO, NO }, },
     { "2013-11-29T22:58:00Z",                         { { "2013-11-29T22:58:00Z",                         Lexer::Type::date         }, NO, NO, NO, NO }, },
+    { "20131129T225800Z",                             { { "20131129T225800Z",                             Lexer::Type::date         }, NO, NO, NO, NO }, },
+    { "9th",                                          { { "9th",                                          Lexer::Type::date         }, NO, NO, NO, NO }, },
+    { "10th",                                         { { "10th",                                         Lexer::Type::date         }, NO, NO, NO, NO }, },
+    { "today",                                        { { "today",                                        Lexer::Type::date         }, NO, NO, NO, NO }, },
 
     // Duration
     { "year",                                         { { "year",                                         Lexer::Type::duration     }, NO, NO, NO, NO }, },
@@ -355,27 +480,23 @@ int main (int argc, char** argv)
     // Misc
     { "--",                                           { { "--",                                           Lexer::Type::separator    }, NO, NO, NO, NO }, },
 
-    // ID
-    //   2,3
-    //   4,5-6
-
     // Expression
     //   due:eom-2w
     //   due < eom + 1w + 1d
     //   ( /pattern/ or 8ad2e3db-914d-4832-b0e6-72fa04f6e331,3b6218f9-726a-44fc-aa63-889ff52be442 )
-    { "name=value",                                   { { "name",                                         Lexer::Type::dom          },
-                                                        { "=",                                            Lexer::Type::op           },
-                                                        { "value",                                        Lexer::Type::dom          },         NO, NO }, },
     { "(1+2)",                                        { { "(",                                            Lexer::Type::op           },
                                                         { "1",                                            Lexer::Type::number       },
                                                         { "+",                                            Lexer::Type::op           },
                                                         { "2",                                            Lexer::Type::number       },
                                                         { ")",                                            Lexer::Type::op           },                }, },
-    { "desc~pattern",                                 { { "desc",                                         Lexer::Type::dom          },
+    { "description~pattern",                          { { "description",                                  Lexer::Type::dom          },
                                                         { "~",                                            Lexer::Type::op           },
-                                                        { "pattern",                                      Lexer::Type::dom          },         NO, NO }, },
+                                                        { "pattern",                                      Lexer::Type::identifier   },         NO, NO }, },
     { "(+tag)",                                       { { "(",                                            Lexer::Type::op           },
                                                         { "+tag",                                         Lexer::Type::tag          },
+                                                        { ")",                                            Lexer::Type::op           },         NO, NO }, },
+    { "(name:value)",                                 { { "(",                                            Lexer::Type::op           },
+                                                        { "name:value",                                   Lexer::Type::pair         },
                                                         { ")",                                            Lexer::Type::op           },         NO, NO }, },
   };
   #define NUM_TESTS (sizeof (lexerTests) / sizeof (lexerTests[0]))

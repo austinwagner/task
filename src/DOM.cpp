@@ -29,10 +29,9 @@
 #include <map>
 #include <stdlib.h>
 #include <Variant.h>
-#include <Duration.h>
 #include <Context.h>
 #include <Nibbler.h>
-#include <Date.h>
+#include <ISO8601.h>
 #include <text.h>
 #include <i18n.h>
 #include <DOM.h>
@@ -50,36 +49,25 @@ DOM::~DOM ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-const std::vector <std::string> DOM::get_references () const
-{
-  std::vector <std::string> refs;
-
-  refs.push_back ("context.program");
-  refs.push_back ("context.args");
-  refs.push_back ("context.width");
-  refs.push_back ("context.height");
-  refs.push_back ("system.version");
-  refs.push_back ("system.os");
-
-  return refs;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // DOM Supported References:
+//
+// Configuration:
 //   rc.<name>
 //
+// System:
 //   context.program
 //   context.args
 //   context.width
 //   context.height
-//
-//   TODO stats.<name>           <-- context.stats
-//
 //   system.version
 //   system.os
 //
 bool DOM::get (const std::string& name, Variant& value)
 {
+  // Special case, blank refs cause problems.
+  if (name == "")
+    return false;
+
   int len = name.length ();
   Nibbler n (name);
 
@@ -88,7 +76,7 @@ bool DOM::get (const std::string& name, Variant& value)
       name.substr (0, 3) == "rc.")
   {
     std::string key = name.substr (3);
-    std::map <std::string, std::string>::iterator c = context.config.find (key);
+    auto c = context.config.find (key);
     if (c != context.config.end ())
     {
       value = Variant (c->second);
@@ -104,13 +92,20 @@ bool DOM::get (const std::string& name, Variant& value)
   {
     if (name == "context.program")
     {
-      value = Variant (context.cli.getBinary ());
+      value = Variant (context.cli2.getBinary ());
       return true;
     }
     else if (name == "context.args")
     {
       std::string commandLine;
-      join (commandLine, " ", context.cli._original_args);
+      for (auto& arg : context.cli2._original_args)
+      {
+        if (commandLine != "")
+           commandLine += " ";
+
+        commandLine += arg.attribute("raw");
+      }
+
       value = Variant (commandLine);
       return true;
     }
@@ -186,11 +181,15 @@ bool DOM::get (const std::string& name, Variant& value)
 ////////////////////////////////////////////////////////////////////////////////
 // DOM Supported References:
 //
+// Relative or absolute attribute:
 //   <attribute>
 //   <id>.<attribute>
 //   <uuid>.<attribute>
 //
-// For certain attributes:
+// Single tag:
+//   tags.<word>
+//
+// Date type:
 //   <date>.year
 //   <date>.month
 //   <date>.day
@@ -201,23 +200,19 @@ bool DOM::get (const std::string& name, Variant& value)
 //   <date>.minute
 //   <date>.second
 //
-//   tags.<literal>                  Includes virtual tags
-//
+// Annotations (entry is a date):
 //   annotations.<N>.entry
-//   annotations.<N>.entry.year
-//   annotations.<N>.entry.month
-//   annotations.<N>.entry.day
-//   annotations.<N>.entry.week
-//   annotations.<N>.entry.weekday
-//   annotations.<N>.entry.julian
-//   annotations.<N>.entry.hour
-//   annotations.<N>.entry.minute
-//   annotations.<N>.entry.second
 //   annotations.<N>.description
 //
+// This code emphasizes speed, hence 'id' and 'urgecny' being evaluated first
+// as special cases.
 bool DOM::get (const std::string& name, const Task& task, Variant& value)
 {
-  // <attr>
+  // Special case, blank refs cause problems.
+  if (name == "")
+    return false;
+
+  // Quickly deal with the most common cases.
   if (task.size () && name == "id")
   {
     value = Variant (static_cast<int> (task.id));
@@ -234,229 +229,178 @@ bool DOM::get (const std::string& name, const Task& task, Variant& value)
   std::vector <std::string> elements;
   split (elements, name, '.');
 
-  if (elements.size () == 1)
+  Task ref (task);
+  Nibbler n (elements[0]);
+  n.save ();
+  int id;
+  std::string uuid;
+
+  // If elements[0] is a UUID, load that task (if necessary), and clobber ref.
+  if (n.getPartialUUID (uuid) && n.depleted ())
   {
-    std::string canonical;
-    if (task.size () && context.cli.canonicalize (canonical, "attribute", name))
+    if (uuid != ref.get ("uuid"))
+      context.tdb2.get (uuid, ref);
+
+    // Eat elements[0]/UUID.
+    elements.erase (elements.begin ());
+  }
+  else
+  {
+    // If elements[0] is a ID, load that task (if necessary), and clobber ref.
+    if (n.getInt (id) && n.depleted ())
     {
-      Column* column = context.columns[canonical];
-      if (column)
+      if (id != ref.id)
+        context.tdb2.get (id, ref);
+
+      // Eat elements[0]/ID.
+      elements.erase (elements.begin ());
+    }
+  }
+
+  auto size = elements.size ();
+
+  std::string canonical;
+  if ((size == 1 || size == 2) && context.cli2.canonicalize (canonical, "attribute", elements[0]))
+  {
+    // Now that 'ref' is the contextual task, and any ID/UUID is chopped off the
+    // elements vector, DOM resolution is now simple.
+    if (ref.size () && size == 1 && canonical == "id")
+    {
+      value = Variant (static_cast<int> (ref.id));
+      return true;
+    }
+
+    if (ref.size () && size == 1 && canonical == "urgency")
+    {
+      value = Variant (ref.urgency_c ());
+      return true;
+    }
+
+    Column* column = context.columns[canonical];
+
+    if (ref.size () && size == 1 && column)
+    {
+      if (column->is_uda () && ! ref.has (canonical))
       {
-        if (column->is_uda () && ! task.has (canonical))
+        value = Variant ("");
+        return true;
+      }
+
+      if (column->type () == "date")
+      {
+        auto numeric = ref.get_date (canonical);
+        if (numeric == 0)
+          value = Variant ("");
+        else
+          value = Variant (numeric, Variant::type_date);
+      }
+      else if (column->type () == "duration" || canonical == "recur")
+      {
+        auto period = ref.get (canonical);
+
+        ISO8601p iso;
+        std::string::size_type cursor = 0;
+        if (iso.parse (period, cursor))
+          value = Variant ((time_t) iso, Variant::type_duration);
+        else
+          value = Variant ((time_t) ISO8601p (ref.get (canonical)), Variant::type_duration);
+      }
+      else if (column->type () == "numeric")
+        value = Variant (ref.get_float (canonical));
+      else
+        value = Variant (ref.get (canonical));
+
+      return true;
+    }
+
+    if (ref.size () && size == 2 && canonical == "tags")
+    {
+      value = Variant (ref.hasTag (elements[1]) ? elements[1] : "");
+      return true;
+    }
+
+    if (ref.size () && size == 2 && column && column->type () == "date")
+    {
+      ISO8601d date (ref.get_date (canonical));
+           if (elements[1] == "year")    { value = Variant (static_cast<int> (date.year ()));      return true; }
+      else if (elements[1] == "month")   { value = Variant (static_cast<int> (date.month ()));     return true; }
+      else if (elements[1] == "day")     { value = Variant (static_cast<int> (date.day ()));       return true; }
+      else if (elements[1] == "week")    { value = Variant (static_cast<int> (date.week ()));      return true; }
+      else if (elements[1] == "weekday") { value = Variant (static_cast<int> (date.dayOfWeek ())); return true; }
+      else if (elements[1] == "julian")  { value = Variant (static_cast<int> (date.dayOfYear ())); return true; }
+      else if (elements[1] == "hour")    { value = Variant (static_cast<int> (date.hour ()));      return true; }
+      else if (elements[1] == "minute")  { value = Variant (static_cast<int> (date.minute ()));    return true; }
+      else if (elements[1] == "second")  { value = Variant (static_cast<int> (date.second ()));    return true; }
+    }
+  }
+
+  if (ref.size () && size == 3 && elements[0] == "annotations")
+  {
+    std::map <std::string, std::string> annos;
+    ref.getAnnotations (annos);
+
+    int a = strtol (elements[1].c_str (), NULL, 10);
+    int count = 0;
+
+    // Count off the 'a'th annotation.
+    for (auto& i : annos)
+    {
+      if (++count == a)
+      {
+        if (elements[2] == "entry")
         {
-          value = Variant ("''");
+          // annotation_1234567890
+          // 0          ^11
+          value = Variant ((time_t) strtol (i.first.substr (11).c_str (), NULL, 10), Variant::type_date);
           return true;
         }
-
-        if (column->type () == "date")
-          value = Variant (task.get_date (canonical), Variant::type_date);
-        else if (column->type () == "duration" || canonical == "recur")
-          value = Variant ((time_t) Duration (task.get (canonical)), Variant::type_duration);
-        else if (column->type () == "numeric")
-          value = Variant (task.get_float (canonical));
-        else // string
-          value = Variant (task.get (canonical));
-
-        return true;
+        else if (elements[2] == "description")
+        {
+          value = Variant (i.second);
+          return true;
+        }
       }
     }
   }
-  else if (elements.size () > 1)
+
+  if (ref.size () && size == 4 && elements[0] == "annotations" && elements[2] == "entry")
   {
-    Task ref;
+    std::map <std::string, std::string> annos;
+    ref.getAnnotations (annos);
 
-    Nibbler n (elements[0]);
-    n.save ();
-    int id;
-    std::string uuid;
-    bool proceed = false;
+    int a = strtol (elements[1].c_str (), NULL, 10);
+    int count = 0;
 
-    if (n.getInt (id) && n.depleted ())
+    // Count off the 'a'th annotation.
+    for (auto& i : annos)
     {
-      if (id == task.id)
-        ref = task;
-      else
-        context.tdb2.get (id, ref);
-
-      proceed = true;
-    }
-    else
-    {
-      n.restore ();
-      if (n.getUUID (uuid) && n.depleted ())
+      if (++count == a)
       {
-        if (uuid == task.get ("uuid"))
-          ref = task;
-        else
-          context.tdb2.get (uuid, ref);
-
-        proceed = true;
-      }
-    }
-
-    if (proceed)
-    {
-      if (elements[1] == "id")
-      {
-        value = Variant (static_cast<int> (ref.id));
-        return true;
-      }
-      else if (elements[1] == "urgency")
-      {
-        value = Variant (ref.urgency_c ());
-        return true;
-      }
-
-      std::string canonical;
-      if (context.cli.canonicalize (canonical, "attribute", elements[1]))
-      {
-        if (elements.size () == 2)
-        {
-          Column* column = context.columns[canonical];
-          if (column)
-          {
-            if (column->is_uda () && ! ref.has (canonical))
-            {
-              value = Variant ("''");
-              return true;
-            }
-
-            if (column->type () == "date")
-              value = Variant (ref.get_date (canonical), Variant::type_date);
-            else if (column->type () == "duration")
-              value = Variant ((time_t) Duration (ref.get (canonical)), Variant::type_duration);
-            else if (column->type () == "numeric")
-              value = Variant (ref.get_float (canonical));
-            else
-              value = Variant (ref.get (canonical));
-
-            return true;
-          }
-        }
-        else if (elements.size () == 3)
-        {
-          // tags.<tag>
-          if (canonical == "tags")
-          {
-            value = Variant (ref.hasTag (elements[2]) ? elements[2] : "");
-            return true;
-          }
-
-          Column* column = context.columns[canonical];
-          if (column && column->type () == "date")
-          {
-            // <date>.year
-            // <date>.month
-            // <date>.day
-            // <date>.week
-            // <date>.weekday
-            // <date>.julian
-            // <date>.hour
-            // <date>.minute
-            // <date>.second
-            Date date (ref.get_date (canonical));
-                 if (elements[2] == "year")    { value = Variant (static_cast<int> (date.year ()));      return true; }
-            else if (elements[2] == "month")   { value = Variant (static_cast<int> (date.month ()));     return true; }
-            else if (elements[2] == "day")     { value = Variant (static_cast<int> (date.day ()));       return true; }
-            else if (elements[2] == "week")    { value = Variant (static_cast<int> (date.week ()));      return true; }
-            else if (elements[2] == "weekday") { value = Variant (static_cast<int> (date.dayOfWeek ())); return true; }
-            else if (elements[2] == "julian")  { value = Variant (static_cast<int> (date.dayOfYear ())); return true; }
-            else if (elements[2] == "hour")    { value = Variant (static_cast<int> (date.hour ()));      return true; }
-            else if (elements[2] == "minute")  { value = Variant (static_cast<int> (date.minute ()));    return true; }
-            else if (elements[2] == "second")  { value = Variant (static_cast<int> (date.second ()));    return true; }
-          }
-        }
-      }
-      else if (elements[1] == "annotations")
-      {
-        if (elements.size () == 4)
-        {
-          std::map <std::string, std::string> annos;
-          ref.getAnnotations (annos);
-
-          int a = strtol (elements[2].c_str (), NULL, 10);
-          int count = 0;
-
-          // Count off the 'a'th annotation.
-          std::map <std::string, std::string>::iterator i;
-          for (i = annos.begin (); i != annos.end (); ++i)
-          {
-            if (++count == a)
-            {
-              if (elements[3] == "entry")
-              {
-                // annotation_1234567890
-                // 0          ^11
-                value = Variant ((time_t) strtol (i->first.substr (11).c_str (), NULL, 10), Variant::type_date);
-                return true;
-              }
-              else if (elements[3] == "description")
-              {
-                value = Variant (i->second);
-                return true;
-              }
-            }
-          }
-        }
-        else if (elements.size () == 5)
-        {
-          std::map <std::string, std::string> annos;
-          ref.getAnnotations (annos);
-
-          int a = strtol (elements[2].c_str (), NULL, 10);
-          int count = 0;
-
-          // Count off the 'a'th annotation.
-          std::map <std::string, std::string>::iterator i;
-          for (i = annos.begin (); i != annos.end (); ++i)
-          {
-            if (++count == a)
-            {
-              // <annotations>.<N>.entry.year
-              // <annotations>.<N>.entry.month
-              // <annotations>.<N>.entry.day
-              // <annotations>.<N>.entry.week
-              // <annotations>.<N>.entry.weekday
-              // <annotations>.<N>.entry.julian
-              // <annotations>.<N>.entry.hour
-              // <annotations>.<N>.entry.minute
-              // <annotations>.<N>.entry.second
-              Date date (i->first.substr (11));
-                   if (elements[4] == "year")    { value = Variant (static_cast<int> (date.year ()));      return true; }
-              else if (elements[4] == "month")   { value = Variant (static_cast<int> (date.month ()));     return true; }
-              else if (elements[4] == "day")     { value = Variant (static_cast<int> (date.day ()));       return true; }
-              else if (elements[4] == "week")    { value = Variant (static_cast<int> (date.week ()));      return true; }
-              else if (elements[4] == "weekday") { value = Variant (static_cast<int> (date.dayOfWeek ())); return true; }
-              else if (elements[4] == "julian")  { value = Variant (static_cast<int> (date.dayOfYear ())); return true; }
-              else if (elements[4] == "hour")    { value = Variant (static_cast<int> (date.hour ()));      return true; }
-              else if (elements[4] == "minute")  { value = Variant (static_cast<int> (date.minute ()));    return true; }
-              else if (elements[4] == "second")  { value = Variant (static_cast<int> (date.second ()));    return true; }
-            }
-          }
-        }
+        // <annotations>.<N>.entry.year
+        // <annotations>.<N>.entry.month
+        // <annotations>.<N>.entry.day
+        // <annotations>.<N>.entry.week
+        // <annotations>.<N>.entry.weekday
+        // <annotations>.<N>.entry.julian
+        // <annotations>.<N>.entry.hour
+        // <annotations>.<N>.entry.minute
+        // <annotations>.<N>.entry.second
+        ISO8601d date (i.first.substr (11));
+             if (elements[3] == "year")    { value = Variant (static_cast<int> (date.year ()));      return true; }
+        else if (elements[3] == "month")   { value = Variant (static_cast<int> (date.month ()));     return true; }
+        else if (elements[3] == "day")     { value = Variant (static_cast<int> (date.day ()));       return true; }
+        else if (elements[3] == "week")    { value = Variant (static_cast<int> (date.week ()));      return true; }
+        else if (elements[3] == "weekday") { value = Variant (static_cast<int> (date.dayOfWeek ())); return true; }
+        else if (elements[3] == "julian")  { value = Variant (static_cast<int> (date.dayOfYear ())); return true; }
+        else if (elements[3] == "hour")    { value = Variant (static_cast<int> (date.hour ()));      return true; }
+        else if (elements[3] == "minute")  { value = Variant (static_cast<int> (date.minute ()));    return true; }
+        else if (elements[3] == "second")  { value = Variant (static_cast<int> (date.second ()));    return true; }
       }
     }
   }
 
   // Delegate to the context-free version of DOM::get.
   return this->get (name, value);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void DOM::set (const std::string& name, const Variant& value)
-{
-  int len = name.length ();
-
-  // rc. --> context.config
-  if (len > 3 &&
-      name.substr (0, 3) == "rc.")
-  {
-    context.config.set (name.substr (3), (std::string) value);
-  }
-
-  // Unrecognized --> error.
-  else
-    throw format (STRING_DOM_CANNOT_SET, name);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

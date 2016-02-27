@@ -27,20 +27,18 @@
 #ifndef INCLUDED_MAIN
 #define INCLUDED_MAIN
 
-#define FEATURE_COLOR  1                               // Enable color.
-
 #include <string>
 #include <vector>
 #include <map>
 #include <sys/types.h>
 #include <Context.h>
-#include <Date.h>
+#include <ISO8601.h>
 #include <Color.h>
 
 // recur.cpp
 void handleRecurrence ();
-Date getNextRecurrence (Date&, std::string&);
-bool generateDueDates (Task&, std::vector <Date>&);
+ISO8601d getNextRecurrence (ISO8601d&, std::string&);
+bool generateDueDates (Task&, std::vector <ISO8601d>&);
 void updateRecurrenceMask (Task&);
 bool nag (Task&);
 
@@ -58,16 +56,15 @@ void dependencyGetBlocking (const Task&, std::vector <Task>&);
 bool dependencyIsCircular (const Task&);
 void dependencyChainOnComplete (Task&);
 void dependencyChainOnStart (Task&);
-void dependencyChainOnModify (Task&, Task&);
 
 // feedback.cpp
-bool taskDiff (const Task&, const Task&);
 std::string taskDifferences (const Task&, const Task&);
 std::string taskInfoDifferences (const Task&, const Task&, const std::string&, long&, const long);
 std::string renderAttribute (const std::string&, const std::string&, const std::string& format = "");
 void feedback_affected (const std::string&);
 void feedback_affected (const std::string&, int);
 void feedback_affected (const std::string&, const Task&);
+void feedback_reserved_tags (const std::string&);
 void feedback_special_tags (const Task&, const std::string&);
 void feedback_unblocked (const Task&);
 void feedback_backlog ();
@@ -79,10 +76,8 @@ std::string onExpiration (Task&);
 void sort_tasks (std::vector <Task>&, std::vector <int>&, const std::string&);
 
 // legacy.cpp
-void legacyAttributeCheck (const std::string&);
 void legacyColumnMap (std::string&);
 void legacySortColumnMap (std::string&);
-std::string legacyCheckForDeprecatedColor ();
 std::string legacyCheckForDeprecatedVariables ();
 std::string legacyCheckForDeprecatedColumns ();
 void legacyAttributeMap (std::string&);

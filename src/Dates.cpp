@@ -25,25 +25,27 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <cmake.h>
+#include <algorithm>
 #include <stdlib.h>
 #include <time.h>
 #include <text.h>
 #include <Dates.h>
-#include <Date.h>
+#include <ISO8601.h>
 #include <Lexer.h>
+#include <CLI2.h>
 #include <i18n.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 static bool isMonth (const std::string& name, int& i)
 {
-  i = Date::monthOfYear (name) - 1;
+  i = ISO8601d::monthOfYear (name) - 1;
   return i != -2 ? true : false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 static bool isDay (const std::string& name, int& i)
 {
-  i = Date::dayOfWeek (name);
+  i = ISO8601d::dayOfWeek (name);
   return i != -1 ? true : false;
 }
 
@@ -101,32 +103,33 @@ static void midsommarafton (struct tm* t)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// <day>
-// <month>
-// - Nth
-// - socy, eocy
-// - socq, eocq
-// socm, eocm
-// som, eom
-// soq, eoq
-// soy, eoy
-// socw, eocw
-// sow, eow
-// soww, eoww
-// sod, eod
-// yesterday
-// today
-// now
-// tomorrow
-// later          = midnight, Jan 18th, 2038.
-// someday        = midnight, Jan 18th, 2038.
-// - easter
-// - eastermonday
-// - ascension
-// - pentecost
-// - goodfriday
-// - midsommar      = midnight, 1st Saturday after 20th June
-// - midsommarafton = midnight, 1st Friday after 19th June
+// Note how these are all single words:
+//   <day>
+//   <month>
+//   Nth
+//   socy, eocy
+//   socq, eocq
+//   socm, eocm
+//   som, eom
+//   soq, eoq
+//   soy, eoy
+//   socw, eocw
+//   sow, eow
+//   soww, eoww
+//   sod, eod
+//   yesterday
+//   today
+//   now
+//   tomorrow
+//   later          = midnight, Jan 18th, 2038.
+//   someday        = midnight, Jan 18th, 2038.
+//   easter
+//   eastermonday
+//   ascension
+//   pentecost
+//   goodfriday
+//   midsommar      = midnight, 1st Saturday after 20th June
+//   midsommarafton = midnight, 1st Friday after 19th June
 //
 bool namedDates (const std::string& name, Variant& value)
 {
@@ -134,20 +137,24 @@ bool namedDates (const std::string& name, Variant& value)
   struct tm* t = localtime (&now);
   int i;
 
+  int minimum = CLI2::minimumMatchLength;
+  if (minimum == 0)
+    minimum = 3;
+
   // Dynamics.
-  if (name == "now")
+  if (closeEnough ("now", name, minimum))
   {
     value = Variant (now, Variant::type_date);
   }
 
-  else if (name == "today")
+  else if (closeEnough ("today", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
     t->tm_isdst = -1;
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "sod")
+  else if (closeEnough ("sod", name, minimum))
   {
     t->tm_mday++;
     t->tm_hour = t->tm_min = t->tm_sec = 0;
@@ -155,7 +162,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "eod")
+  else if (closeEnough ("eod", name, minimum))
   {
     t->tm_mday++;
     t->tm_hour = t->tm_min = 0;
@@ -164,7 +171,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "tomorrow")
+  else if (closeEnough ("tomorrow", name, minimum))
   {
     t->tm_mday++;
     t->tm_hour = t->tm_min = t->tm_sec = 0;
@@ -172,7 +179,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "yesterday")
+  else if (closeEnough ("yesterday", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
     t->tm_isdst = -1;
@@ -203,7 +210,8 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "later" || name == "someday")
+  else if (closeEnough ("later",   name, minimum) ||
+           closeEnough ("someday", name, std::max (minimum, 4)))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
     t->tm_year = 138;
@@ -213,7 +221,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "eoy")
+  else if (closeEnough ("eoy", name, minimum))
   {
     t->tm_hour = t->tm_min = 0;
     t->tm_sec = -1;
@@ -224,7 +232,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "soy")
+  else if (closeEnough ("soy", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
     t->tm_mon = 0;
@@ -234,7 +242,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "eoq")
+  else if (closeEnough ("eoq", name, minimum))
   {
     t->tm_hour = t->tm_min = 0;
     t->tm_sec = -1;
@@ -250,7 +258,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "soq")
+  else if (closeEnough ("soq", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
     t->tm_mon += 3 - (t->tm_mon % 3);
@@ -265,7 +273,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "socm")
+  else if (closeEnough ("socm", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
     t->tm_mday = 1;
@@ -273,7 +281,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "som")
+  else if (closeEnough ("som", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
 
@@ -289,17 +297,18 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "eom" || name == "eocm")
+  else if (closeEnough ("eom",  name, minimum) ||
+           closeEnough ("eocm", name, minimum))
   {
     t->tm_hour = 24;
     t->tm_min = 0;
     t->tm_sec = -1;
-    t->tm_mday = Date::daysInMonth (t->tm_mon + 1, t->tm_year + 1900);
+    t->tm_mday = ISO8601d::daysInMonth (t->tm_mon + 1, t->tm_year + 1900);
     t->tm_isdst = -1;
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "socw")
+  else if (closeEnough ("socw", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
     int extra = t->tm_wday * 86400;
@@ -307,7 +316,8 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t) - extra, Variant::type_date);
   }
 
-  else if (name == "eow" || name == "eocw")
+  else if (closeEnough ("eow",  name, minimum) ||
+           closeEnough ("eocw", name, minimum))
   {
     t->tm_hour = t->tm_min = 0;
     t->tm_sec = -1;
@@ -316,7 +326,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t) + extra, Variant::type_date);
   }
 
-  else if (name == "sow")
+  else if (closeEnough ("sow", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
     int extra = (7 - t->tm_wday) * 86400;
@@ -324,18 +334,16 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t) + extra, Variant::type_date);
   }
 
-  else if (name == "soww")
+  else if (closeEnough ("soww", name, minimum))
   {
     t->tm_hour = t->tm_min = t->tm_sec = 0;
-    int extra = (t->tm_wday - 1) * 86400;
-    if (extra > 0)
-      extra += 7 * 86400;
-
+    int days = (8 - t->tm_wday) % 7;
+    int extra = days * 86400;
     t->tm_isdst = -1;
-    value = Variant (mktime (t) - extra, Variant::type_date);
+    value = Variant (mktime (t) + extra, Variant::type_date);
   }
 
-  else if (name == "eoww")
+  else if (closeEnough ("eoww", name, minimum))
   {
     t->tm_hour = 24;
     t->tm_min = 0;
@@ -407,7 +415,7 @@ bool namedDates (const std::string& name, Variant& value)
 
         // If it is this month.
         if (d < number &&
-            number <= Date::daysInMonth (m, y))
+            number <= ISO8601d::daysInMonth (m, y))
         {
           t->tm_hour = t->tm_min = t->tm_sec = 0;
           t->tm_mon  = m - 1;
@@ -439,11 +447,11 @@ bool namedDates (const std::string& name, Variant& value)
       throw std::string (STRING_DATES_MONTH_31);
   }
 
-  else if (name == "easter"       ||
-           name == "eastermonday" ||
-           name == "ascension"    ||
-           name == "pentecost"    ||
-           name == "goodfriday")
+  else if (closeEnough ("easter",       name, minimum) ||
+           closeEnough ("eastermonday", name, minimum) ||
+           closeEnough ("ascension",    name, minimum) ||
+           closeEnough ("pentecost",    name, minimum) ||
+           closeEnough ("goodfriday",   name, minimum))
   {
     Variant valueNow = Variant (mktime (t), Variant::type_date);
     easter (t);
@@ -457,15 +465,20 @@ bool namedDates (const std::string& name, Variant& value)
       easter (t);
     }
 
-         if (name == "goodfriday")   t->tm_mday -= 2;
-    else if (name == "eastermonday") t->tm_mday += 1;
-    else if (name == "ascension")    t->tm_mday += 39;
-    else if (name == "pentecost")    t->tm_mday += 49;
+         if (closeEnough ("goodfriday",   name, minimum)) t->tm_mday -= 2;
+
+    // DO NOT REMOVE THIS USELESS-LOOKING LINE.
+    // It is here to capture an exact match for 'easter', to prevent 'easter'
+    // being a partial match for 'eastermonday'.
+    else if (closeEnough ("easter",       name, minimum)) ;
+    else if (closeEnough ("eastermonday", name, minimum)) t->tm_mday += 1;
+    else if (closeEnough ("ascension",    name, minimum)) t->tm_mday += 39;
+    else if (closeEnough ("pentecost",    name, minimum)) t->tm_mday += 49;
 
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "midsommar")
+  else if (closeEnough ("midsommar", name, minimum))
   {
     Variant valueNow = Variant (mktime (t), Variant::type_date);
     midsommar (t);
@@ -482,7 +495,7 @@ bool namedDates (const std::string& name, Variant& value)
     value = Variant (mktime (t), Variant::type_date);
   }
 
-  else if (name == "midsommarafton")
+  else if (closeEnough ("midsommarafton", name, minimum))
   {
     Variant valueNow = Variant (mktime (t), Variant::type_date);
     midsommarafton (t);

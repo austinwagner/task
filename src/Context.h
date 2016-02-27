@@ -34,11 +34,10 @@
 #include <TDB2.h>
 #include <Hooks.h>
 #include <DOM.h>
-#include <Path.h>
-#include <File.h>
-#include <Directory.h>
-#include <CLI.h>
+#include <FS.h>
+#include <CLI2.h>
 #include <Timer.h>
+#include <set>
 
 class Context
 {
@@ -57,7 +56,6 @@ public:
   int getHeight ();                    // determine terminal height
 
   const std::vector <std::string> getColumns () const;
-  const std::vector <std::string> getCommands () const;
   void getLimits (int&, int&);
 
   bool color ();                       // TTY or <other>?
@@ -68,7 +66,6 @@ public:
   void debug (const std::string&);     // Debug message sink
   void error (const std::string&);     // Error message sink - non-maskable
   void clearMessages ();
-  void clear ();
 
   void decomposeSortField (const std::string&, std::string&, bool&, bool&);
 
@@ -81,7 +78,7 @@ private:
   void propagateDebug ();
 
 public:
-  CLI                                 cli;
+  CLI2                                cli2;
   std::string                         home_dir;
   File                                rc_file;
   Path                                data_dir;
@@ -97,7 +94,7 @@ public:
   bool                                run_gc;
 
   bool                                verbosity_legacy;
-  std::vector <std::string>           verbosity;
+  std::set <std::string>              verbosity;
   std::vector <std::string>           headers;
   std::vector <std::string>           footnotes;
   std::vector <std::string>           errors;
@@ -109,6 +106,7 @@ public:
   int                                 terminal_width;
   int                                 terminal_height;
 
+  Timer                               timer_total;
   Timer                               timer_init;
   Timer                               timer_load;
   Timer                               timer_gc;

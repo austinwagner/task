@@ -105,9 +105,9 @@
 #define STRING_PARSER_ALIAS_NEST     "Atingis la limon de {1} nest-niveloj de alinomoj."
 #define STRING_PARSER_OVERRIDE_RC    "Agorda superrego rc.{1}:{2}"
 #define STRING_PARSER_UNKNOWN_ATTMOD "Eraro: nekonata atributa modifanto '{1}'."
-#define STRING_PARSER_UUID_AFTER_COMMA "Nekonata UUID-identigilo post komo."
 #define STRING_PARSER_ALTERNATE_RC   "Uzanta alterna .taskrc-dosiero {1}"
 #define STRING_PARSER_ALTERNATE_DATA "Uzanta alterna data.location {1}"
+#define STRING_PARSER_UNEXPECTED_ARG "The '{1}' command does not allow '{2}'."
 
 // Variant
 //
@@ -115,22 +115,16 @@
 // mostly concerned with how various operators interact with the different
 // data types.
 #define STRING_VARIANT_TIME_T        "Ne povas aperaĵigi tiun tipon kun valoro de tipo 'time_t'."
-#define STRING_VARIANT_CMP_UNKNOWN   "Ne povas kompari nekonatan tipon"
-#define STRING_VARIANT_EQ_UNKNOWN    "Ne povas egaligi nekonatan tipon"
-#define STRING_VARIANT_EXP_UNKNOWN   "Ne povas potencigi nekonatan tipon"
 #define STRING_VARIANT_EXP_BOOL      "Ne povas potencigi buleon"
 #define STRING_VARIANT_EXP_NON_INT   "Ne povas potencigi kun malentjera eksponento"
 #define STRING_VARIANT_EXP_STRING    "Ne povas potencigi ĉenon"
 #define STRING_VARIANT_EXP_DATE      "Ne povas potencigi daton"
 #define STRING_VARIANT_EXP_DURATION  "Ne povas potencigi daŭron"
-#define STRING_VARIANT_SUB_UNKNOWN   "Ne povas subtrahi nekonatan tipon"
 #define STRING_VARIANT_SUB_BOOL      "Ne povas subtrahi el buleo"
 #define STRING_VARIANT_SUB_STRING    "Ne povas subtrahi ĉenon"
 #define STRING_VARIANT_SUB_DATE      "Ne povas subtrahi daton"
-#define STRING_VARIANT_ADD_UNKNOWN   "Ne povas adicii nekonatan tipon"
 #define STRING_VARIANT_ADD_BOOL      "Ne povas adicii du buleojn"
 #define STRING_VARIANT_ADD_DATE      "Ne povas adicii du datojn"
-#define STRING_VARIANT_MUL_UNKNOWN   "Ne povas multipliki nekonatan tipon"
 #define STRING_VARIANT_MUL_BOOL      "Ne povas multipliki buleon"
 #define STRING_VARIANT_MUL_DATE      "Ne povas multipliki daton"
 #define STRING_VARIANT_MUL_REAL_STR  "Ne povas multipliki reelon per ĉeno"
@@ -141,7 +135,6 @@
 #define STRING_VARIANT_MUL_DUR_STR   "Ne povas multipliki daŭron per ĉeno"
 #define STRING_VARIANT_MUL_DUR_DATE  "Ne povas multipliki daŭron per dato"
 #define STRING_VARIANT_MUL_DUR_DUR   "Ne povas multipliki daŭron per daŭro"
-#define STRING_VARIANT_DIV_UNKNOWN   "Ne povas dividi nekonatan tipon"
 #define STRING_VARIANT_DIV_BOOL      "Ne povas dividi buleon"
 #define STRING_VARIANT_DIV_INT_BOOL  "Ne povas dividi entjeron per buleo"
 #define STRING_VARIANT_DIV_ZERO      "Ne povas dividi per nulo"
@@ -166,11 +159,8 @@
 #define STRING_VARIANT_MOD_REAL_DATE "Ne povas moduli reelon per dato"
 #define STRING_VARIANT_MOD_REAL_STR  "Ne povas moduli reelon per ĉeno"
 #define STRING_VARIANT_MOD_STR       "Ne povas moduli ĉenon"
-#define STRING_VARIANT_MOD_UNKNOWN   "Ne povas moduli nekonatan tipon"
 #define STRING_VARIANT_MOD_ZERO      "Ne povas moduli nulon"
-#define STRING_VARIANT_RENDER_UNK    "Ne povas bildigi nekonatan tipon."
 #define STRING_VARIANT_SQRT_NEG      "Ne povas kalkuli kvadratan radikon de negativa nombro."
-#define STRING_VARIANT_COERCE_UNK    "Ne povas konverta datumon ni el ni al nekonata tipo"
 
 // Dates
 //
@@ -240,6 +230,16 @@
 #define STRING_COLUMN_LABEL_UDACOUNT "Nombro de uzoj"
 #define STRING_COLUMN_LABEL_ORPHAN   "Orfa UDA"
 
+#define STRING_COLUMN_LABEL_COMMAND  "Command"
+#define STRING_COLUMN_LABEL_CATEGORY "Category"
+#define STRING_COLUMN_LABEL_RO       "R/W"
+#define STRING_COLUMN_LABEL_SHOWS_ID "ID"
+#define STRING_COLUMN_LABEL_GC       "GC"
+#define STRING_COLUMN_LABEL_CONTEXT  "Context"
+#define STRING_COLUMN_LABEL_FILTER   "Filter"
+#define STRING_COLUMN_LABEL_MODS     "Mods"
+#define STRING_COLUMN_LABEL_MISC     "Misc"
+
 // Column Examples
 #define STRING_COLUMN_EXAMPLES_TAGS  "domo @aĉo next"
 #define STRING_COLUMN_EXAMPLES_PROJ  "domo.ĝardeno"
@@ -271,7 +271,10 @@
 #define STRING_CMD_LOG_USAGE         "Kreas novan jamfinitan taskon"
 #define STRING_CMD_LOG_NO_RECUR      "Oni ne povas fari taskojn reokazantajn kun 'log'."
 #define STRING_CMD_LOG_NO_WAITING    "Oni ne povas fari taskojn atendantajn kun 'log'."
-#define STRING_CMD_LOG_LOGGED        "Registris taskon."
+
+//#define STRING_CMD_LOG_LOGGED        "Registris taskon."
+#define STRING_CMD_LOG_LOGGED        "Logged task {1}."
+
 #define STRING_CMD_IDS_USAGE_RANGE   "Montras la identigilon de ĉia kongruanta tasko, kiel atingopovo"
 #define STRING_CMD_IDS_USAGE_LIST    "Montras la identigilon de ĉia kongruanta tasko, kiel listo"
 #define STRING_CMD_IDS_USAGE_ZSH     "Montras la identigilon kaj la priskribon de ĉia kongruanta tasko"
@@ -289,7 +292,6 @@
 #define STRING_CMD_INFO_MODIFIED     "Modifado lasta"
 #define STRING_CMD_INFO_VIRTUAL_TAGS "Virtual tags"
 #define STRING_CMD_UNDO_USAGE        "Malfaras la plej malfrua modifado al tasko"
-#define STRING_CMD_UNDO_MODS         "La komando 'undo' ne permesos, ke oni pli modifus la taskojn."
 #define STRING_CMD_STATS_USAGE       "Montras statistikon de la taska datumbazo"
 #define STRING_CMD_STATS_CATEGORY    "Kategorio"
 #define STRING_CMD_STATS_DATA        "datumoj"
@@ -310,7 +312,6 @@
 #define STRING_CMD_STATS_AVG_PEND    "Meznª pendtempo"
 #define STRING_CMD_STATS_DESC_LEN    "Meznª priskriblongeco"
 #define STRING_CMD_STATS_CHARS       "{1} signojn"
-#define STRING_CMD_STATS_LAST_SYNC   "Lasta sinkronigado"
 #define STRING_CMD_STATS_BLOCKED     "Taskoj blokataj"
 #define STRING_CMD_STATS_BLOCKING    "Taskoj blokantaj"
 #define STRING_CMD_REPORTS_USAGE     "Listigas ĉian raporton subtenatan"
@@ -338,6 +339,9 @@
 #define STRING_CMD_GHISTORY_YEAR     "Jaro"
 #define STRING_CMD_GHISTORY_MONTH    "Monato"
 #define STRING_CMD_GHISTORY_NUMBER   "Nombro Kreitaj/Finitaj/Viŝitaj"
+#define STRING_CMD_UNIQUE_USAGE      "Generates lists of unique attribute values"
+#define STRING_CMD_UNIQUE_MISSING    "An attribute must be specified.  See 'task _columns'."
+#define STRING_CMD_UNIQUE_VALID      "You must specify an attribute or UDA."
 
 #define STRING_CMD_DONE_USAGE        "Markas la specifatan taskon kiel finita"
 #define STRING_CMD_DONE_CONFIRM      "Fini taskon {1} '{2}'?"
@@ -364,6 +368,7 @@
 #define STRING_CMD_COUNT_USAGE       "Nombras kongruantajn taskojn"
 #define STRING_CMD_GET_USAGE         "DOM-enirilo"
 #define STRING_CMD_GET_NO_DOM        "Nenia DOM-referenco specifata."
+#define STRING_CMD_GET_BAD_REF       "'{1}' is not a DOM reference."
 
 #define STRING_CMD_UDAS_NO           "Nenia UDA definita."
 #define STRING_CMD_UDAS_SUMMARY      "{1} UDA definita"
@@ -449,9 +454,9 @@
 
 #define STRING_CMD_IMPORT_USAGE      "Importas JSON-dosierojn"
 #define STRING_CMD_IMPORT_SUMMARY    "Importis {1} taskojn."
-#define STRING_CMD_IMPORT_NOFILE     "Vi devas specifi kiu dosieron import."
 #define STRING_CMD_IMPORT_FILE       "Importanta '{1}'"
 #define STRING_CMD_IMPORT_MISSING    "File '{1}' not found."
+#define STRING_CMD_IMPORT_UUID_BAD   "Not a valid UUID '{1}'."
 #define STRING_TASK_NO_DESC          "Komento havas mankon de priskribo: {1}"
 #define STRING_TASK_NO_ENTRY         "Komento havas mankon de enskrib-dato: {1}"
 #define STRING_CMD_SYNC_USAGE        "Sinkronigas datumojn kun la Taskserver"
@@ -511,11 +516,11 @@
 #define STRING_CMD_DIAG_HOOK_ENABLE  "Enabled"
 #define STRING_CMD_DIAG_HOOK_DISABLE "Disabled"
 
+#define STRING_CMD_COMMANDS_USAGE    "Generates a list of all commands, with behavior details"
 #define STRING_CMD_HCOMMANDS_USAGE   "Generates a list of all commands, for autocompletion purposes"
 #define STRING_CMD_ZSHCOMMANDS_USAGE "Generates a list of all commands, for zsh autocompletion purposes"
 #define STRING_CMD_ZSHATTS_USAGE     "Generates a list of all attributes, for zsh autocompletion purposes"
 #define STRING_CMD_ALIASES_USAGE     "Generates a list of all aliases, for autocompletion purposes"
-#define STRING_CMD_INSTALL_USAGE     "Installs extensions and external scripts"
 
 #define STRING_CMD_MODIFY_USAGE1     "Modifies the existing task with provided arguments."
 #define STRING_CMD_MODIFY_NO_DUE     "You cannot specify a recurring task without a due date."
@@ -554,7 +559,7 @@
 #define STRING_CMD_CONFIG_NO_NAME    "Specifu la nomon de agordvariablo, kiun vi volas modifi."
 #define STRING_CMD_HCONFIG_USAGE     "Listigas çiun subtenatan agordan variablon, por motivo memkompletada"
 #define STRING_CMD_CONTEXT_USAGE     "Set and define contexts (default filters)"
-#define STRING_CMD_CONTEXT_DEF_SUCC  "Context '{1}' defined."
+#define STRING_CMD_CONTEXT_DEF_SUCC  "Context '{1}' defined. Use 'task context {1}' to activate."
 #define STRING_CMD_CONTEXT_DEF_FAIL  "Context '{1}' not defined."
 #define STRING_CMD_CONTEXT_DEF_USAG  "Both context name and its definition must be provided."
 #define STRING_CMD_CONTEXT_DEF_ABRT  "Context definiton aborted."
@@ -585,6 +590,7 @@
 #define STRING_CMD_BURN_USAGE_D      "Montras ĉiutagan abakon de taskbrulo"
 #define STRING_CMD_BURN_TITLE        "Brulo"
 #define STRING_CMD_BURN_TOO_SMALL    "Terminala fenestro tro malgranda por vidigi grafeon."
+#define STRING_CMD_BURN_TOO_LARGE    "Terminal window too large to draw a graph."
 #define STRING_CMD_BURN_DAILY        "Ĉiutaga"
 #define STRING_CMD_BURN_WEEKLY       "Ĉiusemajna"
 #define STRING_CMD_BURN_MONTHLY      "Ĉiumonata"
@@ -624,47 +630,26 @@
 #define STRING_DATE_INVALID_FORMAT   "'{1}' ne estas valida dato laŭ stilo '{2}'."
 #define STRING_DATE_BAD_WEEKSTART    "Argorda variablo 'weekstart' devas esti 'Sunday' aŭ 'Monday'."
 
-#define STRING_DATE_JANUARY_LONG     "januaro"
-#define STRING_DATE_FEBRUARY_LONG    "febrero"
-#define STRING_DATE_MARCH_LONG       "marto"
-#define STRING_DATE_APRIL_LONG       "aprilo"
-#define STRING_DATE_MAY_LONG         "majo"
-#define STRING_DATE_JUNE_LONG        "junio"
-#define STRING_DATE_JULY_LONG        "julio"
-#define STRING_DATE_AUGUST_LONG      "aŭgusto"
-#define STRING_DATE_SEPTEMBER_LONG   "septembro"
-#define STRING_DATE_OCTOBER_LONG     "oktobro"
-#define STRING_DATE_NOVEMBER_LONG    "novembro"
-#define STRING_DATE_DECEMBER_LONG    "decembro"
+#define STRING_DATE_JANUARY          "januaro"
+#define STRING_DATE_FEBRUARY         "febrero"
+#define STRING_DATE_MARCH            "marto"
+#define STRING_DATE_APRIL            "aprilo"
+#define STRING_DATE_MAY              "majo"
+#define STRING_DATE_JUNE             "junio"
+#define STRING_DATE_JULY             "julio"
+#define STRING_DATE_AUGUST           "aŭgusto"
+#define STRING_DATE_SEPTEMBER        "septembro"
+#define STRING_DATE_OCTOBER          "oktobro"
+#define STRING_DATE_NOVEMBER         "novembro"
+#define STRING_DATE_DECEMBER         "decembro"
 
-#define STRING_DATE_JANUARY_SHORT    "jan"
-#define STRING_DATE_FEBRUARY_SHORT   "feb"
-#define STRING_DATE_MARCH_SHORT      "mar"
-#define STRING_DATE_APRIL_SHORT      "apr"
-#define STRING_DATE_MAY_SHORT        "maj"
-#define STRING_DATE_JUNE_SHORT       "jun"
-#define STRING_DATE_JULY_SHORT       "jul"
-#define STRING_DATE_AUGUST_SHORT     "aŭg"
-#define STRING_DATE_SEPTEMBER_SHORT  "sep"
-#define STRING_DATE_OCTOBER_SHORT    "okt"
-#define STRING_DATE_NOVEMBER_SHORT   "nov"
-#define STRING_DATE_DECEMBER_SHORT   "dec"
-
-#define STRING_DATE_SUNDAY_LONG      "dimanĉo"
-#define STRING_DATE_MONDAY_LONG      "lundo"
-#define STRING_DATE_TUESDAY_LONG     "mardo"
-#define STRING_DATE_WEDNESDAY_LONG   "merkredo"
-#define STRING_DATE_THURSDAY_LONG    "ĵaŭdo"
-#define STRING_DATE_FRIDAY_LONG      "vendredo"
-#define STRING_DATE_SATURDAY_LONG    "sabato"
-
-#define STRING_DATE_SUNDAY_SHORT     "di"
-#define STRING_DATE_MONDAY_SHORT     "lu"
-#define STRING_DATE_TUESDAY_SHORT    "ma"
-#define STRING_DATE_WEDNESDAY_SHORT  "me"
-#define STRING_DATE_THURSDAY_SHORT   "ĵa"
-#define STRING_DATE_FRIDAY_SHORT     "ve"
-#define STRING_DATE_SATURDAY_SHORT   "sa"
+#define STRING_DATE_SUNDAY           "dimanĉo"
+#define STRING_DATE_MONDAY           "lundo"
+#define STRING_DATE_TUESDAY          "mardo"
+#define STRING_DATE_WEDNESDAY        "merkredo"
+#define STRING_DATE_THURSDAY         "ĵaŭdo"
+#define STRING_DATE_FRIDAY           "vendredo"
+#define STRING_DATE_SATURDAY         "sabato"
 
 // dependency
 #define STRING_DEPEND_BLOCKED        "Tasko {1} estas blokata per:"
@@ -674,7 +659,6 @@
 // DOM
 #define STRING_DOM_UNKNOWN           "<nekonata>"
 #define STRING_DOM_UNREC             "DOM: Ne povis inspekti nekonatan nomon '{1}'."
-#define STRING_DOM_CANNOT_SET        "DOM: Ne povis ŝanĝi '{1}'."
 
 // Eval
 #define STRING_EVAL_NO_EXPRESSION    "Nenia esprimo por kalkuli."
@@ -685,8 +669,9 @@
 
 // edit
 #define STRING_EDIT_NO_CHANGES       "Ne detektis nenian redakton."
-#define STRING_EDIT_NO_EDITS         "Ne redaktis nenion."
+#define STRING_EDIT_FAILED           "Editing failed with exit code {1}."
 #define STRING_EDIT_COMPLETE         "Redaktis komplete."
+#define STRING_EDIT_IN_PROGRESS      "Task is already being edited."
 #define STRING_EDIT_LAUNCHING        "Lanĉanta nun '{1}'..."
 #define STRING_EDIT_CHANGES          "Detektis redaktojn."
 #define STRING_EDIT_UNPARSEABLE      "Taskwarrior ne povis trakti viaj redaktojn. Ĉu vi volas ripovi?"
@@ -765,6 +750,9 @@
 #define STRING_INVALID_SORT_COL      "Kolumno '{1}' ne estas valida kampo por ordigi."
 #define STRING_TLS_INIT_FAIL         "Erara eko de TLS. {1}"
 #define STRING_ERROR_DETAILS         "Agordo 'calendar.details.report' devas enhavi sole unu raportnomon."
+#define STRING_ERROR_NO_FILTER       "Command line filters are not supported by this command."
+#define STRING_ERROR_CONFIRM_SIGINT  "Interrupted: No changes made."
+#define STRING_ERROR_BAD_STATUS      "The status '{1}' is not valid."
 
 // Feedback
 #define STRING_FEEDBACK_NO_TASKS     "Nenia tasko."
@@ -793,6 +781,7 @@
 #define STRING_FEEDBACK_TAG_NONAG    "Speciala etikedo 'nonag' antaŭmalebligitos molestojn, kiam oni modifus tiun taskon."
 #define STRING_FEEDBACK_TAG_NOCAL    "Speciala etikedo 'nocal' ekskluzivos tiun taskon ĉe raporto 'calendar'."
 #define STRING_FEEDBACK_TAG_NEXT     "Speciala etikedo 'next' pligrandigos la urĝecon de tiu tasko por ke ĝi aperus ĉe raporto 'next'."
+#define STRING_FEEDBACK_TAG_VIRTUAL  "Virtual tags (including '{1}') are reserved and may not be added or removed."
 #define STRING_FEEDBACK_UNBLOCKED    "Malblokis {1} '{2}'."
 #define STRING_FEEDBACK_EXPIRED      "Tasko {1} '{2}' fortempiĝis do estis viŝata."
 #define STRING_FEEDBACK_BACKLOG      "Estas lokaj ŝanĝoj. Sinkronigo devita."
@@ -888,6 +877,10 @@
 #define STRING_TDB2_UNDO_COMPLETE    "Malfaris komplete."
 #define STRING_TDB2_UNDO_SYNCED      "Ne povos malfari ŝanĝon ĉar la tasko estis jam sinkronigita.  Modifu anstataŭe la taskon."
 #define STRING_TDB2_DIRTY_EXIT       "Eliranta kun neskribitajn ŝanĝojn al {1}"
+#define STRING_TDB2_UNWAIT           "Un-waiting task '{1}'"
+
+// recur.cpp
+#define STRING_RECUR_CREATE          "Creating recurring task instance '{1}'"
 
 // View
 #define STRING_VIEW_TOO_SMALL        "La raporto havas larĝecminimumon {1}, al kio ne konformas la disponebla larĝeco {2}."
@@ -895,7 +888,7 @@
 // Usage text.  This is an exception, and contains \n characters and formatting.
 #define STRING_CMD_HELP_TEXT \
   "Oni povas trovi dokumentojn por Taskwarrior uzante 'man task', 'man taskrc', 'man " \
-  "task-color', 'man task-synch, aŭ ĉe http://taskwarrior.org\n" \
+  "task-color', 'man task-sync', aŭ ĉe http://taskwarrior.org\n" \
   "\n" \
   "La ĝenerala formo de komandoj estas:\n" \
   "  task [<filtrilo>] <komando> [<modifantoj>]\n" \
@@ -945,21 +938,27 @@
   "  end:            Dato kiam la tasko estis finata/viŝata\n" \
   "  start:          Dato kiam la tasko estis ekita\n" \
   "  scheduled:      Fiksa dato kiam vi projektas eki la taskon\n" \
+  "  modified:       Date task was last modified\n" \
   "  depends:        Aliaj taskoj, de kioj ĉi tiu tasko dependas\n" \
   "\n" \
   "Atributaj modifantoj igas filtrilojn pli precizaj.  La subtenataj modifantoj estas:\n" \
-  "  before     (antaŭ; samsencaĵoj under, below)\n" \
-  "  after      (post; samsencaĵoj over, above)\n" \
-  "  none       (nenio)\n" \
-  "  any        (ajno)\n" \
-  "  is         (estas; samsencaĵo equals)\n" \
-  "  isnt       (neestas; samsencaĵo not)\n" \
-  "  has        (havas; samsencaĵo contains)\n" \
-  "  hasnt      (nehavas)\n" \
-  "  startswith (kunekas; samsencaĵo left)\n" \
-  "  endswith   (kunfiniĝas; samsencaĵo right)\n" \
-  "  word       (vorto)\n" \
-  "  noword     (nevorto)\n" \
+  "\n" \
+  "  Modifiers         Example            Equivalent           Meaning\n" \
+  "  ----------------  -----------------  -------------------  -------------------------\n" \
+  "                    due:today          due = today          Fuzzy match\n" \
+  "  not               due.not:today      due != today         Fuzzy non-match\n" \
+  "  before, below     due.before:today   due < tomorrow       Exact date comparison\n" \
+  "  after, above      due.after:today    due > tomorrow       Exact date comparison\n" \
+  "  none              project.none:      project == ''        Empty\n" \
+  "  any               project.any:       project !== ''       Not empty\n" \
+  "  is, equals        project.is:x       project == x         Exact match\n" \
+  "  isnt              project.isnt:x     project !== x        Exact non-match\n" \
+  "  has, contains     desc.has:Hello     desc ~ Hello         Pattern match\n" \
+  "  hasnt,            desc.hasnt:Hello   desc !~ Hello        Pattern non-match\n" \
+  "  startswith, left  desc.left:Hel      desc ~ '^Hel'        Beginning match\n" \
+  "  endswith, right   desc.right:llo     desc ~ 'llo$'        End match\n" \
+  "  word              desc.word:Hello    desc ~ '\\bHello\\b'   Boundaried word match\n" \
+  "  noword            desc.noword:Hello  desc !~ '\\bHello\\b'  Boundaried word non-match\n" \
   "\n" \
   "Alterne, algebraj esprimoj subtenas:\n" \
   "  and  or  xor            Logical operators\n" \

@@ -41,33 +41,30 @@ public:
   static Column* uda (const std::string&);
 
   Column ();
-  Column (const Column&);
-  Column& operator= (const Column&);
-  bool operator== (const Column&) const;     // TODO Is this necessary?
   virtual ~Column ();
 
-  const std::string& name () const            { return _name;       }
-  const std::string& style () const           { return _style;      }
-  const std::string& label () const           { return _label;      }
-  const std::string& type () const            { return _type;       }
-  bool modifiable () const                    { return _modifiable; }
-  bool is_uda () const                        { return _uda;        }
-  bool is_fixed_width () const                { return _fixed_width;}
-  std::vector <std::string> styles () const   { return _styles;     }
-  std::vector <std::string> examples () const { return _examples;   }
+  const std::string& name () const            { return _name;        }
+  const std::string& style () const           { return _style;       }
+  const std::string& label () const           { return _label;       }
+  const std::string& type () const            { return _type;        }
+  bool modifiable () const                    { return _modifiable;  }
+  bool is_uda () const                        { return _uda;         }
+  bool is_fixed_width () const                { return _fixed_width; }
+  std::vector <std::string> styles () const   { return _styles;      }
+  std::vector <std::string> examples () const { return _examples;    }
 
-  virtual void setStyle  (const std::string& value) { _style = value;  }
+  virtual void setStyle  (const std::string&);
   virtual void setLabel  (const std::string& value) { _label = value;  }
   virtual void setReport (const std::string& value) { _report = value; }
 
   virtual bool validate (std::string&);
-  virtual void measure (const std::string&, unsigned int&, unsigned int&);
-  virtual void measure (Task&, unsigned int&, unsigned int&);
+  virtual void measure (const std::string&, unsigned int&, unsigned int&)           {};
+  virtual void measure (Task&, unsigned int&, unsigned int&)                        {};
   virtual void renderHeader (std::vector <std::string>&, int, Color&);
-  virtual void render (std::vector <std::string>&, const std::string&, int, Color&);
-  virtual void render (std::vector <std::string>&, Task&, int, Color&);
+  virtual void render (std::vector <std::string>&, const std::string&, int, Color&) {};
+  virtual void render (std::vector <std::string>&, Task&, int, Color&)              {};
   virtual bool can_modify ();
-  virtual std::string modify (std::string&);
+  virtual std::string modify (std::string& input)                                   { return input; };
 
 protected:
   std::string _name;

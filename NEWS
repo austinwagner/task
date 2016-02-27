@@ -1,26 +1,56 @@
 
-New Features in Taskwarrior 2.4.4
+New Features in Taskwarrior 2.5.0
 
-  - Taskwarrior now requires GCC 4.7+ / Clang 3.3+, for full C++11 support.
-  - Taskwarrior now builds properly on 32-bit platforms.
-  - The beginnings of a Japaneѕe translation.
+  - The active context, if one is set, is now identified in "task context list"
+  - It is an error to attempt adding or removing a virtual tag.
+  - New 'UDA', 'ORPHAN', 'PROJECT', 'PRIORITY' and 'LATEST'  virtual tags.
 
-New commands in Taskwarrior 2.4.4
+New Commands in Taskwarrior 2.5.0
 
-  - None
+  - The '_unique' command shows a set of unique values for the specified
+    attribute
+  - The 'commands' command shows the supported commands, with additional
+    details that determine some of their behavior.
 
-New configuration options in Taskwarrior 2.4.4
+New Configuration Options in Taskwarrior 2.5.0
 
-  - The 'obfuscate' setting, if set to '1' will replace all text with 'xxx'.
-    This is useful when sharing data for bug reporting purposes.
+  - The 'json.depends.array' setting controls whether dependencies are exported
+    as a JSON array, of a comma-separated string.  Default is 'on'.
+    Both variations are imported.
+  - The 'color.uda.<name>.none' is a color that is applied to tasks that do
+    not have a value for the UDA '<name>'.
+  - A Cygwin fix means that now we can default 'search.case.sensitive' to 'yes',
+    and all platforms are again equal.
+  - The new 'recur' verbosity token generates a message when a recurring task is
+    generated.
+  - The new 'unwait' verbosity token generates a message when a waiting task
+    becomes visible.
+  - The new 'rule.color.merge' configuration option can disable merging of colors
+    produced by different color rules. Use if your color scheme produces
+    unpleasing foreground and background combinations.
 
-Newly deprecated features in Taskwarrior 2.4.4
+Newly Deprecated Features in Taskwarrior 2.5.0
 
-  - None
+  - The '_ids', '_projects', '_tags', '_uuids' helper commands are deprecated,
+    and replaced by the new '_unique' helper command.
+  - Comma-separated ID lists are deprecated.
+  - The 'new-uuid' verbosity token is deprecated. Its functionality will
+    be merged with the 'new-id' verbosity token.
 
-Removed features in 2.4.4
+Removed Features in 2.5.0
 
-  - None
+  - The script 'context' was removed, now that context is a core feature.
+  - Non­extended forms of ISO-8601 date/time support is removed. This means
+    that 'YYYYMMDD' is no longer supported, but 'YYYY-MM-DD' is. For times,
+    'hhmmss' is no longer supported, but 'hh:mm:ss' is. The non-extended
+    forms all contain sequences of digits that make the identification of
+    IDs, UUIDs, and various date/time formats ambiguous.
+  - Comma-separated UUID lists are no longer supported.
+  - DOM references may no longer be abbreviated.
+  - The 'urgency.next.coefficient' configuration option is deprecated in favor
+    of 'urgency.user.tag.next.coefficient'.
+  - The long deprecated syntax of color values with underscores (i.e 'on_red')
+    is no longer supported.
 
 Known Issues
 

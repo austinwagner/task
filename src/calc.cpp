@@ -41,7 +41,7 @@ Context context;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Constants.
-bool get (const std::string& name, Variant& value)
+bool get (const std::string&, Variant&)
 {
 /*
   // An example, although a bad one because this is supported by default.
@@ -60,7 +60,6 @@ int main (int argc, const char** argv)
   try
   {
     bool infix     = true;
-    bool ambiguous = false;
 
     // Add a source for constants.
     Eval e;
@@ -80,8 +79,6 @@ int main (int argc, const char** argv)
                   << "  -d|--debug        Debug mode\n"
                   << "  -i|--infix        Infix expression (default)\n"
                   << "  -p|--postfix      Postfix expression\n"
-                  << "  -a|--ambiguous    Choose dates over numbers when ambiguous\n"
-                  << "  -n|--noambiguous  Choose numbers over dates when ambiguous (default)\n"
                   << "\n";
         exit (1);
       }
@@ -128,14 +125,8 @@ int main (int argc, const char** argv)
         infix = true;
       else if (!strcmp (argv[i], "-p") || !strcmp (argv[i], "--postfix"))
         infix = false;
-      else if (!strcmp (argv[i], "-a") || !strcmp (argv[i], "--ambiguous"))
-        ambiguous = true;
-      else if (!strcmp (argv[i], "-n") || !strcmp (argv[i], "--noambiguous"))
-        ambiguous = false;
       else
         expression += std::string (argv[i]) + " ";
-
-    e.ambiguity (ambiguous);
 
     Variant result;
     if (infix)
@@ -144,9 +135,8 @@ int main (int argc, const char** argv)
       e.evaluatePostfixExpression (expression, result);
 
     // Show any debug output.
-    std::vector <std::string>::iterator i;
-    for (i = context.debugMessages.begin (); i != context.debugMessages.end (); ++i)
-      nowide::cout << *i << "\n";
+    for (auto& i : context.debugMessages)
+      nowide::cout << i << "\n";
 
     // Show the result in string form.
     nowide::cout << (std::string) result

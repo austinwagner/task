@@ -39,11 +39,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdConfig::CmdConfig ()
 {
-  _keyword     = "config";
-  _usage       = "task          config [name [value | '']]";
-  _description = STRING_CMD_CONFIG_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "config";
+  _usage                 = "task          config [name [value | '']]";
+  _description           = STRING_CMD_CONFIG_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = true;
+  _category              = Command::Category::config;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,12 +62,11 @@ bool CmdConfig::setConfigVariable (std::string name, std::string value, bool con
   bool found = false;
   bool change = false;
 
-  std::vector <std::string>::iterator line;
-  for (line = contents.begin (); line != contents.end (); ++line)
+  for (auto& line : contents)
   {
     // If there is a comment on the line, it must follow the pattern.
-    std::string::size_type comment = line->find ("#");
-    std::string::size_type pos     = line->find (name + "=");
+    auto comment = line.find ("#");
+    auto pos     = line.find (name + "=");
 
     if (pos != std::string::npos &&
         (comment == std::string::npos ||
@@ -72,9 +77,9 @@ bool CmdConfig::setConfigVariable (std::string name, std::string value, bool con
           confirm (format (STRING_CMD_CONFIG_CONFIRM, name, context.config.get (name), value)))
       {
         if (comment != std::string::npos)
-          *line = name + "=" + json::encode (value) + " " + line->substr (comment);
+          line = name + "=" + json::encode (value) + " " + line.substr (comment);
         else
-          *line = name + "=" + json::encode (value);
+          line = name + "=" + json::encode (value);
 
         change = true;
       }
@@ -106,14 +111,13 @@ int CmdConfig::unsetConfigVariable (std::string name, bool confirmation /* = fal
   bool found = false;
   bool change = false;
 
-  std::vector <std::string>::iterator line;
-  for (line = contents.begin (); line != contents.end (); )
+  for (auto line = contents.begin (); line != contents.end (); )
   {
     bool lineDeleted = false;
 
     // If there is a comment on the line, it must follow the pattern.
-    std::string::size_type comment = line->find ("#");
-    std::string::size_type pos     = line->find (name + "=");
+    auto comment = line->find ("#");
+    auto pos     = line->find (name + "=");
 
     if (pos != std::string::npos &&
         (comment == std::string::npos ||
@@ -154,7 +158,7 @@ int CmdConfig::execute (std::string& output)
   std::stringstream out;
 
   // Get the non-attribute, non-fancy command line arguments.
-  std::vector <std::string> words = context.cli.getWords ();
+  std::vector <std::string> words = context.cli2.getWords ();
 
   // Support:
   //   task config name value    # set name to value
@@ -229,11 +233,17 @@ int CmdConfig::execute (std::string& output)
 ////////////////////////////////////////////////////////////////////////////////
 CmdCompletionConfig::CmdCompletionConfig ()
 {
-  _keyword     = "_config";
-  _usage       = "task          _config";
-  _description = STRING_CMD_HCONFIG_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "_config";
+  _usage                 = "task          _config";
+  _description           = STRING_CMD_HCONFIG_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::internal;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -243,9 +253,8 @@ int CmdCompletionConfig::execute (std::string& output)
   context.config.all (configs);
   std::sort (configs.begin (), configs.end ());
 
-  std::vector <std::string>::iterator config;
-  for (config = configs.begin (); config != configs.end (); ++config)
-    output += *config + "\n";
+  for (auto& config : configs)
+    output += config + "\n";
 
   return 0;
 }

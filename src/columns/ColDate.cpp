@@ -28,8 +28,7 @@
 #include <math.h>
 #include <Context.h>
 #include <ColDate.h>
-#include <Date.h>
-#include <Duration.h>
+#include <ISO8601.h>
 #include <text.h>
 #include <i18n.h>
 
@@ -42,35 +41,28 @@ ColumnDate::ColumnDate ()
   _type      = "date";
   _style     = "formatted";
   _label     = "";
+  _styles    = {"formatted",
+                "julian",
+                "epoch", 
+                "iso",
+                "age",
+                "remaining",
+                "countdown"};
 
-  _styles.push_back ("formatted");
-  _styles.push_back ("julian");
-  _styles.push_back ("epoch");
-  _styles.push_back ("iso");
-  _styles.push_back ("age");
-  _styles.push_back ("remaining");
-  _styles.push_back ("countdown");
-
-  Date now;
+  ISO8601d now;
   now -= 125; // So that "age" is non-zero.
-  _examples.push_back (now.toString (context.config.get ("dateformat")));
-  _examples.push_back (format (now.toJulian (), 13, 12));
-  _examples.push_back (now.toEpochString ());
-  _examples.push_back (now.toISO ());
-  _examples.push_back (Duration (Date () - now).formatCompact ());
-  _examples.push_back ("");
-  _examples.push_back (Duration (Date () - now).format ());
+  _examples = {now.toString (context.config.get ("dateformat")),
+               format (now.toJulian (), 13, 12),
+               now.toEpochString (),
+               now.toISO (),
+               ISO8601p (ISO8601d () - now).formatVague (),
+               "",
+               ISO8601p (ISO8601d () - now).format ()};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ColumnDate::~ColumnDate ()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool ColumnDate::validate (std::string& value)
-{
-  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -81,7 +73,7 @@ void ColumnDate::measure (Task& task, unsigned int& minimum, unsigned int& maxim
 
   if (task.has (_name))
   {
-    Date date (task.get_date (_name));
+    ISO8601d date (task.get_date (_name));
 
     if (_style == "default" ||
         _style == "formatted")
@@ -96,12 +88,12 @@ void ColumnDate::measure (Task& task, unsigned int& minimum, unsigned int& maxim
       if (format == "")
         format = context.config.get ("dateformat");
 
-      minimum = maximum = Date::length (format);
+      minimum = maximum = ISO8601d::length (format);
     }
     else if (_style == "countdown")
     {
-      Date now;
-      minimum = maximum = Duration (now - date).format ().length ();
+      ISO8601d now;
+      minimum = maximum = ISO8601p (now - date).formatVague ().length ();
     }
     else if (_style == "julian")
     {
@@ -117,14 +109,14 @@ void ColumnDate::measure (Task& task, unsigned int& minimum, unsigned int& maxim
     }
     else if (_style == "age")
     {
-      Date now;
-      minimum = maximum = Duration (now - date).formatCompact ().length ();
+      ISO8601d now;
+      minimum = maximum = ISO8601p (now - date).formatVague ().length ();
     }
     else if (_style == "remaining")
     {
-      Date now;
+      ISO8601d now;
       if (date > now)
-        minimum = maximum = Duration (date - now).format ().length ();
+        minimum = maximum = ISO8601p (date - now).formatVague ().length ();
     }
     else
       throw format (STRING_COLUMN_BAD_FORMAT, _name, _style);
@@ -140,7 +132,7 @@ void ColumnDate::render (
 {
   if (task.has (_name))
   {
-    Date date (task.get_date (_name));
+    ISO8601d date (task.get_date (_name));
 
     if (_style == "default" ||
         _style == "formatted")
@@ -162,12 +154,12 @@ void ColumnDate::render (
     }
     else if (_style == "countdown")
     {
-      Date now;
+      ISO8601d now;
 
       lines.push_back (
         color.colorize (
           rightJustify (
-            Duration (now - date).format (), width)));
+            ISO8601p (now - date).formatVague (), width)));
     }
     else if (_style == "julian")
     {
@@ -192,21 +184,21 @@ void ColumnDate::render (
     }
     else if (_style == "age")
     {
-      Date now;
+      ISO8601d now;
 
       lines.push_back (
         color.colorize (
           leftJustify (
-            Duration (now - date).formatCompact (), width)));
+            ISO8601p (now - date).formatVague (), width)));
     }
     else if (_style == "remaining")
     {
-      Date now;
+      ISO8601d now;
       if (date > now)
         lines.push_back (
           color.colorize (
             rightJustify (
-              Duration (date - now).format (), width)));
+              ISO8601p (date - now).formatVague (), width)));
     }
   }
 }

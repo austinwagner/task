@@ -105,9 +105,9 @@
 #define STRING_PARSER_ALIAS_NEST     "ネストされたエイリアスの制限 {1} に到達した。"
 #define STRING_PARSER_OVERRIDE_RC    "設定は上書きされた rc.{1}:{2}"
 #define STRING_PARSER_UNKNOWN_ATTMOD "エラー: 不明な属性変更子 '{1}'."
-#define STRING_PARSER_UUID_AFTER_COMMA "カンマのあとの不明な UUID."
 #define STRING_PARSER_ALTERNATE_RC   "代替の .taskrc ファイル {1} を使用"
 #define STRING_PARSER_ALTERNATE_DATA "代替の data.location {1} を使用"
+#define STRING_PARSER_UNEXPECTED_ARG "The '{1}' command does not allow '{2}'."
 
 // Variant
 //
@@ -115,22 +115,16 @@
 // mostly concerned with how various operators interact with the different
 // data types.
 #define STRING_VARIANT_TIME_T        "Cannot instantiate this type with a time_t value."
-#define STRING_VARIANT_CMP_UNKNOWN   "不明なタイプを比較できない"
-#define STRING_VARIANT_EQ_UNKNOWN    "不明なタイプを同一視は出来ません"
-#define STRING_VARIANT_EXP_UNKNOWN   "不明なタイプをべき乗する事は出来ません"
 #define STRING_VARIANT_EXP_BOOL      "論理型はべき乗出来ません"
 #define STRING_VARIANT_EXP_NON_INT   "Cannot exponentiate to a non-integer power"
 #define STRING_VARIANT_EXP_STRING    "文字列はべき乗できません"
 #define STRING_VARIANT_EXP_DATE      "日付はべき乗できません"
 #define STRING_VARIANT_EXP_DURATION  "期間はべき乗できません"
-#define STRING_VARIANT_SUB_UNKNOWN   "不明なタイプは減算できません"
 #define STRING_VARIANT_SUB_BOOL      "論理型からは減算できません"
 #define STRING_VARIANT_SUB_STRING    "文字列は減算できません"
 #define STRING_VARIANT_SUB_DATE      "日付は減算できません"
-#define STRING_VARIANT_ADD_UNKNOWN   "不明なタイプは追加できません"
 #define STRING_VARIANT_ADD_BOOL      "2つの論理値は加算できません"
 #define STRING_VARIANT_ADD_DATE      "2つの日付値は加算できません"
-#define STRING_VARIANT_MUL_UNKNOWN   "不明なタイプは乗算できません"
 #define STRING_VARIANT_MUL_BOOL      "論理値は乗算できません"
 #define STRING_VARIANT_MUL_DATE      "日付は乗算できません"
 #define STRING_VARIANT_MUL_REAL_STR  "実数を文字列では乗算できません"
@@ -141,7 +135,6 @@
 #define STRING_VARIANT_MUL_DUR_STR   "期間を文字列では乗算できません"
 #define STRING_VARIANT_MUL_DUR_DATE  "文字列を日付では乗算できません"
 #define STRING_VARIANT_MUL_DUR_DUR   "期間を期間では乗算できません"
-#define STRING_VARIANT_DIV_UNKNOWN   "不明なタイプは除算できません"
 #define STRING_VARIANT_DIV_BOOL      "論理値は除算できません"
 #define STRING_VARIANT_DIV_INT_BOOL  "整数値を論理値では除算できません"
 #define STRING_VARIANT_DIV_ZERO      "零では除算できません"
@@ -155,22 +148,19 @@
 #define STRING_VARIANT_DIV_DUR_DATE  "期間を日付では除算出来ません"
 #define STRING_VARIANT_DIV_DUR_DUR   "期間を期間では除算出来ません"
 #define STRING_VARIANT_MOD_BOOL      "Cannot modulo Booleans"
-#define STRING_VARIANT_MOD_DATE      "Cannot modulo date values"
+#define STRING_VARIANT_MOD_DATE      "日付は剰余を計算できません。"
 #define STRING_VARIANT_MOD_DUR       "Cannot modulo duration values"
-#define STRING_VARIANT_MOD_INT_BOOL  "Cannot modulo integer by Boolean"
-#define STRING_VARIANT_MOD_INT_DATE  "Cannot modulo integer by date values"
+#define STRING_VARIANT_MOD_INT_BOOL  "整数値を論理値で剰余を取ることは出来ません。"
+#define STRING_VARIANT_MOD_INT_DATE  "整数値を日付で剰余を取ることは出来ません。"
 #define STRING_VARIANT_MOD_INT_DUR   "Cannot modulo integer by duration values"
-#define STRING_VARIANT_MOD_INT_STR   "Cannot modulo integer by string"
-#define STRING_VARIANT_MOD_REAL_BOOL "Cannot modulo real by Boolean"
+#define STRING_VARIANT_MOD_INT_STR   "整数値を文字列で剰余を取ることは出来ません。"
+#define STRING_VARIANT_MOD_REAL_BOOL "実数値を論理値で剰余を取ることは出来ません。"
 #define STRING_VARIANT_MOD_REAL_DUR  "Cannot modulo real by duration values"
-#define STRING_VARIANT_MOD_REAL_DATE "Cannot modulo real numbers by dates"
-#define STRING_VARIANT_MOD_REAL_STR  "Cannot modulo real numbers by strings"
+#define STRING_VARIANT_MOD_REAL_DATE "実数値を日付で剰余を取ることは出来ません。"
+#define STRING_VARIANT_MOD_REAL_STR  "実数値を文字列で剰余を取ることは出来ません。"
 #define STRING_VARIANT_MOD_STR       "Cannot modulo string values"
-#define STRING_VARIANT_MOD_UNKNOWN   "Cannot modulo unknown type"
-#define STRING_VARIANT_MOD_ZERO      "Cannot modulo zero"
-#define STRING_VARIANT_RENDER_UNK    "不明なタイプは描画できません。"
+#define STRING_VARIANT_MOD_ZERO      "零で剰余を取ることは出来ません。"
 #define STRING_VARIANT_SQRT_NEG      "負の数は平方根を計算できません。"
-#define STRING_VARIANT_COERCE_UNK    "Cannot coerce data either to or from an unknown type"
 
 // Dates
 //
@@ -183,7 +173,7 @@
 
 // columns/Col*
 #define STRING_COLUMN_BAD_NAME       "認識できないカラム名 '{1}'。"
-#define STRING_COLUMN_BAD_FORMAT     "Unrecognized column format '{1}.{2}'"
+#define STRING_COLUMN_BAD_FORMAT     "認識出来ないカラム形式 '{1}.{2}'"
 #define STRING_COLUMN_LABEL_TASKS    "Tasks"
 #define STRING_COLUMN_LABEL_DEP      "Depends"
 #define STRING_COLUMN_LABEL_DEP_S    "Dep"
@@ -240,6 +230,16 @@
 #define STRING_COLUMN_LABEL_UDACOUNT "Usage Count"
 #define STRING_COLUMN_LABEL_ORPHAN   "Orphan UDA"
 
+#define STRING_COLUMN_LABEL_COMMAND  "Command"
+#define STRING_COLUMN_LABEL_CATEGORY "Category"
+#define STRING_COLUMN_LABEL_RO       "R/W"
+#define STRING_COLUMN_LABEL_SHOWS_ID "ID"
+#define STRING_COLUMN_LABEL_GC       "GC"
+#define STRING_COLUMN_LABEL_CONTEXT  "Context"
+#define STRING_COLUMN_LABEL_FILTER   "Filter"
+#define STRING_COLUMN_LABEL_MODS     "Mods"
+#define STRING_COLUMN_LABEL_MISC     "Misc"
+
 // Column Examples
 #define STRING_COLUMN_EXAMPLES_TAGS  "home @chore next"
 #define STRING_COLUMN_EXAMPLES_PROJ  "home.garden"
@@ -267,11 +267,14 @@
 #define STRING_CMD_URGENCY_USAGE     "Displays the urgency measure of a task"
 #define STRING_CMD_URGENCY_RESULT    "task {1} urgency {2}"
 #define STRING_CMD_ADD_USAGE         "新しいタスクの追加"
-#define STRING_CMD_ADD_FEEDBACK      "task {1} が生成されました。"
+#define STRING_CMD_ADD_FEEDBACK      "タスク {1} が生成されました。"
 #define STRING_CMD_LOG_USAGE         "Adds a new task that is already completed"
 #define STRING_CMD_LOG_NO_RECUR      "You cannot log recurring tasks."
-#define STRING_CMD_LOG_NO_WAITING    "保留のtaskはログできません。"
-#define STRING_CMD_LOG_LOGGED        "Logged task."
+#define STRING_CMD_LOG_NO_WAITING    "保留のタスクはログできません。"
+
+//#define STRING_CMD_LOG_LOGGED        "Logged task {1}."
+#define STRING_CMD_LOG_LOGGED        "Logged task {1}."
+
 #define STRING_CMD_IDS_USAGE_RANGE   "Shows the IDs of matching tasks, as a range"
 #define STRING_CMD_IDS_USAGE_LIST    "Shows the IDs of matching tasks, in the form of a list"
 #define STRING_CMD_IDS_USAGE_ZSH     "Shows the IDs and descriptions of matching tasks"
@@ -280,7 +283,7 @@
 #define STRING_CMD_UUIDS_USAGE_RANGE "Shows the UUIDs of matching tasks, as a comma-separated list"
 #define STRING_CMD_UUIDS_USAGE_LIST  "Shows the UUIDs of matching tasks, as a list"
 #define STRING_CMD_UUIDS_USAGE_ZSH   "Shows the UUIDs and descriptions of matching tasks"
-#define STRING_CMD_EXPORT_USAGE      "JSON 形式で task をエクスポート"
+#define STRING_CMD_EXPORT_USAGE      "JSON 形式で タスク をエクスポート"
 #define STRING_CMD_INFO_USAGE        "すべてのデータとメタデータを表示"
 #define STRING_CMD_INFO_BLOCKED      "This task blocked by"
 #define STRING_CMD_INFO_BLOCKING     "This task is blocking"
@@ -289,8 +292,7 @@
 #define STRING_CMD_INFO_MODIFIED     "Last modified"
 #define STRING_CMD_INFO_VIRTUAL_TAGS "Virtual tags"
 #define STRING_CMD_UNDO_USAGE        "Reverts the most recent change to a task"
-#define STRING_CMD_UNDO_MODS         "The undo command does not allow further task modification."
-#define STRING_CMD_STATS_USAGE       "task データベース情報を表示"
+#define STRING_CMD_STATS_USAGE       "タスク データベース情報を表示"
 #define STRING_CMD_STATS_CATEGORY    "Category"
 #define STRING_CMD_STATS_DATA        "Data"
 #define STRING_CMD_STATS_TOTAL       "Total"
@@ -301,8 +303,8 @@
 #define STRING_CMD_STATS_UNDO_TXNS   "Undo transactions"
 #define STRING_CMD_STATS_BACKLOG     "Sync backlog transactions"
 #define STRING_CMD_STATS_TAGGED      "Tasks tagged"
-#define STRING_CMD_STATS_OLDEST      "最古の task"
-#define STRING_CMD_STATS_NEWEST      "最新の task"
+#define STRING_CMD_STATS_OLDEST      "最古の タスク"
+#define STRING_CMD_STATS_NEWEST      "最新の タスク"
 #define STRING_CMD_STATS_USED_FOR    "Task used for"
 #define STRING_CMD_STATS_ADD_EVERY   "Task added every"
 #define STRING_CMD_STATS_COMP_EVERY  "Task completed every"
@@ -310,8 +312,7 @@
 #define STRING_CMD_STATS_AVG_PEND    "Average time pending"
 #define STRING_CMD_STATS_DESC_LEN    "Average desc length"
 #define STRING_CMD_STATS_CHARS       "{1} 文字"
-#define STRING_CMD_STATS_LAST_SYNC   "Last server synchronization"
-#define STRING_CMD_STATS_BLOCKED     "Blocked tasks"
+#define STRING_CMD_STATS_BLOCKED     "ブロックされたタスク"
 #define STRING_CMD_STATS_BLOCKING    "Blocking tasks"
 #define STRING_CMD_REPORTS_USAGE     "Lists all supported reports"
 #define STRING_CMD_REPORTS_REPORT    "Report"
@@ -337,15 +338,18 @@
 #define STRING_CMD_GHISTORY_USAGE_A  "Shows a graphical report of task history, by year"
 #define STRING_CMD_GHISTORY_YEAR     "Year"
 #define STRING_CMD_GHISTORY_MONTH    "Month"
-#define STRING_CMD_GHISTORY_NUMBER   "Number Added/Completed/Deleted"
+#define STRING_CMD_GHISTORY_NUMBER   "追加/完了/削除されたタスク数"
+#define STRING_CMD_UNIQUE_USAGE      "Generates lists of unique attribute values"
+#define STRING_CMD_UNIQUE_MISSING    "An attribute must be specified.  See 'task _columns'."
+#define STRING_CMD_UNIQUE_VALID      "You must specify an attribute or UDA."
 
 #define STRING_CMD_DONE_USAGE        "Marks the specified task as completed"
-#define STRING_CMD_DONE_CONFIRM      "task {1} '{2}' を完了?"
-#define STRING_CMD_DONE_TASK         "完了した task {1} '{2}'."
-#define STRING_CMD_DONE_NO           "Task は完了しなかった。"
+#define STRING_CMD_DONE_CONFIRM      "タスク {1} '{2}' を完了?"
+#define STRING_CMD_DONE_TASK         "タスク {1} '{2}' を完了します。"
+#define STRING_CMD_DONE_NO           "タスク は完了しなかった。"
 #define STRING_CMD_DONE_NOTPEND      "Task {1} '{2}' is neither pending nor waiting."
-#define STRING_CMD_DONE_1            "完了した {1} task。"
-#define STRING_CMD_DONE_N            "完了した {1} task。"
+#define STRING_CMD_DONE_1            "{1} task を完了。"
+#define STRING_CMD_DONE_N            "{1} task を完了。"
 
 #define STRING_CMD_PROJECTS_USAGE    "Shows all project names used"
 #define STRING_CMD_PROJECTS_USAGE_2  "Shows only a list of all project names used"
@@ -361,9 +365,10 @@
 #define STRING_CMD_SUMMARY_AVG_AGE   "Avg age"
 #define STRING_CMD_SUMMARY_COMPLETE  "Complete"
 #define STRING_CMD_SUMMARY_NONE      "(none)"
-#define STRING_CMD_COUNT_USAGE       "Counts matching tasks"
+#define STRING_CMD_COUNT_USAGE       "一致した タスク をカウント"
 #define STRING_CMD_GET_USAGE         "DOM Accessor"
 #define STRING_CMD_GET_NO_DOM        "No DOM reference specified."
+#define STRING_CMD_GET_BAD_REF       "'{1}' is not a DOM reference."
 
 #define STRING_CMD_UDAS_NO           "UDAが一つも定義されていません。"
 #define STRING_CMD_UDAS_SUMMARY      "{1} UDA が定義されました。"
@@ -371,49 +376,49 @@
 #define STRING_CMD_UDAS_ORPHAN       "{1} Orphan UDA"
 #define STRING_CMD_UDAS_ORPHANS      "{1} Orphan UDAs"
 
-#define STRING_CMD_DELETE_USAGE      "指定されたtaskの削除"
-#define STRING_CMD_DELETE_CONFIRM    "完全に task {1} '{2}' を削除して良いですか?"
-#define STRING_CMD_DELETE_TASK       "task {1} '{2}' を削除中。"
+#define STRING_CMD_DELETE_USAGE      "指定されたタスクの削除"
+#define STRING_CMD_DELETE_CONFIRM    "完全にタスク {1} '{2}' を削除して良いですか?"
+#define STRING_CMD_DELETE_TASK       "タスク {1} '{2}' を削除中。"
 #define STRING_CMD_DELETE_TASK_R     "Deleting recurring task {1} '{2}'."
 #define STRING_CMD_DELETE_CONFIRM_R  "This is a recurring task.  Do you want to delete all pending recurrences of this same task?"
-#define STRING_CMD_DELETE_NO         "タスクは削除されませんでした。"
-#define STRING_CMD_DELETE_NOT_DEL    "Task {1} '{2}' は削除できません。"
-#define STRING_CMD_DELETE_1          " {1} task を削除しました。"
-#define STRING_CMD_DELETE_N          " {1} task を削除しました。"
+#define STRING_CMD_DELETE_NO         "タスク は削除されませんでした。"
+#define STRING_CMD_DELETE_NOT_DEL    "タスク {1} '{2}' は削除できません。"
+#define STRING_CMD_DELETE_1          " {1} タスク を削除しました。"
+#define STRING_CMD_DELETE_N          " {1} タスク を削除しました。"
 
 #define STRING_CMD_DUPLICATE_USAGE   "指定したタスクが重複しています"
 #define STRING_CMD_DUPLICATE_REC     "Note: task {1} was a parent recurring task.  The duplicated task is too."
 #define STRING_CMD_DUPLICATE_NON_REC "Note: task {1} was a recurring task.  The duplicated task is not."
-#define STRING_CMD_DUPLICATE_CONFIRM "task {1} '{2}' が重複?"
-#define STRING_CMD_DUPLICATE_TASK    "task {1} '{2}' が重複。"
-#define STRING_CMD_DUPLICATE_NO      "Task は重複していません。"
-#define STRING_CMD_DUPLICATE_1       "重複した {1} task。"
-#define STRING_CMD_DUPLICATE_N       "重複した {1} task。"
+#define STRING_CMD_DUPLICATE_CONFIRM "タスク {1} '{2}' が重複?"
+#define STRING_CMD_DUPLICATE_TASK    "タスク {1} '{2}' が重複。"
+#define STRING_CMD_DUPLICATE_NO      "タスク は重複していません。"
+#define STRING_CMD_DUPLICATE_1       "重複した {1} タスク。"
+#define STRING_CMD_DUPLICATE_N       "重複した {1} タスク。"
 
 #define STRING_CMD_START_USAGE       "Marks specified task as started"
-#define STRING_CMD_START_NO          "Task は開始していません。"
-#define STRING_CMD_START_ALREADY     "Task {1} '{2}' は既に開始しています。"
-#define STRING_CMD_START_TASK        "task {1} '{2}' を開始。"
-#define STRING_CMD_START_CONFIRM     "Start task {1} '{2}'?"
-#define STRING_CMD_START_1           " {1} task を開始しました。"
-#define STRING_CMD_START_N           " {1} task を開始しました。"
+#define STRING_CMD_START_NO          "タスク は開始していません。"
+#define STRING_CMD_START_ALREADY     "タスク {1} '{2}' は既に開始しています。"
+#define STRING_CMD_START_TASK        "タスク {1} '{2}' を開始。"
+#define STRING_CMD_START_CONFIRM     "タスク {1} '{2}' を開始?"
+#define STRING_CMD_START_1           " {1} タスク を開始しました。"
+#define STRING_CMD_START_N           " {1} タスク を開始しました。"
 
 #define STRING_CMD_STOP_USAGE        "Removes the 'start' time from a task"
 #define STRING_CMD_STOP_NO           "Task は停止できません。"
 #define STRING_CMD_STOP_ALREADY      "Task {1} '{2}' は停止できません。"
 #define STRING_CMD_STOP_TASK         "task {1} '{2}' を停止中。"
 #define STRING_CMD_STOP_CONFIRM      "task {1} '{2}' を停止?"
-#define STRING_CMD_STOP_1            "{1} task を停止。"
-#define STRING_CMD_STOP_N            "{1} task を停止。"
+#define STRING_CMD_STOP_1            "{1} タスク を停止。"
+#define STRING_CMD_STOP_N            "{1} タスク を停止。"
 
 #define STRING_CMD_APPEND_USAGE      "存在する task 説明文にテキストを追加"
-#define STRING_CMD_APPEND_1          "{1} task を追加。"
-#define STRING_CMD_APPEND_N          "{1} task を追加。"
-#define STRING_CMD_APPEND_TASK       "task {1} '{2}' を追加中。"
+#define STRING_CMD_APPEND_1          "{1} タスク を追加。"
+#define STRING_CMD_APPEND_N          "{1} タスク を追加。"
+#define STRING_CMD_APPEND_TASK       "タスク {1} '{2}' を追加中。"
 #define STRING_CMD_APPEND_TASK_R     "Appending to recurring task {1} '{2}'."
 #define STRING_CMD_APPEND_CONFIRM_R  "This is a recurring task.  Do you want to append to all pending recurrences of this same task?"
-#define STRING_CMD_APPEND_CONFIRM    "task {1} '{2}' を追加?"
-#define STRING_CMD_APPEND_NO         "Task を追加できませんでした。"
+#define STRING_CMD_APPEND_CONFIRM    "タスク {1} '{2}' を追加?"
+#define STRING_CMD_APPEND_NO         "タスク を追加できませんでした。"
 
 #define STRING_CMD_PREPEND_USAGE     "Prepends text to an existing task description"
 #define STRING_CMD_PREPEND_1         "Prepended {1} task."
@@ -424,14 +429,14 @@
 #define STRING_CMD_PREPEND_CONFIRM   "Prepend to task {1} '{2}'?"
 #define STRING_CMD_PREPEND_NO        "Task not prepended."
 
-#define STRING_CMD_ANNO_USAGE        "Adds an annotation to an existing task"
+#define STRING_CMD_ANNO_USAGE        "既存のタスクに注釈を追加"
 #define STRING_CMD_ANNO_CONFIRM      "Annotate task {1} '{2}'?"
-#define STRING_CMD_ANNO_TASK         "Annotating task {1} '{2}'."
+#define STRING_CMD_ANNO_TASK         "タスク{1} に注釈 '{2}' を追加"
 #define STRING_CMD_ANNO_TASK_R       "Annotating recurring task {1} '{2}'."
 #define STRING_CMD_ANNO_CONFIRM_R    "This is a recurring task.  Do you want to annotate all pending recurrences of this same task?"
 #define STRING_CMD_ANNO_NO           "Task not annotated."
-#define STRING_CMD_ANNO_1            "Annotated {1} task."
-#define STRING_CMD_ANNO_N            "Annotated {1} tasks."
+#define STRING_CMD_ANNO_1            "{1} task に注釈付加."
+#define STRING_CMD_ANNO_N            "{1} task に注釈付加."
 
 #define STRING_CMD_COLUMNS_USAGE     "All supported columns and formatting styles"
 #define STRING_CMD_COLUMNS_NOTE      "* Means default format, and therefore optional.  For example, 'due' and 'due.formatted' are equivalent."
@@ -439,19 +444,19 @@
 #define STRING_CMD_COLUMNS_ARGS      "You can only specify one search string."
 
 #define STRING_CMD_DENO_USAGE        "Deletes an annotation"
-#define STRING_CMD_DENO_NONE         "The specified task has no annotations that can be deleted."
-#define STRING_CMD_DENO_CONFIRM      "Denotate task {1} '{2}'?"
-#define STRING_CMD_DENO_FOUND        "Found annotation '{1}' and deleted it."
-#define STRING_CMD_DENO_NOMATCH      "Did not find any matching annotation to be deleted for '{1}'."
+#define STRING_CMD_DENO_NONE         "指定されたtaskには注釈がないので削除できません。"
+#define STRING_CMD_DENO_CONFIRM      "タスク {1} から注釈 '{2}' を削除しますか?"
+#define STRING_CMD_DENO_FOUND        "注釈 '{1}' が見つかったので削除します。"
+#define STRING_CMD_DENO_NOMATCH      "'{1}' に一致する注釈が見つからなかったので削除できません。"
 #define STRING_CMD_DENO_NO           "Task not denotated."
 #define STRING_CMD_DENO_1            "Denotated {1} task."
 #define STRING_CMD_DENO_N            "Denotated {1} tasks."
 
 #define STRING_CMD_IMPORT_USAGE      "JSON ファイルをインポート"
 #define STRING_CMD_IMPORT_SUMMARY    "{1} task をインポートしました。"
-#define STRING_CMD_IMPORT_NOFILE     "インポートするファイルを指定してください。"
 #define STRING_CMD_IMPORT_FILE       "'{1}' をインポート中"
 #define STRING_CMD_IMPORT_MISSING    "ファイル '{1}' が見つかりません。"
+#define STRING_CMD_IMPORT_UUID_BAD   "Not a valid UUID '{1}'."
 #define STRING_TASK_NO_DESC          "Annotation is missing a description: {1}"
 #define STRING_TASK_NO_ENTRY         "Annotation is missing an entry date: {1}"
 #define STRING_CMD_SYNC_USAGE        "Taskserver とデータを同期"
@@ -511,22 +516,22 @@
 #define STRING_CMD_DIAG_HOOK_ENABLE  "Enabled"
 #define STRING_CMD_DIAG_HOOK_DISABLE "Disabled"
 
+#define STRING_CMD_COMMANDS_USAGE    "Generates a list of all commands, with behavior details"
 #define STRING_CMD_HCOMMANDS_USAGE   "Generates a list of all commands, for autocompletion purposes"
 #define STRING_CMD_ZSHCOMMANDS_USAGE "Generates a list of all commands, for zsh autocompletion purposes"
 #define STRING_CMD_ZSHATTS_USAGE     "Generates a list of all attributes, for zsh autocompletion purposes"
 #define STRING_CMD_ALIASES_USAGE     "Generates a list of all aliases, for autocompletion purposes"
-#define STRING_CMD_INSTALL_USAGE     "Installs extensions and external scripts"
 
 #define STRING_CMD_MODIFY_USAGE1     "Modifies the existing task with provided arguments."
 #define STRING_CMD_MODIFY_NO_DUE     "You cannot specify a recurring task without a due date."
 #define STRING_CMD_MODIFY_REM_DUE    "You cannot remove the due date from a recurring task."
 #define STRING_CMD_MODIFY_REC_ALWAYS "You cannot remove the recurrence from a recurring task."
-#define STRING_CMD_MODIFY_TASK       "Modifying task {1} '{2}'."
+#define STRING_CMD_MODIFY_TASK       "タスク {1} '{2}' を変更します。"
 #define STRING_CMD_MODIFY_TASK_R     "Modifying recurring task {1} '{2}'."
-#define STRING_CMD_MODIFY_1          "Modified {1} task."
-#define STRING_CMD_MODIFY_N          "Modified {1} tasks."
-#define STRING_CMD_MODIFY_NO         "Task not modified."
-#define STRING_CMD_MODIFY_CONFIRM    "Modify task {1} '{2}'?"
+#define STRING_CMD_MODIFY_1          "{1} タスク を変更。"
+#define STRING_CMD_MODIFY_N          "{1} タスク を変更。"
+#define STRING_CMD_MODIFY_NO         "タスク は変更されませんでした。"
+#define STRING_CMD_MODIFY_CONFIRM    "タスク {1} '{2}' を変更しますか?"
 #define STRING_CMD_MODIFY_RECUR      "This is a recurring task.  Do you want to modify all pending recurrences of this same task?"
 #define STRING_CMD_MODIFY_NEED_TEXT  "Additional text must be provided."
 
@@ -554,7 +559,7 @@
 #define STRING_CMD_CONFIG_NO_NAME    "Specify the name of a config variable to modify."
 #define STRING_CMD_HCONFIG_USAGE     "Lists all supported configuration variables, for completion purposes"
 #define STRING_CMD_CONTEXT_USAGE     "Set and define contexts (default filters)"
-#define STRING_CMD_CONTEXT_DEF_SUCC  "Context '{1}' defined."
+#define STRING_CMD_CONTEXT_DEF_SUCC  "Context '{1}' defined. Use 'task context {1}' to activate."
 #define STRING_CMD_CONTEXT_DEF_FAIL  "Context '{1}' not defined."
 #define STRING_CMD_CONTEXT_DEF_USAG  "Both context name and its definition must be provided."
 #define STRING_CMD_CONTEXT_DEF_ABRT  "Context definiton aborted."
@@ -585,6 +590,7 @@
 #define STRING_CMD_BURN_USAGE_D      "Shows a graphical burndown chart, by day"
 #define STRING_CMD_BURN_TITLE        "Burndown"
 #define STRING_CMD_BURN_TOO_SMALL    "Terminal window too small to draw a graph."
+#define STRING_CMD_BURN_TOO_LARGE    "Terminal window too large to draw a graph."
 #define STRING_CMD_BURN_DAILY        "Daily"
 #define STRING_CMD_BURN_WEEKLY       "Weekly"
 #define STRING_CMD_BURN_MONTHLY      "Monthly"
@@ -603,19 +609,19 @@
 #define STRING_CMD_CAL_LABEL_HOL     "Holiday"
 #define STRING_CMD_CAL_SUN_MON       "'weekstart' 設定変数は 'Sunday' または 'Monday' のみが使えます。"
 #define STRING_CMD_EDIT_USAGE        "task を直接変更するためにエディタを起動します"
-#define STRING_CMD_CALC_USAGE        "Calculator"
+#define STRING_CMD_CALC_USAGE        "電卓"
 
 // Config
 #define STRING_CONFIG_OVERNEST       "構成ファイルのネストが10以上になっています - これは間違いです。"
 #define STRING_CONFIG_READ_INCLUDE   "インクルードファイル '{1}' が読み込めません。"
 #define STRING_CONFIG_INCLUDE_PATH   "Can only include files with absolute paths, not '{1}'"
 #define STRING_CONFIG_BAD_ENTRY      "Malformed entry '{1}' in config file."
-#define STRING_CONFIG_BAD_WRITE      "Could not write to '{1}'."
+#define STRING_CONFIG_BAD_WRITE      "'{1}' へ書き込みできません。"
 #define STRING_CONFIG_DEPRECATED_COL "Your .taskrc file contains reports with deprecated columns.  Please check for entry_time, start_time or end_time in:"
 #define STRING_CONFIG_DEPRECATED_VAR "Your .taskrc file contains variables that are deprecated:"
 
 // Context
-#define STRING_CONTEXT_CREATE_RC     "A configuration file could not be found in {1}\n\nWould you like a sample {2} created, so taskwarrior can proceed?"
+#define STRING_CONTEXT_CREATE_RC     "設定ファイルが {1} 中で見つけられませんでした。\n\nサンプルの {2} を作って taskwarrior が処理できるようにして良いですか?"
 #define STRING_CONTEXT_NEED_RC       "Cannot proceed without rc file."
 #define STRING_CONTEXT_RC_OVERRIDE   "TASKRC override: {1}"
 #define STRING_CONTEXT_DATA_OVERRIDE "TASKDATA override: {1}"
@@ -624,47 +630,26 @@
 #define STRING_DATE_INVALID_FORMAT   "'{1}' is not a valid date in the '{2}' format."
 #define STRING_DATE_BAD_WEEKSTART    "The 'weekstart' configuration variable may only contain 'Sunday' or 'Monday'."
 
-#define STRING_DATE_JANUARY_LONG     "january"
-#define STRING_DATE_FEBRUARY_LONG    "february"
-#define STRING_DATE_MARCH_LONG       "march"
-#define STRING_DATE_APRIL_LONG       "april"
-#define STRING_DATE_MAY_LONG         "may"
-#define STRING_DATE_JUNE_LONG        "june"
-#define STRING_DATE_JULY_LONG        "july"
-#define STRING_DATE_AUGUST_LONG      "august"
-#define STRING_DATE_SEPTEMBER_LONG   "september"
-#define STRING_DATE_OCTOBER_LONG     "october"
-#define STRING_DATE_NOVEMBER_LONG    "november"
-#define STRING_DATE_DECEMBER_LONG    "december"
+#define STRING_DATE_JANUARY          "january"
+#define STRING_DATE_FEBRUARY         "february"
+#define STRING_DATE_MARCH            "march"
+#define STRING_DATE_APRIL            "april"
+#define STRING_DATE_MAY              "may"
+#define STRING_DATE_JUNE             "june"
+#define STRING_DATE_JULY             "july"
+#define STRING_DATE_AUGUST           "august"
+#define STRING_DATE_SEPTEMBER        "september"
+#define STRING_DATE_OCTOBER          "october"
+#define STRING_DATE_NOVEMBER         "november"
+#define STRING_DATE_DECEMBER         "december"
 
-#define STRING_DATE_JANUARY_SHORT    "jan"
-#define STRING_DATE_FEBRUARY_SHORT   "feb"
-#define STRING_DATE_MARCH_SHORT      "mar"
-#define STRING_DATE_APRIL_SHORT      "apr"
-#define STRING_DATE_MAY_SHORT        "may"
-#define STRING_DATE_JUNE_SHORT       "jun"
-#define STRING_DATE_JULY_SHORT       "jul"
-#define STRING_DATE_AUGUST_SHORT     "aug"
-#define STRING_DATE_SEPTEMBER_SHORT  "sep"
-#define STRING_DATE_OCTOBER_SHORT    "oct"
-#define STRING_DATE_NOVEMBER_SHORT   "nov"
-#define STRING_DATE_DECEMBER_SHORT   "dec"
-
-#define STRING_DATE_SUNDAY_LONG      "sunday"
-#define STRING_DATE_MONDAY_LONG      "monday"
-#define STRING_DATE_TUESDAY_LONG     "tuesday"
-#define STRING_DATE_WEDNESDAY_LONG   "wednesday"
-#define STRING_DATE_THURSDAY_LONG    "thursday"
-#define STRING_DATE_FRIDAY_LONG      "friday"
-#define STRING_DATE_SATURDAY_LONG    "saturday"
-
-#define STRING_DATE_SUNDAY_SHORT     "sun"
-#define STRING_DATE_MONDAY_SHORT     "mon"
-#define STRING_DATE_TUESDAY_SHORT    "tue"
-#define STRING_DATE_WEDNESDAY_SHORT  "wed"
-#define STRING_DATE_THURSDAY_SHORT   "thu"
-#define STRING_DATE_FRIDAY_SHORT     "fri"
-#define STRING_DATE_SATURDAY_SHORT   "sat"
+#define STRING_DATE_SUNDAY           "sunday"
+#define STRING_DATE_MONDAY           "monday"
+#define STRING_DATE_TUESDAY          "tuesday"
+#define STRING_DATE_WEDNESDAY        "wednesday"
+#define STRING_DATE_THURSDAY         "thursday"
+#define STRING_DATE_FRIDAY           "friday"
+#define STRING_DATE_SATURDAY         "saturday"
 
 // dependency
 #define STRING_DEPEND_BLOCKED        "Task {1} is blocked by:"
@@ -674,19 +659,19 @@
 // DOM
 #define STRING_DOM_UNKNOWN           "<unknown>"
 #define STRING_DOM_UNREC             "DOM: Cannot get unrecognized name '{1}'."
-#define STRING_DOM_CANNOT_SET        "DOM: Cannot set '{1}'."
 
 // Eval
 #define STRING_EVAL_NO_EXPRESSION    "No expression to evaluate."
 #define STRING_EVAL_UNSUPPORTED      "Unsupported operator '{1}'."
 #define STRING_EVAL_OP_EXPECTED      "Operator expected."
-#define STRING_EVAL_NO_EVAL          "The expression could not be evaluated."
+#define STRING_EVAL_NO_EVAL          "式を評価出来ません。"
 #define STRING_PAREN_MISMATCH        "Mismatched parentheses in expression"
 
 // edit
 #define STRING_EDIT_NO_CHANGES       "No edits were detected."
-#define STRING_EDIT_NO_EDITS         "No editing performed."
+#define STRING_EDIT_FAILED           "Editing failed with exit code {1}."
 #define STRING_EDIT_COMPLETE         "Editing complete."
+#define STRING_EDIT_IN_PROGRESS      "Task is already being edited."
 #define STRING_EDIT_LAUNCHING        "Launching '{1}' now..."
 #define STRING_EDIT_CHANGES          "Edits were detected."
 #define STRING_EDIT_UNPARSEABLE      "Taskwarrior couldn't handle your edits.  Would you like to try again?"
@@ -755,7 +740,7 @@
 #define STRING_ERROR_PREFIX          "エラー: "
 #define STRING_UNKNOWN_ERROR         "不明なエラー。"
 #define STRING_TRIVIAL_INPUT         "変更したいコマンドまたはタスクを指定しなければなりません。"
-#define STRING_ASSUME_INFO           "No command specified - assuming 'information'."
+#define STRING_ASSUME_INFO           "コマンドが指定されていません - 'information' を仮定します。"
 #define STRING_INFINITE_LOOP         "Terminated substitution because more than {1} changes were made - infinite loop protection."
 #define STRING_UDA_TYPE              "User defined attributes may only be of type 'string', 'date', 'duration' or 'numeric'."
 #define STRING_UDA_TYPE_MISSING      "uda.{1}.type not found. The UDA '{1}' must have a type specified."
@@ -763,13 +748,16 @@
 #define STRING_UDA_COLLISION         "The UDA named '{1}' is the same as a core attribute, and is not permitted."
 #define STRING_INVALID_MOD           "The '{1}' attribute does not allow a value of '{2}'."
 #define STRING_INVALID_SORT_COL      "The '{1}' column is not a valid sort field."
-#define STRING_TLS_INIT_FAIL         "Error initializing TLS. {1}"
+#define STRING_TLS_INIT_FAIL         "TLS初期化でエラー。 {1}"
 #define STRING_ERROR_DETAILS         "The setting 'calendar.details.report' must contain a single report name."
+#define STRING_ERROR_NO_FILTER       "Command line filters are not supported by this command."
+#define STRING_ERROR_CONFIRM_SIGINT  "Interrupted: No changes made."
+#define STRING_ERROR_BAD_STATUS      "The status '{1}' is not valid."
 
 // Feedback
 #define STRING_FEEDBACK_NO_TASKS     "タスクがない。"
-#define STRING_FEEDBACK_NO_TASKS_SP  "No tasks specified."
-#define STRING_FEEDBACK_NO_MATCH     "一致したものはない。"
+#define STRING_FEEDBACK_NO_TASKS_SP  "タスクが1つも指定されていません。"
+#define STRING_FEEDBACK_NO_MATCH     "一致したものはありません。"
 #define STRING_FEEDBACK_TASKS_SINGLE "(1 タスク)"
 #define STRING_FEEDBACK_TASKS_PLURAL "({1} タスク)"
 #define STRING_FEEDBACK_DELETED      "{1} will be deleted."
@@ -793,6 +781,7 @@
 #define STRING_FEEDBACK_TAG_NONAG    "The 'nonag' special tag will prevent nagging when this task is modified."
 #define STRING_FEEDBACK_TAG_NOCAL    "The 'nocal' special tag will keep this task off the 'calendar' report."
 #define STRING_FEEDBACK_TAG_NEXT     "The 'next' special tag will boost the urgency of this task so it appears on the 'next' report."
+#define STRING_FEEDBACK_TAG_VIRTUAL  "Virtual tags (including '{1}') are reserved and may not be added or removed."
 #define STRING_FEEDBACK_UNBLOCKED    "Unblocked {1} '{2}'."
 #define STRING_FEEDBACK_EXPIRED      "Task {1} '{2}' expired and was deleted."
 #define STRING_FEEDBACK_BACKLOG      "There are local changes.  Sync required."
@@ -863,7 +852,7 @@
 #define STRING_TASK_VALID_BEFORE     "Warning: You have specified that the '{1}' date is after the '{2}' date."
 #define STRING_TASK_VALID_REC_DUE    "A recurring task must also have a 'due' date."
 #define STRING_TASK_VALID_RECUR      "The recurrence value '{1}' is not valid."
-#define STRING_TASK_SAFETY_VALVE     "This command has no filter, and will modify all tasks.  Are you sure?"
+#define STRING_TASK_SAFETY_VALVE     "このコマンドにはフィルタが設定されていないため全タスクが変更されます。よいですか?"
 #define STRING_TASK_SAFETY_FAIL      "コマンドの実行は中止された。"
 #define STRING_TASK_SAFETY_ALLOW     "You did not specify a filter, and with the 'allow.empty.filter' value, no action is taken."
 #define STRING_TASK_INVALID_DUR      "The duration value '{1}' is not supported."
@@ -888,6 +877,10 @@
 #define STRING_TDB2_UNDO_COMPLETE    "Undo complete."
 #define STRING_TDB2_UNDO_SYNCED      "Cannot undo change because the task was already synced.  Modify the task instead."
 #define STRING_TDB2_DIRTY_EXIT       "Exiting with unwritten changes to {1}"
+#define STRING_TDB2_UNWAIT           "Un-waiting task '{1}'"
+
+// recur.cpp
+#define STRING_RECUR_CREATE          "Creating recurring task instance '{1}'"
 
 // View
 #define STRING_VIEW_TOO_SMALL        "The report has a minimum width of {1} and does not fit in the available width of {2}."
@@ -895,7 +888,7 @@
 // Usage text.  This is an exception, and contains \n characters and formatting.
 #define STRING_CMD_HELP_TEXT \
   "Taskwarrior のドキュメンテーションは、'man task', 'man taskrc', 'man " \
-  "task-color', 'man task-sync または http://taskwarrior.org にあります。\n" \
+  "task-color', 'man task-sync' または http://taskwarrior.org にあります。\n" \
   "\n" \
   "一般的なコマンド形式は以下の通りです:\n" \
   "  task [<filter>] <command> [<mods>]\n" \
@@ -945,21 +938,27 @@
   "  end:            タスク完了/削除日" \
   "  start:          タスク開始日\n" \
   "  scheduled:      タスク開始をスケジュールした日\n" \
+  "  modified:       Date task was last modified\n" \
   "  depends:        このタスクが依存する他のタスク\n" \
   "\n" \
   "属性修飾子はフィルタの効果をより正確にします。使える変更子は以下の通りです:\n" \
-  "  before     (同義語は under, below)\n" \
-  "  after      (同義語は over, above)\n" \
-  "  none\n" \
-  "  any\n" \
-  "  is         (同義語は equals)\n" \
-  "  isnt       (同義語は not)\n" \
-  "  has        (同義語は contains)\n" \
-  "  hasnt\n" \
-  "  startswith (同義語は left)\n" \
-  "  endswith   (同義語は right)\n" \
-  "  word\n" \
-  "  noword\n" \
+  "\n" \
+  "  Modifiers         Example            Equivalent           Meaning\n" \
+  "  ----------------  -----------------  -------------------  -------------------------\n" \
+  "                    due:today          due = today          Fuzzy match\n" \
+  "  not               due.not:today      due != today         Fuzzy non-match\n" \
+  "  before, below     due.before:today   due < tomorrow       Exact date comparison\n" \
+  "  after, above      due.after:today    due > tomorrow       Exact date comparison\n" \
+  "  none              project.none:      project == ''        Empty\n" \
+  "  any               project.any:       project !== ''       Not empty\n" \
+  "  is, equals        project.is:x       project == x         Exact match\n" \
+  "  isnt              project.isnt:x     project !== x        Exact non-match\n" \
+  "  has, contains     desc.has:Hello     desc ~ Hello         Pattern match\n" \
+  "  hasnt,            desc.hasnt:Hello   desc !~ Hello        Pattern non-match\n" \
+  "  startswith, left  desc.left:Hel      desc ~ '^Hel'        Beginning match\n" \
+  "  endswith, right   desc.right:llo     desc ~ 'llo$'        End match\n" \
+  "  word              desc.word:Hello    desc ~ '\\bHello\\b'   Boundaried word match\n" \
+  "  noword            desc.noword:Hello  desc !~ '\\bHello\\b'  Boundaried word non-match\n" \
   "\n" \
   "さらに、代数演算もサポートします:\n" \
   "  and  or  xor            論理演算子\n" \

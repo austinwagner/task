@@ -30,8 +30,7 @@
 #include <string>
 #include <stdlib.h>
 #include <Context.h>
-#include <Variant.h>
-#include <Duration.h>
+#include <ISO8601.h>
 #include <Task.h>
 #include <text.h>
 #include <i18n.h>
@@ -68,7 +67,6 @@ void sort_tasks (
 // require re-parsing.
 //
 // Essentially a static implementation of a dynamic operator<.
-// UDA string values delegate to Variant::operator<.
 static bool sort_compare (int left, int right)
 {
   std::string field;
@@ -80,10 +78,9 @@ static bool sort_compare (int left, int right)
   float left_real;
   float right_real;
 
-  std::vector <std::string>::iterator k;
-  for (k = global_keys.begin (); k != global_keys.end (); ++k)
+  for (auto& k : global_keys)
   {
-    context.decomposeSortField (*k, field, ascending, breakIndicator);
+    context.decomposeSortField (k, field, ascending, breakIndicator);
 
     // Urgency.
     if (field == "urgency")
@@ -132,26 +129,8 @@ static bool sort_compare (int left, int right)
     }
 
     // Due Date.
-    else if (field == "due")
-    {
-      const std::string& left_string  = (*global_data)[left].get_ref  (field);
-      const std::string& right_string = (*global_data)[right].get_ref (field);
-
-      if (left_string != "" && right_string == "")
-        return true;
-
-      if (left_string == "" && right_string != "")
-        return false;
-
-      if (left_string == right_string)
-        continue;
-
-      return ascending ? (left_string < right_string)
-                       : (left_string > right_string);
-    }
-
-    // Date.
-    else if (field == "end"      ||
+    else if (field == "due"      ||
+             field == "end"      ||
              field == "entry"    ||
              field == "start"    ||
              field == "until"    ||
@@ -161,6 +140,12 @@ static bool sort_compare (int left, int right)
     {
       const std::string& left_string  = (*global_data)[left].get_ref  (field);
       const std::string& right_string = (*global_data)[right].get_ref (field);
+
+      if (left_string != "" && right_string == "")
+        return true;
+
+      if (left_string == "" && right_string != "")
+        return false;
 
       if (left_string == right_string)
         continue;
@@ -205,8 +190,8 @@ static bool sort_compare (int left, int right)
       if (left_string == right_string)
         continue;
 
-      Duration left_duration (left_string);
-      Duration right_duration (right_string);
+      ISO8601p left_duration (left_string);
+      ISO8601p right_duration (right_string);
       return ascending ? (left_duration < right_duration)
                        : (left_duration > right_duration);
     }
@@ -226,24 +211,46 @@ static bool sort_compare (int left, int right)
         return ascending ? (left_real < right_real)
                          : (left_real > right_real);
       }
-      // UDA values of type 'string' are sorted by Variant::operator<.
-      // By setting 'source' to the UDA name, the comparison operator can use
-      // the custom sort order, if defined.
       else if (type == "string")
       {
-        Variant l ((*global_data)[left].get_ref  (field));
-        Variant r ((*global_data)[right].get_ref (field));
-        if (l == r)
+        const std::string left_string = (*global_data)[left].get_ref (field);
+        const std::string right_string = (*global_data)[right].get_ref (field);
+
+        if (left_string == right_string)
           continue;
 
-        l.source (field);
-        r.source (field);
-        return ascending ? (l < r) : (r < l);
+        // UDAs of the type string can have custom sort orders, which need to be considered.
+        auto order = Task::customOrder.find (field);
+        if (order != Task::customOrder.end ())
+        {
+          // Guaranteed to be found, because of ColUDA::validate ().
+          auto posLeft  = std::find (order->second.begin (), order->second.end (), left_string);
+          auto posRight = std::find (order->second.begin (), order->second.end (), right_string);
+          return ascending ? (posLeft < posRight) : (posLeft > posRight);
+        }
+        else
+        {
+          // Empty values are unconditionally last, if no custom order was specified.
+          if (left_string == "")
+            return false;
+          else if (right_string == "")
+            return true;
+
+          return ascending ? (left_string < right_string)
+                           : (left_string > right_string);
+        }
       }
+
       else if (type == "date")
       {
         const std::string& left_string  = (*global_data)[left].get_ref  (field);
         const std::string& right_string = (*global_data)[right].get_ref (field);
+
+        if (left_string != "" && right_string == "")
+          return true;
+
+        if (left_string == "" && right_string != "")
+          return false;
 
         if (left_string == right_string)
           continue;
@@ -259,8 +266,8 @@ static bool sort_compare (int left, int right)
         if (left_string == right_string)
           continue;
 
-        Duration left_duration (left_string);
-        Duration right_duration (right_string);
+        ISO8601p left_duration (left_string);
+        ISO8601p right_duration (right_string);
         return ascending ? (left_duration < right_duration)
                          : (left_duration > right_duration);
       }

@@ -37,31 +37,20 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 ColumnProject::ColumnProject ()
 {
-  _name  = "project";
-  _type  = "string";
-  _style = "full";
-  _label = STRING_COLUMN_LABEL_PROJECT;
-
-  _styles.push_back ("full");
-  _styles.push_back ("parent");
-  _styles.push_back ("indented");
-
-  _examples.push_back (STRING_COLUMN_EXAMPLES_PROJ);
-  _examples.push_back (STRING_COLUMN_EXAMPLES_PAR);
-  _examples.push_back (STRING_COLUMN_EXAMPLES_IND);
-
+  _name      = "project";
+  _type      = "string";
+  _style     = "full";
+  _label     = STRING_COLUMN_LABEL_PROJECT;
+  _styles    = {"full", "parent", "indented"};
+  _examples  = {STRING_COLUMN_EXAMPLES_PROJ,
+                STRING_COLUMN_EXAMPLES_PAR,
+                STRING_COLUMN_EXAMPLES_IND};
   _hyphenate = context.config.getBoolean ("hyphenate");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ColumnProject::~ColumnProject ()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool ColumnProject::validate (std::string& value)
-{
-  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,7 +65,7 @@ void ColumnProject::measure (Task& task, unsigned int& minimum, unsigned int& ma
 
     if (_style == "parent")
     {
-      std::string::size_type period = project.find ('.');
+      auto period = project.find ('.');
       if (period != std::string::npos)
         project = project.substr (0, period);
     }
@@ -106,7 +95,7 @@ void ColumnProject::render (
     std::string project = task.get (_name);
     if (_style == "parent")
     {
-      std::string::size_type period = project.find ('.');
+      auto period = project.find ('.');
       if (period != std::string::npos)
         project = project.substr (0, period);
     }
@@ -118,9 +107,8 @@ void ColumnProject::render (
     std::vector <std::string> raw;
     wrapText (raw, project, width, _hyphenate);
 
-    std::vector <std::string>::iterator i;
-    for (i = raw.begin (); i != raw.end (); ++i)
-      lines.push_back (color.colorize (leftJustify (*i, width)));
+    for (auto& i : raw)
+      lines.push_back (color.colorize (leftJustify (i, width)));
   }
 }
 

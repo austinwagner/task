@@ -39,11 +39,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdUrgency::CmdUrgency ()
 {
-  _keyword     = "_urgency";
-  _usage       = "task <filter> _urgency";
-  _description = STRING_CMD_URGENCY_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "_urgency";
+  _usage                 = "task <filter> _urgency";
+  _description           = STRING_CMD_URGENCY_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::internal;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,20 +68,19 @@ int CmdUrgency::execute (std::string& output)
 
   // Display urgency for the selected tasks.
   std::stringstream out;
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
-    if (task->id)
+    if (task.id)
     {
       out << format (STRING_CMD_URGENCY_RESULT,
-                     task->id, task->urgency ())
+                     task.id, trim (format (task.urgency (), 6, 3)))
           << "\n";
     }
     else
     {
       out << format (STRING_CMD_URGENCY_RESULT,
-                     task->get ("uuid"),
-                     task->urgency ())
+                     task.get ("uuid"),
+                     trim (format (task.urgency (), 6, 3)))
           << "\n";
     }
   }

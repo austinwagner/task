@@ -41,21 +41,13 @@ ColumnMask::ColumnMask ()
   _style      = "default";
   _label      = STRING_COLUMN_LABEL_MASK;
   _modifiable = false;
-
-  _styles.push_back ("default");
-
-  _examples.push_back ("++++---");
+  _styles     = {"default"};
+  _examples   = {"++++---"};
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ColumnMask::~ColumnMask ()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool ColumnMask::validate (std::string& value)
-{
-  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,7 +68,7 @@ void ColumnMask::measure (Task& task, unsigned int& minimum, unsigned int& maxim
 void ColumnMask::render (
   std::vector <std::string>& lines,
   Task& task,
-  int width,
+  int,
   Color& color)
 {
   if (task.has (_name))

@@ -29,11 +29,10 @@
 import sys
 import os
 import unittest
-from datetime import datetime
 # Ensure python finds the local simpletap module
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from basetest import Task, TestCase, Taskd, ServerTestCase
+from basetest import Task, TestCase
 
 
 class TestCLI(TestCase):
@@ -45,12 +44,12 @@ class TestCLI(TestCase):
 
     def test_quoted_args_remain_intact(self):
         """Quoted arguments should remain unmolested."""
-        self.t(("add", "'a/b'"))
-        code, out, err = self.t(("_get", "1.description"))
+        self.t("add 'a/b'")
+        code, out, err = self.t("_get 1.description")
         self.assertIn("a/b", out)
 
-        self.t(("add", "'1-2'"))
-        code, out, err = self.t(("_get", "2.description"))
+        self.t("add '1-2'")
+        code, out, err = self.t("_get 2.description")
         self.assertIn("1-2", out)
 
 
@@ -58,4 +57,4 @@ if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

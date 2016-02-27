@@ -64,6 +64,8 @@ public:
   unsigned long total () const;
   void subtract (unsigned long);
 
+  static unsigned long now ();
+
 private:
   std::string    _description;
   bool           _running;
@@ -76,31 +78,6 @@ private:
 #endif
   unsigned long  _total;
 };
-
-// HighResTimer is a stop watch with microsecond resolution.
-class HighResTimer
-{
-public:
-  HighResTimer ();
-  ~HighResTimer ();
-  HighResTimer (const HighResTimer&);
-  HighResTimer& operator= (const HighResTimer&);
-
-  void start ();
-  void stop ();
-  double total () const;
-
-private:
-#ifdef WINDOWS
-  LARGE_INTEGER _freq;
-  LARGE_INTEGER _start;
-  LARGE_INTEGER _stop;
-#else
-  struct timeval _start;
-  struct timeval _stop;
-#endif
-};
-
 
 #endif
 

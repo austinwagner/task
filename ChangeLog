@@ -1,3 +1,218 @@
+2.5.0 (2015-10-21) dd5968a61b1fab258b38879cfdbb7d67f1bcd550
+
+- TW-20   Task edit loses annotation precision, causing journal updating code
+          to incorrectly indicate annotions are deleted and recreated (thanks
+          to Cory Donnelly).
+- TW-32   Unable to change annotations via task edit (thanks to Peter De
+          Poorter).
+- TW-46   Circular dependency detection broken for missing tasks.
+- TW-50   Creation time is lost after editing (thanks to Ben Boeckel).
+- TW-148  default.command options (thanks to David Patrick).
+- TW-158  JSON export should model dependencies as array (thanks to Nicholas E.
+          Rabenau).
+- TW-263  Unexpected zsh autocomplete behaviour (thanks to Leon Feng, Marc
+          Cornellà).
+- TW-269  \t is not rendered correctly (thanks to Scott Kostyshak).
+- TW-283  Process rc.* items when executing config (thanks to Ben Armstrong).
+- TW-303  Ability for "import" to update existing tasks (thanks to Kosta
+          Harlan).
+- TW-1285 relative dates combined with times (thanks to Adam Gibbins).
+- TW-1319 UDA is NOT sorted corresponding to the order of UDA list entries
+          (thanks to Onion).
+- TW-1344 Filter due:yyyy-mm-dd is failing to display daily recurring tasks if
+          there is deleted task in the series.(thanks to Svetoslav Trochev).
+- TW-1375 Use of ^ in regex parsed as exponentiate operator (thanks to
+          lolilolicon).
+- TW-1389 tw will import same UUID n-times if part of same import (thanks to
+          Markus Beppler).
+- TW-1419 On add '-tag' is considered a tag removal, which makes no sense.
+- TW-1426 Adding a date in 1963 (why not?) stores a negative epoch, which fails
+          to export (thanks to Black Ops Testing).
+- TW-1430 Slashes in project names don't work (thanks to Richard Boß).
+- TW-1432 start/stop can be issued on completed tasks  (thanks to Renato Alves).
+- TW-1440 "task import" from STDIN (thanks to Renato Alves).
+- TW-1448 Add possibility to modify newest task (thanks to Jens Erat).
+- TW-1452 The uuid:<uuid> filter does not work (thanks to Tomas Babej).
+- TW-1454 Redundant dependency should not stop modification  (thanks to Tomas
+          Babej).
+- TW-1455 Filter parser does not properly handle parentheses in attributes
+          (thanks to Tomas Babej).
+- TW-1456 Filter parser does not always handle multiple arguments bundled into
+          one with apostrophes (thanks to Tomas Babej).
+- TW-1466 UDA with type duration is stored as text/string (thanks to Thomas
+          Sullivan).
+- TW-1472 Syntactic sugar morphs into regex expressions, even if turned off
+          (thanks to Richard Boß).
+- TW-1475 task config expands values with unnecessary spaces (thanks to Tomas
+          Babej).
+- TW-1478 due:easter sets the easter of the current year regardless of the date
+          (thanks to David Costa).
+- TW-1479 Task arguments not properly parsed if they contain a space (thanks to
+          Tomas Babej).
+- TW-1480 Weird behaviour on redundant filter beginning with number (thanks to
+          Tomas Babej).
+- TW-1485 can't delete recurring tasks (except by workaround) (thanks to
+          Dustin J. Mitchell).
+- TW-1488 You have more urgent tasks (thanks to Stefan Betz, Denis Kasak).
+- TW-1496 Translation manuals are outdated/miss information (thanks to Jens
+          Erat).
+- TW-1499 Invalid due date produces jump to beggining of the unix epoch (thanks
+          to Tomas Babej).
+- TW-1511 Project titles not properly parsed if they contain hyphens (thanks to
+          Leon Feng, Blake Sweeney, Dylan Mikus).
+- TW-1515 abbreviation.minimum does not apply to date recognition (thanks to
+          Lars Beckers).
+- TW-1521 task project!=PROJECTNAME does not work (Regression) (thanks to
+          Florian Petry).
+- TW-1527 Extra spaces added around slashes (thanks to Renato Alves).
+- TW-1529 Parser incorrectly inserting spaces into task description (thanks to
+          David Brenner).
+- TW-1533 dateformat confusion, regress tests (thanks to Peter Rochen).
+- TW-1537 soww Synonym produces wrong date (thanks to Michael Meier).
+- TW-1543 cmake complains "test" is not a valid target (on arch linux) (thanks
+          to Renato Alves).
+- TW-1553 Setting defaultheight:0 makes burndown command hang (thanks to Tomas
+          Babej).
+- TW-1555 Project Names Converted to Dates (thanks to Ryan).
+- TW-1566 Context is applied on 'task export' (thanks to Tomas Babej).
+- TW-1569 update wait:<wait-date> manpage entry (thanks to David Patrick).
+- TW-1572 Better urgency inheritance (thanks to Jens Erat).
+- TW-1575 `task log` mangles URLs when quoted (thanks to Luke Macken).
+- TW-1592 Able to add duplicate tags using 'tags:<value>' (thanks to Tomas
+          Babej).
+- TW-1593 context and description substring (thanks to Peter Rochen).
+- TW-1594 Filter "due.before" with relative dates stopped working (thanks to
+          Sebastien Badia).
+- TW-1598 (Bulk) modification of tasks unintentionally overwrites description
+          if a context is active (thanks to Johannes Schlatow).
+- TW-1600 Filtering "regressions"(?) in task-2.4.3, task-2.4.4 (thanks to Ralph
+          Bean).
+- TW-1607 Theme Support for missing UDAs (thanks to Stefan Betz).
+- TW-1609 In 'urgency<10', 10 is interpreted as an ID (thanks to Wim Schuermann).
+- TW-1611 soww weirdness (thanks to Wim Schuermann).
+- TW-1612 Spurious whitespace added in task descriptions around certain symbols
+          (thanks to Denis Kasak).
+- TW-1615 Japanese translation for Taskwarrior(150513) (thanks to ribbon).
+- TW-1616 Intermittent lengthy delay when starting or completing a task (thanks
+          to Jeremy John Reeder).
+- TW-1617 Can't search for multi-word project (thanks to Audrey Easterday).
+- TW-1619 fish completion contain backspaces in fish master version (thanks to
+          Johannes Wienke₎.
+- TW-1620 Dateformat wrongly interpreted (thanks to Dirk Deimeke).
+- TW-1621 Recurrent parent tasks shouldn't be counted in history (thanks to
+          Denis Kasak).
+- TW-1622 Duration UDA can't take an algebraic expression (thanks to Jeremy John
+          Reeder).
+- TW-1624 Report filters combine incorrectly with command line with terminator.
+- TW-1626 Wrong wait date (thanks to Andrea Rizzi).
+- TW-1627 'mon' is replaced with date in project field (thanks to James Cline).
+- TW-1629 Descriptions often get overwritten with "( or )" (thanks to Jeremy
+          John Reeder).
+- TW-1630 "Due" parsing behavior seems inconsistent (thanks to Jim B).
+- TW-1632 Japanese translation for Taskwarrior(150713) (thanks to ribbon).
+- TW-1634 due.not:<date> excludes only tasks scheduled at mitnight (thanks to
+          Tomas Babej).
+- TW-1635 Running "task anystringatall" does not filter anything (thanks to
+          Tomas Babej).
+- TW-1636 UUID with numeric-only first segment is not parsed properly (thanks
+          to Tomas Babej).
+- TW-1637 project name "mod" interpreted as date (thanks to Wim Schuermann).
+- TW-1638 Undo doesn't work when a context is set (thanks to Jeremy John Reeder).
+- TW-1640 '_get <id>.start' for an inactive tasks returns a date formatted from
+          epoch 0.
+- TW-1641 'edit' should process or reject <mods> arguments (thanks to Daniel
+          Shahaf).
+- TW-1642 After "--", an apostrophe unexpectedly ends the task description
+          (thanks to Jeremy John Reeder).
+- TW-1643 Batch modifying tasks under context sets description to '( )'
+          (thanks to Leon Feng).
+- TW-1647 descriptions that are stringified ids (thanks to Daniel Shahaf).
+- TW-1648 Typo in Documentation (thanks to Simon W. Jackson).
+- TW-1649 'columns' colorizes output when stdout is a pipe (thanks to Daniel
+          Shahaf).
+- TW-1651 Provide opt-out of filter parser's id treatment (thanks to Daniel
+          Shahaf).
+- TW-1652 task rm misparsed (thanks to Daniel Shahaf).
+- TW-1653 info report regression; shouldn't be context sensitive (thanks to
+          David Patrick).
+- TW-1655 Inform "No changes made." when quitting early due to signal (thanks
+          to Daniel Shahaf).
+- TW-1656 Implicitly parenthesize argv filter (thanks to Daniel Shahaf).
+- TW-1660 Disabled sorting option (thanks to David Patrick).
+- TW-1662 filter before add becomes description (thanks to Daniel
+          Shahaf).
+- TW-1664 Notify of waiting→pending promotion (thanks to Daniel Shahaf).
+- TW-1666 import should reject invalid data (thanks to Daniel Shahaf).
+- TW-1670 Reversed ranges are parsed as a mathematician would expect (thanks to
+          Daniel Shahaf).
+- TW-1671 task add: segfault with foo-bar:1 (thanks to Daniel Shahaf).
+- TW-1675 project.not:something doesn't exclude project:something.subprojects
+          (thanks to Ander).
+- TW-1678 segfault in ~ViewTask() (thanks to Daniel Shahaf).
+- TW-1683 Dom reference for project not properly evaluated (thanks to Tomas
+          Babej).
+- TW-1684 make no-date > has-date for all date attributes (thanks to David
+          Patrick).
+- TW-1686 Sorting not working on udas (thanks to Naga Kiran).
+- TW-1687 task add due:som appears to be interpreted as 'someday' (thanks to
+          Alan Young).
+- TW-1688 task fails to import (thanks to Rainer Müller).
+- TW-1692 '42//' segfaults (thanks to Daniel Shahaf).
+- TW-1695 edit: Concurrent edits (thanks to Daniel Shahaf).
+- TW-1699 Command interpretation displayed incorrectly (thanks to Tomas Babej).
+- TW-1700 modify tags behavior changed (thanks to David Badura).
+- TW-1701 Some generated UUIDs deemed invalid (thanks to Wim Schuermann).
+- TW-1707 Context can leak into modifications (thanks to Tomas Babej).
+- TW-1715 Dates misinterpreted when no dateformat active.
+- TW-1716 on-modify hooks fail if `date.iso` is not set (thanks to Jens Erat).
+- Prevent potential task duplication during import for non-pending tasks.
+- Show the active context in "context list", if any is active.
+- Fix "task edit" dropping annotation text after newlines.
+- Removed obsolete script 'context'.
+- Fix "project" verbosity info not showing without "footnote" being manually
+  enabled.
+- Internal plumbing:  Use variadic templates for format(), reducing code bloat
+  and enabling more flexible use of the function.
+- Enable "task sync" support by default.  "cmake -DENABLE_SYNC=OFF" allows
+  disabling it and building Taskwarrior without libgnutls available.
+- An attempt to add or remove a virtual tag is now an error (thanks to Scott M).
+- json.array now defaults to "on", making "export" output a JSON array that
+  can be parsed by most JSON libraries without changes.
+- The '_ids', '_projects', '_tags', '_uuids' helper commands are deprecated,
+  and replaced by the new '_unique' helper command, which generates lists of
+  unique values for the specified attribute.
+- "import" can now import JSON arrays, the new default "export" output.
+- The '_tags' helper command now includes virtual tags (thanks to Daniel
+  Shahaf).
+- When multiple tasks are 'edit'ed, a failure causes the editing to stop (thanks
+  to Daniel Shahaf).
+- New 'UDA', 'ORPHAN', 'PROJECT', 'PRIORITY' and 'LATEST' virtual tags.
+- Commands that do not accept filters or modifications now generate an error
+  when extra arguments are specified.
+- Improved zsh support (thanks to Daniel Shahaf).
+- Dependencies are exported as a JSON array by default, overridable using
+  'rc.json.depends.array=off'. Both forms are imported.
+- The 'commands' command shows the supported commands, with additional details
+  that determine some of their behavior.
+- Improved feedback for tasks that do not have ID (thanks to Tomas Babej).
+- Comma-separated lists of UUIDs can no longer be used as a filter. Use the
+  space character instead.
+- New 'recur' verbosity token generates a notification message when a recurring
+  task is created.
+- New 'unwait' verbosity token generates a notification message when a waiting
+  task becomes visible.
+- New 'rule.color.merge=yes|no' configuration option, that can optionally
+  turn off color blending engine.
+- The 'urgency.next.coefficient' configuration option is deprecated in favor
+  of 'urgency.user.tag.next.coefficient'.
+- The long deprecated syntax of color values with underscores (i.e 'on_red')
+  is no longer supported.
+- Correct a false-positive warning when a due date is removed and a wait is
+  added.
+- When GC is turned off, disable the query shortcuts, which no longer apply.
+
+------ current release ---------------------------
+
 2.4.4 (2015-05-10) df49aaba126484b668c41d3ff9301f8d8ec49987
 
 - TW-69   wait dates relative to due date (thanks to John Florian).
@@ -17,7 +232,7 @@
 - The 'obfuscate' setting, if set to '1' will replace all text with 'xxx'.
 - POSIX file locking mechanism, eliminating platform-specific code.
 
------- current release ---------------------------
+------ old releases ------------------------------
 
 2.4.3 (2015-04-19) 499044b9b6bdbc95338ea585204e949d80b24a09
 
@@ -530,8 +745,6 @@ Bugs
   (thanks to greenskeleton).
 - Fixed rc.nag documentation (thanks to Jeroen Budts).
 - Fixed bug where task edit incorrectly claimed duration UDA was modified.
-
------- old releases ------------------------------
 
 2.2.0 (2013-04-07) 05f7948f7e70d7be3642bdc336faace52eaa9dfb
 

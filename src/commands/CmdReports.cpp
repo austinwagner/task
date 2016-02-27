@@ -38,11 +38,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdReports::CmdReports ()
 {
-  _keyword     = "reports";
-  _usage       = "task          reports";
-  _description = STRING_CMD_REPORTS_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "reports";
+  _usage                 = "task          reports";
+  _description           = STRING_CMD_REPORTS_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::config;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -51,13 +57,12 @@ int CmdReports::execute (std::string& output)
   std::vector <std::string> reports;
 
   // Add custom reports.
-  Config::const_iterator i;
-  for (i = context.config.begin (); i != context.config.end (); ++i)
+  for (auto& i : context.config)
   {
-    if (i->first.substr (0, 7) == "report.")
+    if (i.first.substr (0, 7) == "report.")
     {
-      std::string report = i->first.substr (7);
-      std::string::size_type columns = report.find (".columns");
+      std::string report = i.first.substr (7);
+      auto columns = report.find (".columns");
       if (columns != std::string::npos)
         reports.push_back (report.substr (0, columns));
     }
@@ -96,12 +101,11 @@ int CmdReports::execute (std::string& output)
     view.intraColorOdd (alternate);
   }
 
-  std::vector <std::string>::iterator report;
-  for (report = reports.begin (); report != reports.end (); ++report)
+  for (auto& report : reports)
   {
     int row = view.addRow ();
-    view.set (row, 0, *report);
-    view.set (row, 1, context.commands[*report]->description ());
+    view.set (row, 0, report);
+    view.set (row, 1, context.commands[report]->description ());
   }
 
   out << optionalBlankLine ()

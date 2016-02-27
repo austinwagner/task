@@ -29,7 +29,7 @@
 #include <iomanip>
 #include <stdlib.h>
 #include <ViewText.h>
-#include <Duration.h>
+#include <ISO8601.h>
 #include <Context.h>
 #include <Filter.h>
 #include <main.h>
@@ -43,11 +43,17 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdStats::CmdStats ()
 {
-  _keyword     = "stats";
-  _usage       = "task <filter> stats";
-  _description = STRING_CMD_STATS_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "stats";
+  _usage                 = "task <filter> stats";
+  _description           = STRING_CMD_STATS_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = true;
+  _uses_context          = true;
+  _accepts_filter        = true;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::metadata;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -67,16 +73,15 @@ int CmdStats::execute (std::string& output)
   // Count the undo transactions.
   std::vector <std::string> undoTxns = context.tdb2.undo.get_lines ();
   int undoCount = 0;
-  std::vector <std::string>::iterator tx;
-  for (tx = undoTxns.begin (); tx != undoTxns.end (); ++tx)
-    if (*tx == "---")
+  for (auto& tx : undoTxns)
+    if (tx == "---")
       ++undoCount;
 
   // Count the backlog transactions.
   std::vector <std::string> backlogTxns = context.tdb2.backlog.get_lines ();
   int backlogCount = 0;
-  for (tx = backlogTxns.begin (); tx != backlogTxns.end (); ++tx)
-    if ((*tx)[0] == '{')
+  for (auto& tx : backlogTxns)
+    if (tx[0] == '{')
       ++backlogCount;
 
   // Get all the tasks.
@@ -85,7 +90,7 @@ int CmdStats::execute (std::string& output)
   std::vector <Task> filtered;
   filter.subset (all, filtered);
 
-  Date now;
+  ISO8601d now;
   time_t earliest   = time (NULL);
   time_t latest     = 1;
   int totalT        = 0;
@@ -103,12 +108,11 @@ int CmdStats::execute (std::string& output)
   std::map <std::string, int> allTags;
   std::map <std::string, int> allProjects;
 
-  std::vector <Task>::iterator task;
-  for (task = filtered.begin (); task != filtered.end (); ++task)
+  for (auto& task : filtered)
   {
     ++totalT;
 
-    Task::status status = task->getStatus ();
+    Task::status status = task.getStatus ();
     switch (status)
     {
     case Task::deleted:   ++deletedT;   break;
@@ -118,37 +122,37 @@ int CmdStats::execute (std::string& output)
     case Task::waiting:   ++waitingT;   break;
     }
 
-    if (task->is_blocked)  ++blockedT;
-    if (task->is_blocking) ++blockingT;
+    if (task.is_blocked)  ++blockedT;
+    if (task.is_blocking) ++blockingT;
 
-    time_t entry = strtol (task->get ("entry").c_str (), NULL, 10);
+    time_t entry = strtol (task.get ("entry").c_str (), NULL, 10);
     if (entry < earliest) earliest = entry;
     if (entry > latest)   latest   = entry;
 
     if (status == Task::completed)
     {
-      time_t end = strtol (task->get ("end").c_str (), NULL, 10);
+      time_t end = strtol (task.get ("end").c_str (), NULL, 10);
       daysPending += (end - entry) / 86400.0;
     }
 
     if (status == Task::pending)
       daysPending += (now.toEpoch () - entry) / 86400.0;
 
-    descLength += task->get ("description").length ();
+    descLength += task.get ("description").length ();
 
     std::map <std::string, std::string> annotations;
-    task->getAnnotations (annotations);
+    task.getAnnotations (annotations);
     annotationsT += annotations.size ();
 
     std::vector <std::string> tags;
-    task->getTags (tags);
-    if (tags.size ()) ++taggedT;
+    task.getTags (tags);
+    if (tags.size ())
+      ++taggedT;
 
-    std::vector <std::string>::iterator t;
-    for (t = tags.begin (); t != tags.end (); ++t)
-      allTags[*t] = 0;
+    for (auto& tag : tags)
+      allTags[tag] = 0;
 
-    std::string project = task->get ("project");
+    std::string project = task.get ("project");
     if (project != "")
       allProjects[project] = 0;
   }
@@ -231,47 +235,47 @@ int CmdStats::execute (std::string& output)
 
   if (filtered.size ())
   {
-    Date e (earliest);
+    ISO8601d e (earliest);
     row = view.addRow ();
     view.set (row, 0, STRING_CMD_STATS_OLDEST);
     view.set (row, 1, e.toString (dateformat));
 
-    Date l (latest);
+    ISO8601d l (latest);
     row = view.addRow ();
     view.set (row, 0, STRING_CMD_STATS_NEWEST);
     view.set (row, 1, l.toString (dateformat));
 
     row = view.addRow ();
     view.set (row, 0, STRING_CMD_STATS_USED_FOR);
-    view.set (row, 1, Duration (latest - earliest).format ());
+    view.set (row, 1, ISO8601p (latest - earliest).formatVague ());
   }
 
   if (totalT)
   {
     row = view.addRow ();
     view.set (row, 0, STRING_CMD_STATS_ADD_EVERY);
-    view.set (row, 1, Duration (((latest - earliest) / totalT)).format ());
+    view.set (row, 1, ISO8601p (((latest - earliest) / totalT)).formatVague ());
   }
 
   if (completedT)
   {
     row = view.addRow ();
     view.set (row, 0, STRING_CMD_STATS_COMP_EVERY);
-    view.set (row, 1, Duration ((latest - earliest) / completedT).format ());
+    view.set (row, 1, ISO8601p ((latest - earliest) / completedT).formatVague ());
   }
 
   if (deletedT)
   {
     row = view.addRow ();
     view.set (row, 0, STRING_CMD_STATS_DEL_EVERY);
-    view.set (row, 1, Duration ((latest - earliest) / deletedT).format ());
+    view.set (row, 1, ISO8601p ((latest - earliest) / deletedT).formatVague ());
   }
 
   if (pendingT || completedT)
   {
     row = view.addRow ();
     view.set (row, 0, STRING_CMD_STATS_AVG_PEND);
-    view.set (row, 1, Duration ((int) ((daysPending / (pendingT + completedT)) * 86400)).format ());
+    view.set (row, 1, ISO8601p ((int) ((daysPending / (pendingT + completedT)) * 86400)).formatVague ());
   }
 
   if (totalT)
@@ -280,14 +284,6 @@ int CmdStats::execute (std::string& output)
     view.set (row, 0, STRING_CMD_STATS_DESC_LEN);
     view.set (row, 1, format (STRING_CMD_STATS_CHARS, (int) (descLength / totalT)));
   }
-
-/*
-  // TODO Re-enable this when 2.3 has taskd support.  Until then, it makes no
-  //      sense to include this.
-  row = view.addRow ();
-  view.set (row, 0, STRING_CMD_STATS_LAST_SYNC);
-  view.set (row, 1, "-");
-*/
 
   // If an alternating row color is specified, notify the table.
   if (context.color ())

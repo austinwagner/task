@@ -38,26 +38,29 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 CmdZshAttributes::CmdZshAttributes ()
 {
-  _keyword     = "_zshattributes";
-  _usage       = "task          _zshattributes";
-  _description = STRING_CMD_ZSHATTS_USAGE;
-  _read_only   = true;
-  _displays_id = false;
+  _keyword               = "_zshattributes";
+  _usage                 = "task          _zshattributes";
+  _description           = STRING_CMD_ZSHATTS_USAGE;
+  _read_only             = true;
+  _displays_id           = false;
+  _needs_gc              = false;
+  _uses_context          = false;
+  _accepts_filter        = false;
+  _accepts_modifications = false;
+  _accepts_miscellaneous = false;
+  _category              = Command::Category::internal;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 int CmdZshAttributes::execute (std::string& output)
 {
-  // Get a list of all columns.
+  // Get a list of all columns, sort them.
   std::vector <std::string> columns = context.getColumns ();
-
-  // Sort alphabetically.
   std::sort (columns.begin (), columns.end ());
 
   std::stringstream out;
-  std::vector <std::string>::iterator c;
-  for (c = columns.begin (); c != columns.end (); ++c)
-    out << *c << ":" << *c << "\n";
+  for (auto& col : columns)
+    out << col << ":" << col << "\n";
 
   output = out.str ();
   return 0;

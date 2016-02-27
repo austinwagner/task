@@ -28,8 +28,6 @@
 #include <stdlib.h>
 #include <Context.h>
 #include <ColScheduled.h>
-#include <Date.h>
-#include <Duration.h>
 #include <text.h>
 #include <i18n.h>
 
@@ -38,25 +36,13 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 ColumnScheduled::ColumnScheduled ()
 {
-  _name      = "scheduled";
-  _label     = STRING_COLUMN_LABEL_SCHED;
-
-  _styles.push_back ("countdown");
-
-  Date now;
-  now += 125;
-  _examples.push_back (Duration (now - Date ()).formatCompact ());
+  _name     = "scheduled";
+  _label    = STRING_COLUMN_LABEL_SCHED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ColumnScheduled::~ColumnScheduled ()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool ColumnScheduled::validate (std::string& value)
-{
-  return ColumnDate::validate (value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

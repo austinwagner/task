@@ -5,19 +5,17 @@ include_directories (${CMAKE_SOURCE_DIR}
                      ${CMAKE_SOURCE_DIR}/src/columns
                      ${TASK_INCLUDE_DIRS})
 
-set (task_SRCS CLI.cpp CLI.h
+set (task_SRCS CLI2.cpp CLI2.h
                Color.cpp Color.h
                Config.cpp Config.h
                Context.cpp Context.h
                DOM.cpp DOM.h
-               Date.cpp Date.h
                Dates.cpp Dates.h
-               Duration.cpp Duration.h
                Eval.cpp Eval.h
-               iostream.cpp
                Filter.cpp Filter.h
                Hooks.cpp Hooks.h
                ISO8601.cpp ISO8601.h
+	             iostream.cpp
                JSON.cpp JSON.h
                Lexer.cpp Lexer.h
                Msg.cpp Msg.h
@@ -42,16 +40,12 @@ set (task_SRCS CLI.cpp CLI.h
 
 if (WINDOWS)
   set(task_SRCS ${task_SRCS}
-    windows/Directory.cpp windows/Directory.h
-    windows/File.cpp windows/File.h
-    windows/Path.cpp windows/Path.h
+    windows/FS.cpp windows/FS.h
     windows/interactive.cpp
     windows/RX.cpp windows/RX.h)
 else (WINDOWS)
   set(task_SRCS ${task_SRCS}
-    posix/Directory.cpp posix/Directory.h
-    posix/File.cpp posix/File.h
-    posix/Path.cpp posix/Path.h
+    posix/FS.cpp posix/FS.h
     posix/interactive.cpp
     posix/RX.cpp posix/RX.h)
 endif (WINDOWS)

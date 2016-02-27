@@ -43,14 +43,13 @@ void dependencyGetBlocked (const Task& task, std::vector <Task>& blocked)
 {
   std::string uuid = task.get ("uuid");
 
-  const std::vector <Task>& all = context.tdb2.pending.get_tasks ();
-  std::vector <Task>::const_iterator it;
-  for (it = all.begin (); it != all.end (); ++it)
-    if ((it->getStatus () == Task::pending  ||
-         it->getStatus () == Task::waiting) &&
-        it->has ("depends")                 &&
-        it->get ("depends").find (uuid) != std::string::npos)
-      blocked.push_back (*it);
+  auto all = context.tdb2.pending.get_tasks ();
+  for (auto& it : all)
+    if ((it.getStatus () == Task::pending  ||
+         it.getStatus () == Task::waiting) &&
+        it.has ("depends")                 &&
+        it.get ("depends").find (uuid) != std::string::npos)
+      blocked.push_back (it);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -58,30 +57,25 @@ void dependencyGetBlocking (const Task& task, std::vector <Task>& blocking)
 {
   std::string depends = task.get ("depends");
   if (depends != "")
-  {
-    const std::vector <Task>& all = context.tdb2.pending.get_tasks ();
-    std::vector <Task>::const_iterator it;
-    for (it = all.begin (); it != all.end (); ++it)
-      if ((it->getStatus () == Task::pending  ||
-           it->getStatus () == Task::waiting) &&
-          depends.find (it->get ("uuid")) != std::string::npos)
-        blocking.push_back (*it);
-  }
+    for (auto& it : context.tdb2.pending.get_tasks ())
+      if ((it.getStatus () == Task::pending  ||
+           it.getStatus () == Task::waiting) &&
+          depends.find (it.get ("uuid")) != std::string::npos)
+        blocking.push_back (it);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Returns true if the supplied task adds a cycle to the dependency chain.
 bool dependencyIsCircular (const Task& task)
 {
-  std::stack <Task> s;
-  std::vector <std::string> deps_current;
-
   std::string task_uuid = task.get ("uuid");
 
+  std::stack <Task> s;
   s.push (task);
-  while (!s.empty ())
+  while (! s.empty ())
   {
     Task& current = s.top ();
+    std::vector <std::string> deps_current;
     current.getDependencies (deps_current);
 
     // This is a basic depth first search that always terminates given the
@@ -91,16 +85,18 @@ bool dependencyIsCircular (const Task& task)
     // function, this is a reasonable assumption.
     for (unsigned int i = 0; i < deps_current.size (); i++)
     {
-      context.tdb2.get (deps_current[i], current);
-
-      if (task_uuid == current.get ("uuid"))
+      if (context.tdb2.get (deps_current[i], current))
+      {
+        if (task_uuid == current.get ("uuid"))
         {
           // Cycle found, initial task reached for the second time!
           return true;
         }
 
-      s.push (current);
+        s.push (current);
+      }
     }
+
     s.pop ();
   }
 
@@ -153,9 +149,8 @@ void dependencyChainOnComplete (Task& task)
       nowide::cout << format (STRING_DEPEND_BLOCKED, task.id)
                 << "\n";
 
-      std::vector <Task>::iterator b;
-      for (b = blocking.begin (); b != blocking.end (); ++b)
-        nowide::cout << "  " << b->id << " " << b->get ("description") << "\n";
+      for (auto& b : blocking)
+        nowide::cout << "  " << b.id << " " << b.get ("description") << "\n";
     }
 
     // If there are both blocking and blocked tasks, the chain is broken.
@@ -166,9 +161,8 @@ void dependencyChainOnComplete (Task& task)
         nowide::cout << STRING_DEPEND_BLOCKING
                   << "\n";
 
-        std::vector <Task>::iterator b;
-        for (b = blocked.begin (); b != blocked.end (); ++b)
-          nowide::cout << "  " << b->id << " " << b->get ("description") << "\n";
+        for (auto& b : blocked)
+          nowide::cout << "  " << b.id << " " << b.get ("description") << "\n";
       }
 
       if (!context.config.getBoolean ("dependency.confirmation") ||
@@ -176,22 +170,20 @@ void dependencyChainOnComplete (Task& task)
       {
         // Repair the chain - everything in blocked should now depend on
         // everything in blocking, instead of task.id.
-        std::vector <Task>::iterator left;
-        std::vector <Task>::iterator right;
-        for (left = blocked.begin (); left != blocked.end (); ++left)
+        for (auto& left : blocked)
         {
-          left->removeDependency (task.id);
+          left.removeDependency (task.id);
 
-          for (right = blocking.begin (); right != blocking.end (); ++right)
-            left->addDependency (right->id);
+          for (auto& right : blocking)
+            left.addDependency (right.id);
         }
 
         // Now update TDB2, now that the updates have all occurred.
-        for (left = blocked.begin (); left != blocked.end (); ++left)
-          context.tdb2.modify (*left);
+        for (auto& left : blocked)
+          context.tdb2.modify (left);
 
-        for (right = blocking.begin (); right != blocking.end (); ++right)
-          context.tdb2.modify (*right);
+        for (auto& right : blocking)
+          context.tdb2.modify (right);
       }
     }
   }
@@ -212,56 +204,10 @@ void dependencyChainOnStart (Task& task)
       nowide::cout << format (STRING_DEPEND_BLOCKED, task.id)
                 << "\n";
 
-      std::vector <Task>::iterator b;
-      for (b = blocking.begin (); b != blocking.end (); ++b)
-        nowide::cout << "  " << b->id << " " << b->get ("description") << "\n";
+      for (auto& b : blocking)
+        nowide::cout << "  " << b.id << " " << b.get ("description") << "\n";
     }
   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Iff a dependency is being removed, is there something to do.
-void dependencyChainOnModify (Task& before, Task& after)
-{
-  // TODO It is not clear that this should even happen.  TBD.
-/*
-  // Get the dependencies from before.
-  std::string depends = before.get ("depends");
-  std::vector <std::string> before_depends;
-  split (before_depends, depends, ',');
-  nowide::cout << "# dependencyChainOnModify before has " << before_depends.size () << "\n";
-
-  // Get the dependencies from after.
-  depends = after.get ("depends");
-  std::vector <std::string> after_depends;
-  split (after_depends, depends, ',');
-  nowide::cout << "# dependencyChainOnModify after has " << after_depends.size () << "\n";
-
-  // listDiff
-  std::vector <std::string> before_only;
-  std::vector <std::string> after_only;
-  listDiff (before_depends, after_depends, before_only, after_only);
-
-  // Any dependencies in before_only indicates that a dependency was removed.
-  if (before_only.size ())
-  {
-    nowide::cout << "# dependencyChainOnModify detected a dependency removal\n";
-
-    // before   dep:2,3
-    // after    dep:2
-    //
-    // any tasks blocked by after might should be repaired to depend on 3.
-
-    std::vector <Task> blocked;
-    dependencyGetBlocked (after, blocked);
-
-    std::vector <Task>::iterator b;
-    for (b = blocked.begin (); b != blocked.end (); ++b)
-    {
-      nowide::cout << "# dependencyChainOnModify\n";
-    }
-  }
-*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -40,19 +40,12 @@ ColumnStart::ColumnStart ()
   _label = STRING_COLUMN_LABEL_STARTED;
 
   _styles.push_back ("active");
-
   _examples.push_back (context.config.get ("active.indicator"));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ColumnStart::~ColumnStart ()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool ColumnStart::validate (std::string& value)
-{
-  return ColumnDate::validate (value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -76,8 +69,10 @@ void ColumnStart::measure (Task& task, unsigned int& minimum, unsigned int& maxi
   {
     if (_style == "active")
     {
-      minimum = maximum = utf8_width (context.config.get ("active.indicator"));
-      _fixed_width = true;
+      if (task.has ("start"))
+        minimum = maximum = utf8_width (context.config.get ("active.indicator"));
+      else
+        minimum = maximum = 0;
     }
     else
       ColumnDate::measure (task, minimum, maximum);

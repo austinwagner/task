@@ -37,31 +37,20 @@ extern Context context;
 ////////////////////////////////////////////////////////////////////////////////
 ColumnTags::ColumnTags ()
 {
-  _name  = "tags";
-  _type  = "string";
-  _style = "list";
-  _label = STRING_COLUMN_LABEL_TAGS;
-
-  _styles.push_back ("list");
-  _styles.push_back ("indicator");
-  _styles.push_back ("count");
-
-  _examples.push_back (STRING_COLUMN_EXAMPLES_TAGS);
-  _examples.push_back (context.config.get ("tag.indicator"));
-  _examples.push_back ("[2]");
-
+  _name      = "tags";
+  _type      = "string";
+  _style     = "list";
+  _label     = STRING_COLUMN_LABEL_TAGS;
+  _styles    = {"list", "indicator", "count"};
+  _examples  = {STRING_COLUMN_EXAMPLES_TAGS,
+                context.config.get ("tag.indicator"),
+                "[2]"};
   _hyphenate = context.config.getBoolean ("hyphenate");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ColumnTags::~ColumnTags ()
 {
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool ColumnTags::validate (std::string& value)
-{
-  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -90,8 +79,10 @@ void ColumnTags::measure (Task& task, unsigned int& minimum, unsigned int& maxim
   {
     if (_style == "indicator")
     {
-      minimum = maximum = utf8_width (context.config.get ("tag.indicator"));
-      _fixed_width = true;
+      if (task.has ("tags"))
+        minimum = maximum = utf8_width (context.config.get ("tag.indicator"));
+      else
+        minimum = maximum = 0;
     }
     else if (_style == "count")
     {
@@ -107,10 +98,9 @@ void ColumnTags::measure (Task& task, unsigned int& minimum, unsigned int& maxim
       {
         std::vector <std::string> all;
         split (all, tags, ',');
-        std::vector <std::string>::iterator i;
-        for (i = all.begin (); i != all.end (); ++i)
+        for (auto& i : all)
         {
-          unsigned int length = utf8_width (*i);
+          unsigned int length = utf8_width (i);
           if (length > minimum)
             minimum = length;
         }
@@ -145,9 +135,8 @@ void ColumnTags::render (
       std::vector <std::string> all;
       wrapText (all, tags, width, _hyphenate);
 
-      std::vector <std::string>::iterator i;
-      for (i = all.begin (); i != all.end (); ++i)
-        lines.push_back (color.colorize (leftJustify (*i, width)));
+      for (auto& i : all)
+        lines.push_back (color.colorize (leftJustify (i, width)));
     }
     else if (_style == "indicator")
     {

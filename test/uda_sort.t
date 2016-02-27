@@ -29,11 +29,10 @@
 import sys
 import os
 import unittest
-from datetime import datetime
 # Ensure python finds the local simpletap module
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from basetest import Task, TestCase, Taskd, ServerTestCase
+from basetest import Task, TestCase
 
 
 class TestUDACustomSort(TestCase):
@@ -45,55 +44,90 @@ class TestUDACustomSort(TestCase):
         cls.t.config('uda.foo.values', 'H,M,L,')
         cls.t.config('report.list.columns', 'id,description,foo')
         cls.t.config('report.list.labels', 'ID,Desc,Foo')
-        cls.t(('add', 'four',  'foo:H'))
-        cls.t(('add', 'three', 'foo:M'))
-        cls.t(('add', 'two',   'foo:L'))
-        cls.t(('add', 'one'))
+        cls.t('add four foo:H')
+        cls.t('add three foo:M')
+        cls.t('add two foo:L')
+        cls.t('add one')
 
     def test_ascending(self):
-        """Ascending sort order"""
+        """Ascending custom sort order"""
         self.t.config('uda.foo.values', 'H,M,L,')
-        code, out, err = self.t(('rc.report.list.sort:foo+', 'list'))
+        code, out, err = self.t('rc.report.list.sort:foo+ list')
 
         one   = out.find('one')
         two   = out.find('two')
         three = out.find('three')
         four  = out.find('four')
 
-        self.assertEqual(one   < two,   True)
-        self.assertEqual(two   < three, True)
-        self.assertEqual(three < four,  True)
+        self.assertTrue(one   < two)
+        self.assertTrue(two   < three)
+        self.assertTrue(three < four)
 
     def test_descending(self):
-        """Descending sort order"""
+        """Descending custom sort order"""
         self.t.config('uda.foo.values', 'H,M,L,')
-        code, out, err = self.t(('rc.report.list.sort:foo-', 'list'))
+        code, out, err = self.t('rc.report.list.sort:foo- list')
 
         one   = out.find('one')
         two   = out.find('two')
         three = out.find('three')
         four  = out.find('four')
 
-        self.assertEqual(four  < three, True)
-        self.assertEqual(three < two,   True)
-        self.assertEqual(two   < one,   True)
+        self.assertTrue(four  < three)
+        self.assertTrue(three < two)
+        self.assertTrue(two   < one)
 
     def test_ridiculous(self):
-        """Ridiculous sort order"""
+        """Ridiculous custom sort order"""
         self.t.config('uda.foo.values', 'H,M,,L')
-        code, out, err = self.t(('rc.report.list.sort:foo-', 'list'))
+        code, out, err = self.t('rc.report.list.sort:foo- list')
 
         one   = out.find('one')
         two   = out.find('two')
         three = out.find('three')
         four  = out.find('four')
 
-        self.assertEqual(four  < three, True)
-        self.assertEqual(three < one,   True)
-        self.assertEqual(one   < two,   True)
+        self.assertTrue(four  < three)
+        self.assertTrue(three < one)
+        self.assertTrue(one   < two)
+
+
+class TestUDADefaultSort(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.t = Task()
+        cls.t.config('uda.foo.type', 'string')
+        cls.t.config('uda.foo.label', 'Foo')
+        cls.t.config('report.list.columns', 'id,description,foo')
+        cls.t.config('report.list.labels', 'ID,Desc,Foo')
+        cls.t('add one foo:A')
+        cls.t('add three')
+        cls.t('add two foo:B')
+
+    def test_ascending(self):
+        """Ascending default sort order"""
+        code, out, err = self.t('rc.report.list.sort:foo+ list')
+
+        one   = out.find('one')
+        two   = out.find('two')
+        three = out.find('three')
+
+        self.assertTrue(one < two)
+        self.assertTrue(two < three)
+
+    def test_descending(self):
+        """Descending default sort order"""
+        code, out, err = self.t('rc.report.list.sort:foo- list')
+
+        one   = out.find('one')
+        two   = out.find('two')
+        three = out.find('three')
+
+        self.assertTrue(one < three)
+        self.assertTrue(two < one)
 
 if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

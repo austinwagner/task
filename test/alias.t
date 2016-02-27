@@ -38,43 +38,127 @@ from basetest import Task, TestCase
 class TestAlias(TestCase):
     def setUp(self):
         """Executed before each test in the class"""
-        # Used to initialize objects that should be re-initialized or
-        # re-created for each individual test
         self.t = Task()
 
+    def test_simple_alias_to_project(self):
+        """Access a project via aliases"""
+
+        # Setup aliases
         self.t.config("alias.foo", "_projects")
         self.t.config("alias.bar", "foo")
         self.t.config("alias.baz", "bar")
         self.t.config("alias.qux", "baz")
 
-    def test_alias_to_project(self):
-        """Access a project via aliases"""
+        # Setup a task with dummy project called Home
+        expected = "Home"
+        self.t("add project:{0} foo".format(expected))
 
-        expected = "ALIAS"
-        self.t(("add", "project:{0}".format(expected), "foo"))
-
-        code, out, err = self.t(("_projects",))
+        # Sanity check that _projects command outputs the "Home" project
+        code, out, err = self.t("_projects")
         self.assertIn(expected, out,
-                      msg="task _projects -> ALIAS")
+                      msg="task _projects -> Home")
 
-        code, out, err = self.t(("foo",))
+        # Check that foo command outputs the "Home" project
+        code, out, err = self.t("foo")
         self.assertIn(expected, out,
-                      msg="task foo -> _projects > ALIAS")
+                      msg="task foo -> _projects > Home")
 
-        code, out, err = self.t(("bar",))
+        # Check that bar command outputs the "Home" project
+        code, out, err = self.t("bar")
         self.assertIn(expected, out,
-                      msg="task bar -> foo > _projects > ALIAS")
+                      msg="task bar -> foo > _projects > Home")
 
-        code, out, err = self.t(("baz",))
+        # Check that baz command outputs the "Home" project
+        code, out, err = self.t("baz")
         self.assertIn(expected, out,
-                      msg="task baz -> bar > foo > _projects > ALIAS")
+                      msg="task baz -> bar > foo > _projects > Home")
 
-        code, out, err = self.t(("qux",))
+        # Check that qux command outputs the "Home" project
+        code, out, err = self.t("qux")
         self.assertIn(expected, out,
-                      msg="task qux -> baz > bar > foo > _projects > ALIAS")
+                      msg="task qux -> baz > bar > foo > _projects > Home")
+
+    def test_alias_with_implicit_filter(self):
+        """Test alias containing simple filter string"""
+
+        # Setup alias with simple filter string
+        self.t.config("alias.foofilter", "project:Home _projects")
+
+        # Setup tasks for projects Home and Work
+        self.t("add project:Home Home task")
+        self.t("add project:Work Work task")
+
+        # Sanity check that _projects command outputs
+        # both the "Home" and "Work" projects
+        code, out, err = self.t("_projects")
+        self.assertIn("Home", out,
+                      msg="task _projects -> Home")
+        self.assertIn("Work", out,
+                      msg="task _projects -> Work")
+
+        # Check that foo command outputs the "Home" project
+        code, out, err = self.t("foofilter")
+        self.assertIn("Home", out,
+                msg="task foofilter -> project:Home _projects > Home")
+        self.assertNotIn("Work", out,
+                msg="task foofilter -> project:Home _projects > Work")
+
+    def test_alias_with_implicit_complex_filter(self):
+        """Test alias containing filter string with conjuction"""
+
+        # Setup alias with simple filter string
+        self.t.config("alias.hometoday", "project:Home and due:today minimal")
+
+        # Setup tasks for projects Home and Work
+        self.t("add project:Home due:today Home urgent task")
+        self.t("add project:Home Home task")
+        self.t("add project:Work due:today Work task")
+
+        # Check that hometoday command outputs the "Home urgent task"
+        code, out, err = self.t("hometoday")
+        self.assertIn("Home urgent task", out,
+                msg="task hometoday -> project:Home and due:today minimal > "
+                    "Home urgent task")
+
+        # It should not output "Home task", as that one is not due:today
+        self.assertNotIn("Home task", out,
+                msg="task hometoday -> project:Home and due:today minimal > "
+                    "Home task")
+
+        # It should not output "Work task" either, it has entirely wrong
+        # project
+        self.assertNotIn("Work task", out,
+                msg="task hometoday -> project:Home and due:today minimal > "
+                    "Work task")
+
+class TestAliasesCommand(TestCase):
+    def setUp(self):
+        """Executed before each test in the class"""
+        self.t = Task()
+
+    def test_aliases_helper(self):
+        """Verify that aliases are listed by the _aliases command"""
+        self.t.config("alias.foo", "bar")
+        code, out, err = self.t("_aliases")
+        self.assertIn("foo", out)
+
+class TestBug1652(TestCase):
+    def setUp(self):
+        """Executed before each test in the class"""
+        self.t = Task()
+        self.t("add one")
+
+    def test_odd_alias(self):
+        """Verify that 'delete' is not lexed further"""
+        self.t.config("alias.rm", "delete")
+        self.t.config("confirmation", "off")
+        code, out, err = self.t("1 rm")
+        self.assertIn("Deleted 1 task.", out)
+        self.assertNotIn("No matches.", err)
+
 
 if __name__ == "__main__":
     from simpletap import TAPTestRunner
     unittest.main(testRunner=TAPTestRunner())
 
-# vim: ai sts=4 et sw=4
+# vim: ai sts=4 et sw=4 ft=python

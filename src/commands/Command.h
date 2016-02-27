@@ -35,10 +35,24 @@
 class Command
 {
 public:
+  enum class Category
+  {
+    unassigned,
+    // In presentation ("usefulness") order: frequently-used categories first.
+    metadata,
+    report,
+    operation,
+    context,
+    graphs,
+    config,
+    migration,
+    misc,
+    internal,
+    UNDOCUMENTED,
+    // Whenever you extend this enum, update categoryNames.
+  };
+
   Command ();
-  Command (const Command&);
-  Command& operator= (const Command&);
-  bool operator== (const Command&) const;     // TODO Is this necessary?
   virtual ~Command ();
 
   static void factory (std::map <std::string, Command*>&);
@@ -48,10 +62,17 @@ public:
   std::string description () const;
   bool read_only () const;
   bool displays_id () const;
+  bool needs_gc () const;
+  bool uses_context () const;
+  bool accepts_filter () const;
+  bool accepts_modifications () const;
+  bool accepts_miscellaneous () const;
+  Category category () const;
   virtual int execute (std::string&) = 0;
 
 protected:
-  bool permission (const Task&, const std::string&, unsigned int);
+  bool permission (const std::string&, unsigned int);
+  static const std::map <Command::Category, std::string> categoryNames;
 
 protected:
   std::string _keyword;
@@ -60,6 +81,12 @@ protected:
   bool        _read_only;
   bool        _displays_id;
   bool        _needs_confirm;
+  bool        _needs_gc;
+  bool        _uses_context;
+  bool        _accepts_filter;
+  bool        _accepts_modifications;
+  bool        _accepts_miscellaneous;
+  Category    _category;
 
   // Permission support
   bool        _permission_quit;
