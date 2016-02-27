@@ -29,7 +29,6 @@
 #include <sstream>
 #include <stdlib.h>
 #include <algorithm>
-#include <unistd.h>
 #include <Duration.h>
 #include <Context.h>
 #include <Filter.h>
@@ -41,6 +40,23 @@
 #include <main.h>
 #include <CmdEdit.h>
 #include <nowide/iostream.hpp>
+
+#ifdef WINDOWS
+#include <nowide/convert.hpp>
+typedef DWORD pid_t;
+pid_t getpid()
+{
+  return GetCurrentProcessId();
+}
+
+int chdir(const char * dir)
+{
+  auto wdir = nowide::widen(dir);
+  return SetCurrentDirectoryW(wdir.c_str());
+}
+#else
+#include <unistd.h>
+#endif
 
 extern Context context;
 

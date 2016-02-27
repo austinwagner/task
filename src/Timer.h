@@ -28,7 +28,26 @@
 #define INCLUDED_TIMER
 
 #include <string>
+
+#ifdef WINDOWS
+#include <Windows.h>
+#else
 #include <sys/time.h>
+#endif
+
+#ifdef WINDOWS
+class QpcFreq
+{
+public:
+  static double value();
+
+private:
+  QpcFreq();
+
+  double _freq;
+  static QpcFreq _inst;
+};
+#endif
 
 // Timer is a scope-activated timer that dumps to nowide::cout at end of scope.
 class Timer
@@ -48,7 +67,13 @@ public:
 private:
   std::string    _description;
   bool           _running;
+
+#ifdef WINDOWS
+  LARGE_INTEGER _freq;
+  LARGE_INTEGER _start;
+#else
   struct timeval _start;
+#endif
   unsigned long  _total;
 };
 
@@ -66,8 +91,14 @@ public:
   double total () const;
 
 private:
+#ifdef WINDOWS
+  LARGE_INTEGER _freq;
+  LARGE_INTEGER _start;
+  LARGE_INTEGER _stop;
+#else
   struct timeval _start;
   struct timeval _stop;
+#endif
 };
 
 

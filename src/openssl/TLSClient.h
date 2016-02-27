@@ -23,26 +23,47 @@
 // http://www.opensource.org/licenses/mit-license.php
 //
 ////////////////////////////////////////////////////////////////////////////////
-
-#ifndef INCLUDED_CMDSYNC
-#define INCLUDED_CMDSYNC
+#ifndef INCLUDED_TLSCLIENT
+#define INCLUDED_TLSCLIENT
 
 #include <string>
-#include <Command.h>
-#include <Msg.h>
-#include <TLSClient.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/bio.h>
 
-class CmdSync : public Command
+class TLSClient
 {
 public:
-  CmdSync ();
-  int execute (std::string&);
+  enum trust_level { strict, ignore_hostname, allow_all };
 
-#ifdef HAVE_TLS_LIBRARY
+  TLSClient ();
+  ~TLSClient ();
+  void limit (int);
+  void debug (int);
+  void trust (const enum trust_level);
+  void ciphers (const std::string&);
+  void init (const std::string&, const std::string&, const std::string&);
+  void connect (const std::string&, const std::string&);
+  void bye ();
+
+  void send (const std::string&);
+  void recv (std::string&);
+
 private:
-  bool send (const std::string&, const std::string&, const std::string&, const std::string&, const enum TLSClient::trust_level, const Msg&, Msg&);
-#endif
+  std::string                      _ca;
+  std::string                      _cert;
+  std::string                      _key;
+  std::string                      _ciphers;
+  std::string                      _host;
+  std::string                      _port;
+  SSL_CTX *                        _context;
+  BIO *                            _conn;
+  int                              _limit;
+  bool                             _debug;
+  enum trust_level                 _trust;
 };
 
 #endif
+
 ////////////////////////////////////////////////////////////////////////////////
+

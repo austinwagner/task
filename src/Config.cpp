@@ -31,7 +31,6 @@
 #include <algorithm>
 #include <sys/stat.h>
 #include <inttypes.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <Directory.h>
 #include <Date.h>

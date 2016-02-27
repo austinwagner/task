@@ -34,6 +34,10 @@
 #include <Path.h>
 #include <util.h>
 
+#ifdef WINDOWS
+typedef int mode_t;
+#endif
+
 class File : public Path
 {
 public:

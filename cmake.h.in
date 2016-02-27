@@ -53,6 +53,12 @@
 /* Found the GnuTLS library */
 #cmakedefine HAVE_LIBGNUTLS
 
+/* Found the OpenSSL library */
+#cmakedefine HAVE_LIBOPENSSL
+
+/* Found either GnuTLS or OpenSSL */
+#cmakedefine HAVE_TLS_LIBRARY
+
 /* Found tm_gmtoff */
 #cmakedefine HAVE_TM_GMTOFF
 

@@ -26,8 +26,6 @@
 #ifndef INCLUDED_TLSCLIENT
 #define INCLUDED_TLSCLIENT
 
-#ifdef HAVE_LIBGNUTLS
-
 #include <string>
 #include <gnutls/gnutls.h>
 
@@ -65,7 +63,6 @@ private:
   enum trust_level                 _trust;
 };
 
-#endif
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////

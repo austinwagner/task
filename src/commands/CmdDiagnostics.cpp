@@ -39,8 +39,9 @@
 #include <commit.h>
 #endif
 
-#ifdef HAVE_LIBGNUTLS
+#if defined(HAVE_LIBGNUTLS)
 #include <gnutls/gnutls.h>
+#elseif defined(HAVE_LIBOPENSSL)
 #endif
 
 #include <CmdDiagnostics.h>
@@ -171,12 +172,14 @@ int CmdDiagnostics::execute (std::string& output)
       << "\n";
 
   out << "  libgnutls: "
-#ifdef HAVE_LIBGNUTLS
+#if defined(HAVE_LIBGNUTLS)
 #ifdef GNUTLS_VERSION
       << GNUTLS_VERSION
 #elif defined LIBGNUTLS_VERSION
       << LIBGNUTLS_VERSION
 #endif
+#elseif defined(HAVE_LIBOPENSSL)
+// TODO: Fill this in
 #else
       << "n/a"
 #endif

@@ -32,7 +32,6 @@
 #define _WITH_GETLINE
 #endif
 #include <stdio.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <Context.h>
 #include <JSON.h>

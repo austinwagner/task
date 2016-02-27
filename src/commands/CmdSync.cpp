@@ -51,7 +51,7 @@ CmdSync::CmdSync ()
 int CmdSync::execute (std::string& output)
 {
   int status = 0;
-#ifdef HAVE_LIBGNUTLS
+#ifdef HAVE_TLS_LIBRARY
   std::stringstream out;
 
   // Loog for the 'init' keyword to indicate one-time pending.data upload.
@@ -334,7 +334,7 @@ int CmdSync::execute (std::string& output)
   return status;
 }
 
-#ifdef HAVE_LIBGNUTLS
+#ifdef HAVE_TLS_LIBRARY
 ////////////////////////////////////////////////////////////////////////////////
 bool CmdSync::send (
   const std::string& to,

@@ -25,7 +25,6 @@ set (task_SRCS CLI.cpp CLI.h
                TDB2.cpp TDB2.h
                Task.cpp Task.h
                Timer.cpp Timer.h
-               TLSClient.cpp TLSClient.h
                Variant.cpp Variant.h
                ViewTask.cpp ViewTask.h
                ViewText.cpp ViewText.h
@@ -56,6 +55,14 @@ else (WINDOWS)
     posix/interactive.cpp
     posix/RX.cpp posix/RX.h)
 endif (WINDOWS)
+
+if (HAVE_LIBGNUTLS)
+  set(task_SRCS ${task_SRCS}
+    gnutls/TLSClient.cpp gnutls/TLSClient.h)
+elseif (HAVE_LIBOPENSSL)
+  set(task_SRCS ${task_SRCS}
+    openssl/TLSClient.cpp openssl/TLSClient.h)
+endif (HAVE_LIBGNUTLS)
 
 add_library (task STATIC ${task_SRCS})
 add_executable (task_executable main.cpp)

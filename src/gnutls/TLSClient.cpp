@@ -26,8 +26,6 @@
 
 #include <cmake.h>
 
-#ifdef HAVE_LIBGNUTLS
-
 #include <iostream>
 #include <unistd.h>
 #include <stdio.h>
@@ -552,5 +550,4 @@ namespace {
       }
   } inst;
 }
-#endif
 #endif

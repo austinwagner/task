@@ -40,6 +40,8 @@
 #include <util.h>
 #include <CmdBurndown.h>
 
+#undef max
+
 extern Context context;
 
 // Helper macro.

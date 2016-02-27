@@ -618,7 +618,7 @@ void TDB2::update (
 
   // If the task already exists, it is a modification, else addition.
   Task original;
-  if (not addition && get (task.get ("uuid"), original))
+  if (!addition && get (task.get ("uuid"), original))
   {
     if (add_to_backlog)
     {

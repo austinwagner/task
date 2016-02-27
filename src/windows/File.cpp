@@ -30,7 +30,6 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <File.h>
 #include <text.h>
 #include <util.h>

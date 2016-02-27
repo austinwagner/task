@@ -31,7 +31,6 @@
 #include <iomanip>
 #include <vector>
 #include <string>
-#include <strings.h>
 #include <Context.h>
 #include <Lexer.h>
 #include <math.h>
@@ -39,6 +38,7 @@
 #include <text.h>
 #include <utf8.h>
 #include <i18n.h>
+#include <cctype>
 
 extern Context context;
 
@@ -46,6 +46,16 @@ static const char* newline = "\n";
 static const char* noline  = "";
 
 static void replace_positional (std::string&, const std::string&, const std::string&);
+
+bool charCompareIgnoreCase(char c1, char c2)
+{
+  return std::tolower(c1) < std::tolower(c2);
+}
+
+int stringCompareIgnoreCase(const std::string& str1, const std::string& str2)
+{
+  return std::lexicographical_compare(str1.begin(), str1.end(), str2.begin(), str2.end(), charCompareIgnoreCase);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 void wrapText (
@@ -486,7 +496,7 @@ bool compare (
 {
   // Use strcasecmp if required.
   if (!sensitive)
-    return strcasecmp (left.c_str (), right.c_str ()) == 0 ? true : false;
+    return stringCompareIgnoreCase(left, right) == 0 ? true : false;
 
   // Otherwise, just use std::string::operator==.
   return left == right;

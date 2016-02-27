@@ -33,6 +33,22 @@
 
 extern Context context;
 
+QpcFreq QpcFreq::_inst;
+
+#ifdef WINDOWS
+QpcFreq::QpcFreq()
+{
+  LARGE_INTEGER freq;
+  QueryPerformanceFrequency(&freq);
+  _freq = static_cast<double>(freq.QuadPart);
+}
+
+double QpcFreq::value()
+{
+  return _inst._freq;
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Timer starts when the object is constructed.
 Timer::Timer ()
@@ -67,7 +83,11 @@ Timer::~Timer ()
     // Haiku fails on this - don't know why.
     << std::fixed
 #endif
+#ifdef WINDOWS
+    << _total / QpcFreq::value()
+#else
     << _total / 1000000.0
+#endif
     << " sec";
 
   context.debug (s.str ());
@@ -78,7 +98,11 @@ void Timer::start ()
 {
   if (!_running)
   {
+#ifdef WINDOWS
+    QueryPerformanceCounter(&_start);
+#else
     gettimeofday (&_start, NULL);
+#endif
     _running = true;
   }
 }
@@ -88,11 +112,17 @@ void Timer::stop ()
 {
   if (_running)
   {
+#ifdef WINDOWS
+    LARGE_INTEGER end;
+    QueryPerformanceCounter(&end);
+    _total += end.QuadPart - _start.QuadPart;
+#else
     struct timeval end;
     gettimeofday (&end, NULL);
     _running = false;
     _total += (end.tv_sec - _start.tv_sec) * 1000000
             + (end.tv_usec - _start.tv_usec);
+#endif
   }
 }
 
@@ -114,11 +144,13 @@ void Timer::subtract (unsigned long value)
 ////////////////////////////////////////////////////////////////////////////////
 HighResTimer::HighResTimer ()
 {
+#ifndef WINDOWS
   _start.tv_sec = 0;
   _start.tv_usec = 0;
 
   _stop.tv_sec = 0;
   _stop.tv_usec = 0;
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -129,22 +161,34 @@ HighResTimer::~HighResTimer ()
 ////////////////////////////////////////////////////////////////////////////////
 void HighResTimer::start ()
 {
+#ifdef WINDOWS
+  QueryPerformanceCounter(&_start);
+#else
   gettimeofday (&_start, NULL);
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void HighResTimer::stop ()
 {
-  gettimeofday (&_stop, NULL);
+#ifdef WINDOWS
+  QueryPerformanceCounter(&_stop);
+#else
+  gettimeofday(&_stop, NULL);
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 double HighResTimer::total () const
 {
+#ifdef WINDOWS
+  if (_stop.QuadPart > 0)
+    return (_stop.QuadPart - _start.QuadPart) / QpcFreq::value();
+#else
   if (_stop.tv_sec > 0 || _stop.tv_usec > 0)
     return (_stop.tv_sec  - _start.tv_sec) +
            (_stop.tv_usec - _start.tv_usec) / 1000000.0;
-
+#endif
   return 0.0;
 }
 

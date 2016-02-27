@@ -32,7 +32,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <Context.h>
 #include <Directory.h>
 #include <File.h>
@@ -46,6 +45,39 @@
 
 #ifdef HAVE_COMMIT
 #include <commit.h>
+#endif
+
+#ifdef WINDOWS
+const int STDIN_FILENO = 0;
+const int STDOUT_FILENO = 1;
+const int STDERR_FILENO = 2;
+
+bool isatty(int fileno)
+{
+  DWORD winfileno;
+  switch (fileno)
+  {
+  case STDIN_FILENO:
+    winfileno = STD_INPUT_HANDLE;
+    break;
+  case STDOUT_FILENO:
+    winfileno = STD_OUTPUT_HANDLE;
+    break;
+  case STDERR_FILENO:
+    winfileno = STD_ERROR_HANDLE;
+    break;
+  default:
+    throw std::runtime_error("unexpected fileno");
+  }
+
+  HANDLE stdhandle = GetStdHandle(winfileno);
+  if (stdhandle == INVALID_HANDLE_VALUE) return false;
+
+  DWORD mode;
+  return GetConsoleMode(stdhandle, &mode);
+}
+#else
+#include <unistd.h>
 #endif
 
 // Supported modifiers, synonyms on the same line.
