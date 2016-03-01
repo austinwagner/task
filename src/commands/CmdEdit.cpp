@@ -784,7 +784,7 @@ CmdEdit::editResult CmdEdit::editFile (Task& task)
 
   // Change directory for the editor
   std::string current_dir = Directory::cwd ();
-  int ignored = chdir (location.to_string().c_str ());
+  int ignored = chdir (location._data.c_str ());
   ++ignored; // Keep compiler quiet.
 
   // Check if the file already exists, if so, bail out
@@ -813,15 +813,15 @@ ARE_THESE_REALLY_HARMFUL:
   bool changes = false; // No changes made.
 
   // Launch the editor.
-  std::nowide << format (STRING_EDIT_LAUNCHING, editor) << "\n";
+  nowide::cout << format (STRING_EDIT_LAUNCHING, editor) << "\n";
   int exitcode = system (editor.c_str ());
   if (0 == exitcode)
-    std::nowide << STRING_EDIT_COMPLETE << "\n";
+    nowide::cout << STRING_EDIT_COMPLETE << "\n";
   else
   {
-    std::nowide << format (STRING_EDIT_FAILED, exitcode) << "\n";
+    nowide::cout << format (STRING_EDIT_FAILED, exitcode) << "\n";
     if (-1 == exitcode)
-      std::nowide << std::strerror (errno) << "\n";
+      nowide::cout << std::strerror (errno) << "\n";
     return CmdEdit::editResult::error;
   }
 

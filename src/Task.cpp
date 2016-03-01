@@ -57,6 +57,8 @@
 #include <Filter.h>
 #include <Dates.h>
 
+#undef max
+
 #define APPROACHING_INFINITY 1000   // Close enough.  This isn't rocket surgery.
 
 extern Context context;

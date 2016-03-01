@@ -554,10 +554,10 @@ void Config::parse (const std::string& input, int nest /* = 1 */)
             if (included.readable ())
               this->load (included, nest + 1);
             else
-              throw format (STRING_CONFIG_READ_INCLUDE, included.to_string());
+              throw format (STRING_CONFIG_READ_INCLUDE, included._data);
           }
           else
-            throw format (STRING_CONFIG_INCLUDE_PATH, included.to_string());
+            throw format (STRING_CONFIG_INCLUDE_PATH, included._data);
         }
         else
           throw format (STRING_CONFIG_BAD_ENTRY, line);
@@ -659,7 +659,7 @@ double Config::getReal (const std::string& key)
 {
   //NOTE: Backwards compatible handling of next coefficient.
   //TODO: Remove.
-  if (key == "urgency.user.tag.next.coefficient" and has("urgency.next.coefficient"))
+  if (key == "urgency.user.tag.next.coefficient" && has("urgency.next.coefficient"))
     return getReal("urgency.next.coefficient");
 
   if ((*this).find (key) != (*this).end ())

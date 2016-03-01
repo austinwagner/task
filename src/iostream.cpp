@@ -18,8 +18,6 @@
 # define NOMINMAX
 #endif
 
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
 #include <windows.h>
 
 
@@ -177,12 +175,35 @@ namespace details {
         void processEscapeCode(const std::string& modifiers, char command) {
             // m is for color commands
             if (command == 'm') {
-                std::vector<std::string> parts;
+                std::vector<int> parts;
                 if (modifiers.empty()) {
-                    parts.push_back("0");
+                    parts.push_back(0);
                 }
                 else {
-                    boost::split(parts, modifiers, boost::is_any_of(";"));
+                    std::string valStr;
+                    for (char c : modifiers) {
+                        if (c != ';') {
+                            valStr.push_back(c);
+                        }
+                        else if (!valStr.empty()) {
+                            try {
+                                parts.push_back(std::stoi(valStr.c_str()));
+                            }
+                            catch (std::invalid_argument &) { }
+
+                            valStr.clear();
+                        }
+                        else {
+                            parts.push_back(0);
+                        }
+                    }
+
+                    if (!valStr.empty()) {
+                        try {
+                            parts.push_back(std::stoi(valStr.c_str()));
+                        }
+                        catch (std::invalid_argument &) { }
+                    }
                 }
 
                 CONSOLE_SCREEN_BUFFER_INFO bufInfo = {0};
@@ -190,16 +211,8 @@ namespace details {
 
                 WORD attribs = bufInfo.wAttributes;
 
-                for (auto& part : parts) {
-                    int val = 0;
-                    try {
-                        val = boost::lexical_cast<int>(part);
-                    }
-                    catch (boost::bad_lexical_cast&) {
-                        continue;
-                    }
-
-                    switch (val) {
+                for (auto part : parts) {
+                    switch (part) {
                         case ColorCodes::Reset:
                             attribs = CON_NORMAL;
                             break;

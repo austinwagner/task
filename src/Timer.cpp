@@ -144,9 +144,15 @@ void Timer::subtract (unsigned long value)
 ////////////////////////////////////////////////////////////////////////////////
 unsigned long Timer::now ()
 {
+#ifdef WINDOWS
+  LARGE_INTEGER now;
+  QueryPerformanceCounter(&now);
+  return now.QuadPart;
+#else
   struct timeval now;
   gettimeofday (&now, NULL);
   return now.tv_sec * 1000000 + now.tv_usec;
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -84,37 +84,55 @@ struct FindCloseCloser {
     void operator()(HANDLE handle) { FindClose(handle); }
 };
 
-template <LONG_PTR NullValue, typename Closer>
+template <typename Closer>
 class SafeHandleBase
 {
 private:
-    HANDLE _handle;
-    Closer closer;
+  HANDLE _handle;
+  Closer _closer;
+  HANDLE _nullValue;
 
 public:
-    SafeHandleBase() : _handle((HANDLE)NullValue) { }
-    explicit SafeHandleBase(HANDLE handle) : _handle(handle) { }
+  SafeHandleBase(HANDLE nullValue) : _handle(nullValue), _nullValue(nullValue) { }
+  SafeHandleBase(HANDLE nullValue, HANDLE handle) : _handle(handle), _nullValue(nullValue) { }
 
-    void reset() {
-      reset((HANDLE)NullValue);
+  void reset() {
+    reset(_nullValue);
+  }
+
+  void reset(HANDLE handle) {
+    if (_handle != _nullValue) {
+      _closer(_handle);
     }
 
-    void reset(HANDLE handle) {
-      if (_handle != (HANDLE)NullValue) {
-        closer(_handle);
-      }
-
-      _handle = handle;
-    }
-    ~SafeHandleBase() { closer(_handle); }
-    HANDLE get() { return _handle; }
-    HANDLE* ptr() { return &_handle; }
-    bool valid() { return _handle != (HANDLE)NullValue; }
+    _handle = handle;
+  }
+  virtual ~SafeHandleBase() { _closer(_handle); }
+  HANDLE get() { return _handle; }
+  HANDLE* ptr() { return &_handle; }
+  bool valid() { return _handle != _nullValue; }
 };
 
-typedef SafeHandleBase<(LONG_PTR)INVALID_HANDLE_VALUE, CloseHandleCloser> SafeHandle;
-typedef SafeHandleBase<(LONG_PTR)NULL, CloseHandleCloser> SafeHandle2;
-typedef SafeHandleBase<(LONG_PTR)INVALID_HANDLE_VALUE, FindCloseCloser> FindHandle;
+class SafeHandle : public SafeHandleBase<CloseHandleCloser>
+{
+public:
+  SafeHandle() : SafeHandleBase(INVALID_HANDLE_VALUE) {}
+  explicit SafeHandle(HANDLE handle) : SafeHandleBase(INVALID_HANDLE_VALUE, handle) {}
+};
+
+class SafeHandle2 : public SafeHandleBase<CloseHandleCloser>
+{
+public:
+  SafeHandle2() : SafeHandleBase(NULL) {}
+  explicit SafeHandle2(HANDLE handle) : SafeHandleBase(NULL, handle) {}
+};
+
+class FindHandle : public SafeHandleBase<FindCloseCloser>
+{
+public:
+  FindHandle() : SafeHandleBase(INVALID_HANDLE_VALUE) {}
+  explicit FindHandle(HANDLE handle) : SafeHandleBase(INVALID_HANDLE_VALUE, handle) {}
+};
 
 time_t filetime_to_timet(const FILETIME& ft);
 
@@ -123,6 +141,18 @@ bool supports_ansi_codes();
 #define WIN_TRY(f) if (!(f)) { \
   std::ostringstream oss; \
   oss << getErrorString(GetLastError()) << " (" << __FILE__ << ":" << __LINE__ << ")"; \
+  throw oss.str(); \
+}
+
+#define THROW_WIN_ERROR(s) { \
+  std::ostringstream oss; \
+  oss << (s) << " " << getErrorString(GetLastError()); \
+  throw oss.str(); \
+}
+
+#define THROW_WIN_ERROR_FMT(s, ...) { \
+  std::ostringstream oss; \
+  oss << format((s), __VA_ARGS__) << " " << getErrorString(GetLastError()); \
   throw oss.str(); \
 }
 

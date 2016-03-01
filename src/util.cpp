@@ -33,10 +33,6 @@
 
 #ifdef WINDOWS
 #include <chrono>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/lexical_cast.hpp>
 #include <nowide/convert.hpp>
 #endif
 
@@ -61,6 +57,7 @@
 #include <i18n.h>
 #include <util.h>
 #include <nowide/iostream.hpp>
+#include <src/numeric_cast.hpp>
 
 #ifndef WINDOWS
 #include <sys/wait.h>
@@ -232,12 +229,48 @@ const std::string uuid ()
 
 #elif defined(WINDOWS)
 
+struct CryptoRandom_ {
+  BOOLEAN (APIENTRY *advRand)(void*, ULONG);
+
+  CryptoRandom_() {
+    // As odd as it is that we have to manually load this, it is a documented function
+    // https://msdn.microsoft.com/en-us/library/windows/desktop/aa387694%28v=vs.85%29.aspx
+    HMODULE lib = LoadLibraryW(L"ADVAPI32.DLL");
+    if (!lib) {
+      fprintf(stderr, "Failed to load ADVAPI32.DLL\n");
+      exit(101);
+    }
+
+    advRand = (BOOLEAN (APIENTRY *)(void*, ULONG))GetProcAddress(lib, "SystemFunction036");
+    if (!advRand) {
+      fprintf(stderr, "Failed to find RtlGenRandom\n");
+      exit(102);
+    }
+  }
+
+  bool operator()(void* buf, unsigned long len) {
+    return advRand(buf, len);
+  }
+} cryptoRandom;
+
 const std::string uuid ()
 {
-  static boost::uuids::random_generator generator;
+  uint8_t random[16];
+  if (!cryptoRandom(random, 16)) {
+    throw "Failed to create UUID";
+  }
 
-  boost::uuids::uuid uuid = generator();
-  return boost::lexical_cast<std::string>(uuid);
+  random[6] = (random[6] & (uint8_t)0x0F) | (uint8_t)0x4F;
+  random[8] = (random[8] & (uint8_t)0x3F) | (uint8_t)0x70;
+
+  char buffer[37] = {0};
+  sprintf(buffer, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+          random[0], random[1], random[2], random[3],
+          random[4], random[5], random[6], random[7],
+          random[8], random[9], random[10], random[11],
+          random[12], random[13], random[14], random[15]);
+
+  return std::string(buffer);
 }
 
 #else
@@ -671,7 +704,7 @@ int execute (
   CloseHandle(procInfo.hThread);
   SafeHandle procHandle(procInfo.hProcess);
 
-  DWORD inputSize = boost::numeric_cast<DWORD>(input.size());
+  DWORD inputSize = numeric_cast<DWORD>(input.size());
 
   DWORD written;
   WIN_TRY(WriteFile(stdInWrite.get(), input.c_str(), inputSize, &written, NULL));
@@ -691,7 +724,7 @@ int execute (
   DWORD exitCode;
   WIN_TRY(GetExitCodeProcess(procHandle.get(), &exitCode));
 
-  return boost::numeric_cast<int>(exitCode);
+  return numeric_cast<int>(exitCode);
 }
 
 bool supports_ansi_codes_;

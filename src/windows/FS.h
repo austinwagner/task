@@ -31,6 +31,9 @@
 #include <string>
 #include <vector>
 #include <sys/stat.h>
+#include <util.h>
+
+typedef int mode_t;
 
 class Path
 {
@@ -60,6 +63,9 @@ public:
   // Statics
   static std::string expand (const std::string&);
   static std::vector<std::string> glob (const std::string&);
+ 
+protected:
+  static bool isDots(const wchar_t *);
 
 public:
   std::string _original;
@@ -114,9 +120,15 @@ public:
   static bool append (const std::string&, const std::vector <std::string>&, bool addNewlines = true);
   static bool remove (const std::string&);
 
+protected:
+  static SafeHandle open_for_metadata (const char*);
+
 private:
-  FILE* _fh;
-  int   _h;
+  void append (const std::vector <std::string>&, bool);
+  void write (const std::vector <std::string>&, bool);
+  bool open (bool);
+  
+  SafeHandle _file;
   bool  _locked;
 };
 
@@ -143,8 +155,8 @@ public:
   bool cd () const;
 
 private:
-  void list (const std::string&, std::vector <std::string>&, bool);
-  bool remove_directory (const std::string&) const;
+  void listRecursive(std::vector<std::string>&, const wchar_t *, const wchar_t *);
+  bool remove_directory (const wchar_t*) const;
 };
 
 std::ostream& operator<< (std::ostream&, const Path&);

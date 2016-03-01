@@ -35,6 +35,8 @@
 #include <CLI2.h>
 #include <i18n.h>
 
+#undef max
+
 ////////////////////////////////////////////////////////////////////////////////
 static bool isMonth (const std::string& name, int& i)
 {

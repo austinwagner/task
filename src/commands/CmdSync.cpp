@@ -111,10 +111,10 @@ int CmdSync::execute (std::string& output)
 
   // CA must exist, if provided.
   File ca (context.config.get ("taskd.ca"));
-  if (ca.to_string() != "" && ! ca.exists ())
+  if (ca._data != "" && ! ca.exists ())
     throw std::string (STRING_CMD_SYNC_BAD_CA);
 
-  if (trust == TLSClient::allow_all && ca.to_string() != "")
+  if (trust == TLSClient::allow_all && ca._data != "")
     throw std::string (STRING_CMD_SYNC_TRUST_CA);
 
   File certificate (context.config.get ("taskd.certificate"));
@@ -180,7 +180,7 @@ int CmdSync::execute (std::string& output)
 #endif
 
   Msg response;
-  if (send (connection, ca.to_string(), certificate.to_string(), key.to_string(), trust, request, response))
+  if (send (connection, ca._data, certificate._data, key._data, trust, request, response))
   {
     std::string code = response.get ("code");
     if (code == "200")

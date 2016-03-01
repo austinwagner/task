@@ -28,9 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <RX.h>
-#include <boost/numeric/conversion/cast.hpp>
-#include <algorithm>
-#include <boost/range/iterator_range_core.hpp>
+#include <numeric_cast.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 RX::RX ()
@@ -116,12 +114,11 @@ bool RX::match (
   if (!_compiled)
     compile ();
 
-  std::transform(
-    std::sregex_iterator(in.begin(), in.end(), _regex),
-    std::sregex_iterator(),
-    std::back_inserter(matches),
-    [](const std::smatch& match) { return match[0].str(); }
-  );
+  std::string::const_iterator it = in.begin();
+  std::smatch raw_matches;
+  while (std::regex_search(it, in.end(), raw_matches, _regex)) {
+    matches.push_back(raw_matches[0].str());
+  }
 
   return !matches.empty();
 }
@@ -135,12 +132,12 @@ bool RX::match (
   if (!_compiled)
     compile ();
 
-  auto dist = [&in](const std::string::const_iterator& pos) { return boost::numeric_cast<int>(std::distance(in.begin(), pos)); };
-  auto matches = boost::make_iterator_range(std::sregex_iterator(in.begin(), in.end(), _regex), std::sregex_iterator());
-  for (auto& match : matches)
-  {
-    start.push_back(dist(match[0].first));
-    end.push_back(dist(match[0].second));
+  std::string::const_iterator it = in.begin();
+  std::smatch matches;
+  while (std::regex_search(it, in.end(), matches, _regex)) {
+    start.push_back(numeric_cast<int>(std::distance(matches[0].first, in.begin())));
+    end.push_back(numeric_cast<int>(std::distance(matches[0].second, in.begin()) - 1));
+    it = matches[0].second;
   }
 
   return !start.empty();

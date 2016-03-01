@@ -355,7 +355,7 @@ void TF2::load_tasks ()
 
   catch (const std::string& e)
   {
-    throw e + format (STRING_TDB2_PARSE_ERROR, _file.to_string(), line_number);
+    throw e + format (STRING_TDB2_PARSE_ERROR, _file._data, line_number);
   }
 
   context.timer_load.stop ();
@@ -791,10 +791,10 @@ void TDB2::revert ()
 
     // Commit.  If processing makes it this far with no exceptions, then we're
     // done.
-    File::write (undo._file.to_string(), u);
-    File::write (pending._file.to_string(), p);
-    File::write (completed._file.to_string(), c);
-    File::write (backlog._file.to_string(), b);
+    File::write (undo._file._data, u);
+    File::write (pending._file._data, p);
+    File::write (completed._file._data, c);
+    File::write (backlog._file._data, b);
   }
   else
     nowide::cout << STRING_CMD_CONFIG_NO_CHANGE << "\n";

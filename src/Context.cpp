@@ -151,7 +151,7 @@ int Context::initialize (int argc, const char** argv)
     if (override)
     {
       rc_file = File (override);
-      header (format (STRING_CONTEXT_RC_OVERRIDE, rc_file.to_string()));
+      header (format (STRING_CONTEXT_RC_OVERRIDE, rc_file._data));
     }
 
     config.clear ();
@@ -175,8 +175,8 @@ int Context::initialize (int argc, const char** argv)
     if (override)
     {
       data_dir = Directory (override);
-      config.set ("data.location", data_dir.to_string());
-      header (format (STRING_CONTEXT_DATA_OVERRIDE, data_dir.to_string()));
+      config.set ("data.location", data_dir._data);
+      header (format (STRING_CONTEXT_DATA_OVERRIDE, data_dir._data));
     }
 
     tdb2.set_location (data_dir);
@@ -728,10 +728,10 @@ void Context::createDefaultConfig ()
   if (! rc_file.exists ())
   {
     if (config.getBoolean ("confirmation") &&
-        !confirm (format (STRING_CONTEXT_CREATE_RC, home_dir, rc_file.to_string())))
+        !confirm (format (STRING_CONTEXT_CREATE_RC, home_dir, rc_file._data)))
       throw std::string (STRING_CONTEXT_NEED_RC);
 
-    config.createDefaultRC (rc_file, data_dir.original());
+    config.createDefaultRC (rc_file, data_dir._data);
   }
 
   // Create data location, if necessary.

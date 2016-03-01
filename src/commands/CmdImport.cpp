@@ -35,6 +35,7 @@
 #include <main.h>
 #include <CmdImport.h>
 #include <nowide/iostream.hpp>
+#include "CmdModify.h"
 
 extern Context context;
 
@@ -177,12 +178,12 @@ void CmdImport::importSingleTask (json::object* obj)
   // Parse the whole thing, validate the data.
   Task task (obj);
 
-  bool hasGeneratedEntry = not task.has ("entry");
+  bool hasGeneratedEntry = ! task.has ("entry");
   bool hasExplicitEnd = task.has ("end");
 
   task.validate ();
 
-  bool hasGeneratedEnd = not hasExplicitEnd and task.has ("end");
+  bool hasGeneratedEnd = ! hasExplicitEnd && task.has ("end");
 
   // Check whether the imported task is new or a modified existing task.
   Task before;

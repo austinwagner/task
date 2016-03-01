@@ -90,7 +90,7 @@ void Hooks::initialize ()
     }
   }
   else if (_debug >= 1)
-    context.debug ("Hook directory not readable: " + d.to_string());
+    context.debug ("Hook directory not readable: " + d._data);
 
   _enabled = context.config.getBoolean ("hooks");
 }
@@ -519,10 +519,10 @@ std::vector <std::string>& Hooks::buildHookScriptArgs (std::vector <std::string>
   args.push_back ("command:" + context.cli2.getCommand ());
 
   // rc file used after applying all overrides.
-  args.push_back ("rc:" + context.rc_file.to_string());
+  args.push_back ("rc:" + context.rc_file._data);
 
   // Directory containing *.data files.
-  args.push_back ("data:" + context.data_dir.to_string());
+  args.push_back ("data:" + context.data_dir._data);
 
   // Taskwarrior version, same as returned by "task --version"
   args.push_back ("version:" + std::string(VERSION));

@@ -26,34 +26,21 @@
 
 #include <cmake.h>
 #include <fstream>
-#include <glob.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdlib.h>
-#include <pwd.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <fcntl.h>
-#include <dirent.h>
 #include <string.h>
 #include <errno.h>
 #include <text.h>
 #include <util.h>
 #include <i18n.h>
 #include <FS.h>
-
-#if defined SOLARIS || defined NETBSD || defined FREEBSD
-#include <limits.h>
-#endif
-
-// Fixes build with musl libc.
-#ifndef GLOB_TILDE
-#define GLOB_TILDE 0
-#endif
-
-#ifndef GLOB_BRACE
-#define GLOB_BRACE 0
-#endif
+#include <nowide/convert.hpp>
+#include <Shlwapi.h>
+#include <ShlObj.h>
+#include <src/numeric_cast.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 std::ostream& operator<< (std::ostream& out, const Path& path)
@@ -110,7 +97,12 @@ bool Path::operator== (const Path& other)
 ////////////////////////////////////////////////////////////////////////////////
 Path& Path::operator+= (const std::string& dir)
 {
-  _data += "/" + dir;
+  wchar_t result[MAX_PATH];
+  if (PathCombineW(result, nowide::widen(_data).c_str(), nowide::widen(dir).c_str()) == NULL) {
+    THROW_WIN_ERROR_FMT("Failed to combine \"{1}\" with \"{2}\".", _data, dir);
+  }
+
+  _data = nowide::narrow(result);
   return *this;
 }
 
@@ -123,170 +115,123 @@ Path::operator std::string () const
 ////////////////////////////////////////////////////////////////////////////////
 std::string Path::name () const
 {
-  if (_data.length ())
-  {
-    auto slash = _data.rfind ('/');
-    if (slash != std::string::npos)
-      return _data.substr (slash + 1, std::string::npos);
+  auto wdata = nowide::widen(_data);
+  const wchar_t * name = PathFindFileNameW(wdata.c_str());
+  if (name == wdata.c_str()) {
+    return "";
   }
 
- return _data;
+  return nowide::narrow(name);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string Path::parent () const
 {
-  if (_data.length ())
-  {
-    auto slash = _data.rfind ('/');
-    if (slash != std::string::npos)
-      return _data.substr (0, slash);
+  auto parent = nowide::widen(_data);
+  wchar_t *parent_buf = const_cast<wchar_t*>(parent.c_str());
+  if (!PathRemoveFileSpecW(parent_buf)) {
+    return "";
   }
 
-  return "";
+  return nowide::narrow(parent_buf);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string Path::extension () const
 {
-  if (_data.length ())
-  {
-    auto dot = _data.rfind ('.');
-    if (dot != std::string::npos)
-      return _data.substr (dot + 1, std::string::npos);
+  const wchar_t *extension = PathFindExtensionW(nowide::widen(_data).c_str());
+  if (*extension == 0) {
+    return "";
   }
 
-  return "";
+  extension += sizeof(wchar_t);
+  return nowide::narrow(extension);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::exists () const
 {
-  return access (_data.c_str (), F_OK) ? false : true;
+  return PathFileExistsW(nowide::widen(_data).c_str()) == TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::is_directory () const
 {
-  struct stat s {};
-  if (! stat (_data.c_str (), &s) &&
-      S_ISDIR (s.st_mode))
-    return true;
-
-  return false;
+  return PathIsDirectoryW(nowide::widen(_data).c_str()) == TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::is_absolute () const
 {
-  if (_data.length () && _data[0] == '/')
-    return true;
-
-  return false;
+  return PathIsRelativeW(nowide::widen(_data).c_str()) == FALSE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::is_link () const
 {
-  struct stat s {};
-  if (! lstat (_data.c_str (), &s) &&
-      S_ISLNK (s.st_mode))
-    return true;
-
-  return false;
+  DWORD attribs = GetFileAttributesW(nowide::widen(_data).c_str());
+  return (attribs & FILE_ATTRIBUTE_REPARSE_POINT) == FILE_ATTRIBUTE_REPARSE_POINT;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::readable () const
 {
-  return access (_data.c_str (), R_OK) ? false : true;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::writable () const
 {
-  return access (_data.c_str (), W_OK) ? false : true;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::executable () const
 {
-  return access (_data.c_str (), X_OK) ? false : true;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Path::rename (const std::string& new_name)
 {
-  std::string expanded = expand (new_name);
-  if (_data != expanded)
+  std::wstring expanded = nowide::widen(expand(new_name));
+  std::wstring wdata = nowide::widen(_data);
+
+  if (wdata != expanded)
   {
-    if (::rename (_data.c_str (), expanded.c_str ()) == 0)
+    if (!MoveFileW(wdata.c_str (), expanded.c_str ()))
     {
-      _data = expanded;
-      return true;
+      return false;
     }
   }
 
-  return false;
+  wdata = expanded;
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// ~      --> /home/user
-// ~foo/x --> /home/foo/s
-// ~/x    --> /home/foo/x
-// ./x    --> $PWD/x
-// x      --> $PWD/x
+// Only expand tilde on Windows
 std::string Path::expand (const std::string& in)
 {
-  std::string copy = in;
+  std::wstring result_str;
 
-  auto tilde = copy.find ("~");
-  std::string::size_type slash;
-
-  if (tilde != std::string::npos)
-  {
-    const char *home = getenv("HOME");
-    if (home == NULL)
-    {
-      struct passwd* pw = getpwuid (getuid ());
-      home = pw->pw_dir;
+  if (in.size() >= 2 && in[0] == '~' && (in[1] == '\\' || in[1] == '/')) {
+    wchar_t home[MAX_PATH];
+    if (SHGetFolderPathW(nullptr, CSIDL_PROFILE, nullptr, SHGFP_TYPE_CURRENT, home) != S_OK) {
+      throw "Failed to get home path.";
     }
 
-    // Convert: ~ --> /home/user
-    if (copy.length () == 1)
-      copy = home;
-
-    // Convert: ~/x --> /home/user/x
-    else if (copy.length () > tilde + 1 &&
-             copy[tilde + 1] == '/')
-    {
-      copy.replace (tilde, 1, home);
-    }
-
-    // Convert: ~foo/x --> /home/foo/x
-    else if ((slash = copy.find  ("/", tilde)) != std::string::npos)
-    {
-      std::string name = copy.substr (tilde + 1, slash - tilde - 1);
-      struct passwd* pw = getpwnam (name.c_str ());
-      if (pw)
-        copy.replace (tilde, slash - tilde, pw->pw_dir);
-    }
+    result_str = home;
+    result_str.append(nowide::widen(in.substr(1)));
+  }
+  else {
+    result_str = nowide::widen(in);
   }
 
-  // Relative paths
-  else if (in.length () > 2 &&
-           in.substr (0, 2) == "./")
-  {
-    copy = Directory::cwd () + "/" + in.substr (2);
-  }
-  else if (in.length () > 1 &&
-           in[0] != '.' &&
-           in[0] != '/')
-  {
-    copy = Directory::cwd () + "/" + in;
-  }
+  wchar_t result[MAX_PATH];
+  PathCanonicalizeW(result, result_str.c_str());
 
-  return copy;
+  return nowide::narrow(result);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -294,24 +239,34 @@ std::vector <std::string> Path::glob (const std::string& pattern)
 {
   std::vector <std::string> results;
 
-  glob_t g;
-#ifdef SOLARIS
-  if (!::glob (pattern.c_str (), GLOB_ERR, NULL, &g))
-#else
-  if (!::glob (pattern.c_str (), GLOB_ERR | GLOB_BRACE | GLOB_TILDE, NULL, &g))
-#endif
-    for (int i = 0; i < (int) g.gl_pathc; ++i)
-      results.push_back (g.gl_pathv[i]);
+  WIN32_FIND_DATAW findData;
+  FindHandle handle(FindFirstFileW(nowide::widen(pattern).c_str(), &findData));
+  if (!handle.valid())
+  {
+    return results;
+  }
 
-  globfree (&g);
+  do
+  {
+    if (Path::isDots(findData.cFileName))
+    {
+      continue;
+    }
+
+    results.push_back(nowide::narrow(findData.cFileName));
+  } while (FindNextFileW(handle.get(), &findData) == TRUE);
+
   return results;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Path::isDots(const wchar_t *name) {
+  return name[0] == L'.' && (name[1] == L'\0' || (name[1] == L'.' && name[2] == L'\0'));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 File::File ()
 : Path::Path ()
-, _fh (NULL)
-, _h (-1)
 , _locked (false)
 {
 }
@@ -319,8 +274,6 @@ File::File ()
 ////////////////////////////////////////////////////////////////////////////////
 File::File (const Path& other)
 : Path::Path (other)
-, _fh (NULL)
-, _h (-1)
 , _locked (false)
 {
 }
@@ -328,8 +281,6 @@ File::File (const Path& other)
 ////////////////////////////////////////////////////////////////////////////////
 File::File (const File& other)
 : Path::Path (other)
-, _fh (NULL)
-, _h (-1)
 , _locked (false)
 {
 }
@@ -337,8 +288,6 @@ File::File (const File& other)
 ////////////////////////////////////////////////////////////////////////////////
 File::File (const std::string& in)
 : Path::Path (in)
-, _fh (NULL)
-, _h (-1)
 , _locked (false)
 {
 }
@@ -346,8 +295,6 @@ File::File (const std::string& in)
 ////////////////////////////////////////////////////////////////////////////////
 File::~File ()
 {
-  if (_fh)
-    close ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -365,7 +312,7 @@ bool File::create (int mode /* = 0640 */)
 {
   if (open ())
   {
-    fchmod (_h, mode);
+    // Ignore mode on windows
     close ();
     return true;
   }
@@ -376,85 +323,76 @@ bool File::create (int mode /* = 0640 */)
 ////////////////////////////////////////////////////////////////////////////////
 bool File::remove () const
 {
-  return unlink (_data.c_str ()) == 0 ? true : false;
+  return DeleteFileW (nowide::widen(_data).c_str ()) == TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::open ()
 {
-  if (_data != "")
-  {
-    if (! _fh)
-    {
-      bool already_exists = exists ();
-      if (already_exists)
-        if (!readable () || !writable ())
-          throw std::string (format (STRING_FILE_PERMS, _data));
+  return open (false);
+}
 
-      _fh = fopen (_data.c_str (), (already_exists ? "r+" : "w+"));
-      if (_fh)
-      {
-        _h = fileno (_fh);
-        _locked = false;
-        return true;
-      }
-    }
-    else
-      return true;
+////////////////////////////////////////////////////////////////////////////////
+bool File::open (bool lock)
+{
+  if (_data.empty() || _file.valid()) {
+    return false;
   }
 
-  return false;
+  _file.reset(CreateFileW(
+    nowide::widen(_data).c_str(),
+    GENERIC_READ | GENERIC_WRITE,
+    FILE_SHARE_READ | (lock ? 0u : FILE_SHARE_WRITE),
+    nullptr,
+    OPEN_ALWAYS,
+    FILE_ATTRIBUTE_NORMAL,
+    nullptr
+    ));
+
+  if (_file.valid()) {
+    _locked = lock;
+  }
+
+  return _file.valid();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::openAndLock ()
 {
-  return open () && lock ();
+  return open (true);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void File::close ()
 {
-  if (_fh)
+  if (_file.valid())
   {
-    if (_locked)
-      unlock ();
-
-    fclose (_fh);
-    _fh = NULL;
-    _h = -1;
+    // Windows will unlock the file when the handle is closed
     _locked = false;
+    _file.reset();
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::lock ()
 {
-  _locked = false;
-  if (_fh && _h != -1)
-  {
-                    // l_type   l_whence  l_start  l_len  l_pid
-    struct flock fl = {F_WRLCK, SEEK_SET, 0,       0,     0 };
-    fl.l_pid = getpid ();
-    if (fcntl (_h, F_SETLKW, &fl) == 0)
-      _locked = true;
+  if (_locked) {
+    return true;
   }
 
-  return _locked;
+  close();
+  return open(true);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void File::unlock ()
 {
-  if (_locked)
-  {
-                    // l_type   l_whence  l_start  l_len  l_pid
-    struct flock fl = {F_UNLCK, SEEK_SET, 0,       0,     0 };
-    fl.l_pid = getpid ();
-
-    fcntl (_h, F_SETLK, &fl);
-    _locked = false;
+  if (!_locked) {
+    return;
   }
+
+  close();
+  open(false);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -462,17 +400,26 @@ void File::unlock ()
 void File::read (std::string& contents)
 {
   contents = "";
-  contents.reserve (size ());
+  if (!_file.valid()) {
+    open();
+  }
 
-  std::ifstream in (_data.c_str ());
-  if (in.good ())
-  {
-    std::string line;
-    line.reserve (512 * 1024);
-    while (getline (in, line))
-      contents += line + "\n";
+  contents.reserve(size());
 
-    in.close ();
+  char buffer[512];
+  DWORD read = 1;
+
+  while (read > 0) {
+    WIN_TRY(ReadFile(_file.get(), buffer, sizeof(buffer), &read, nullptr));
+
+    for (DWORD i = 0; i < read; i++) {
+      char c = buffer[i];
+
+      // Naive line ending conversion
+      if (c != '\r') {
+        contents.push_back(c);
+      }
+    }
   }
 }
 
@@ -480,17 +427,40 @@ void File::read (std::string& contents)
 // Opens if necessary.
 void File::read (std::vector <std::string>& contents)
 {
-  contents.clear ();
+  contents.clear();
 
-  std::ifstream in (_data.c_str ());
-  if (in.good ())
-  {
-    std::string line;
-    line.reserve (512 * 1024);
-    while (getline (in, line))
-      contents.push_back (line);
+  if (!_file.valid()) {
+    open();
+  }
 
-    in.close ();
+  char buffer[512];
+  DWORD read = 1;
+  std::string line;
+
+  while (read > 0) {
+    WIN_TRY(ReadFile(_file.get(), buffer, sizeof(buffer), &read, nullptr));
+
+    for (DWORD i = 0; i < read; i++) {
+      char c = buffer[i];
+
+      // Naive line ending conversion
+      if (c == '\r') {
+        continue;
+      }
+      else if (c == '\n') {
+        if (!line.empty()) {
+          contents.push_back(line);
+          line = std::string();
+        }
+      }
+      else {
+        line.push_back(c);
+      }
+    }
+  }
+
+  if (!line.empty()) {
+    contents.push_back(line);
   }
 }
 
@@ -498,24 +468,42 @@ void File::read (std::vector <std::string>& contents)
 // Opens if necessary.
 void File::write (const std::string& line)
 {
-  if (!_fh)
-    open ();
+  if (!_file.valid()) {
+    open();
+  }
 
-  if (_fh)
-    fputs (line.c_str (), _fh);
+  if (_file.valid()) {
+    DWORD line_size = numeric_cast<DWORD>(line.size());
+
+    WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
+    WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr));
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Opens if necessary.
 void File::write (const std::vector <std::string>& lines)
 {
-  if (!_fh)
-    open ();
+  write(lines, true);
+}
 
-  if (_fh)
-  {
-    for (auto& line : lines)
-      fputs (line.c_str (), _fh);
+////////////////////////////////////////////////////////////////////////////////
+// Opens if necessary.
+void File::write(const std::vector <std::string>& lines, bool add_newlines)
+{
+  if (!_file.valid()) {
+    open();
+  }
+
+  if (_file.valid()) {
+    for (auto& line : lines) {
+      DWORD line_size = numeric_cast<DWORD>(line.size());
+
+      WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
+      if (add_newlines) {
+        WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr));
+      }
+    }
   }
 }
 
@@ -523,13 +511,20 @@ void File::write (const std::vector <std::string>& lines)
 // Opens if necessary.
 void File::append (const std::string& line)
 {
-  if (!_fh)
-    open ();
+  if (!_file.valid()) {
+    open();
+  }
 
-  if (_fh)
-  {
-    fseek (_fh, 0, SEEK_END);
-    fputs (line.c_str (), _fh);
+  if (_file.valid()) {
+    DWORD line_size = numeric_cast<DWORD>(line.size());
+
+    LARGE_INTEGER offset;
+    offset.QuadPart = 0;
+
+    WIN_TRY(SetFilePointerEx(_file.get(), offset, nullptr, FILE_END));
+
+    WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
+    WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr))
   }
 }
 
@@ -537,25 +532,42 @@ void File::append (const std::string& line)
 // Opens if necessary.
 void File::append (const std::vector <std::string>& lines)
 {
-  if (!_fh)
-    open ();
+  append(lines, true);
+}
 
-  if (_fh)
-  {
-    fseek (_fh, 0, SEEK_END);
-    for (auto& line : lines)
-      fputs ((line + "\n").c_str (), _fh);
+////////////////////////////////////////////////////////////////////////////////
+// Opens if necessary.
+void File::append(const std::vector <std::string>& lines, bool add_newlines) {
+  if (!_file.valid()) {
+    open();
+  }
+
+  if (_file.valid()) {
+    for (auto& line : lines) {
+      DWORD line_size = numeric_cast<DWORD>(line.size());
+
+      WIN_TRY(SetFilePointer(_file.get(), 0, nullptr, FILE_END));
+
+      WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr))
+
+        if (add_newlines) {
+          WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr))
+        }
+    }
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void File::truncate ()
 {
-  if (!_fh)
-    open ();
+  if (!_file.valid()) {
+    open();
+  }
 
-  if (_fh)
-    ftruncate (_h, 0);
+  if (_file.valid()) {
+    WIN_TRY(SetFilePointer(_file.get(), 0, nullptr, FILE_END));
+    WIN_TRY(SetEndOfFile(_file.get()));
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -576,87 +588,79 @@ void File::truncate ()
 //  S_IXUSR         0000100  execute/search permission, owner
 mode_t File::mode ()
 {
-  struct stat s;
-  if (!stat (_data.c_str (), &s))
-    return s.st_mode;
-
   return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+SafeHandle File::open_for_metadata(const char *path) {
+  SafeHandle h(
+    CreateFileW(
+      nowide::widen(path).c_str(),
+      0,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr,
+      OPEN_EXISTING,
+      0,
+      nullptr));
+
+  if (!h.valid()) {
+    THROW_WIN_ERROR_FMT("Error opening \"{1}\" for reading metadata.", path);
+  }
+
+  return h;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 size_t File::size () const
 {
-  struct stat s;
-  if (!stat (_data.c_str (), &s))
-    return s.st_size;
+  SafeHandle handle = File::open_for_metadata(_data.c_str());
+  LARGE_INTEGER size;
+  WIN_TRY(GetFileSizeEx(handle.get(), &size));
 
-  return 0;
+  return numeric_cast<size_t>(size.QuadPart);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 time_t File::mtime () const
 {
-  struct stat s;
-  if (!stat (_data.c_str (), &s))
-    return s.st_mtime;
+  SafeHandle handle = File::open_for_metadata(_data.c_str());
+  BY_HANDLE_FILE_INFORMATION fileInfo;
+  WIN_TRY(GetFileInformationByHandle(handle.get(), &fileInfo));
 
-  return 0;
+  return filetime_to_timet(fileInfo.ftLastWriteTime);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 time_t File::ctime () const
 {
-  struct stat s;
-  if (!stat (_data.c_str (), &s))
-    return s.st_ctime;
+  SafeHandle handle = File::open_for_metadata(_data.c_str());
+  BY_HANDLE_FILE_INFORMATION fileInfo;
+  WIN_TRY(GetFileInformationByHandle(handle.get(), &fileInfo));
 
-  return 0;
+  return filetime_to_timet(fileInfo.ftLastAccessTime);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 time_t File::btime () const
 {
-  struct stat s;
-  if (!stat (_data.c_str (), &s))
-#ifdef HAVE_ST_BIRTHTIME
-    return s.st_birthtime;
-#else
-    return s.st_ctime;
-#endif
+  SafeHandle handle = File::open_for_metadata(_data.c_str());
+  BY_HANDLE_FILE_INFORMATION fileInfo;
+  WIN_TRY(GetFileInformationByHandle(handle.get(), &fileInfo));
 
-  return 0;
+  return filetime_to_timet(fileInfo.ftCreationTime);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::create (const std::string& name, int mode /* = 0640 */)
 {
-  std::string full_name = expand (name);
-  std::ofstream out (full_name.c_str ());
-  if (out.good ())
-  {
-    out.close ();
-    chmod (full_name.c_str (), mode);
-    return true;
-  }
-
-  return false;
+  return File(name).create(mode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 std::string File::read (const std::string& name)
 {
   std::string contents = "";
-
-  std::ifstream in (name.c_str ());
-  if (in.good ())
-  {
-    std::string line;
-    line.reserve (1024);
-    while (getline (in, line))
-      contents += line + "\n";
-
-    in.close ();
-  }
+  File(name).read(contents);
 
   return contents;
 }
@@ -665,55 +669,23 @@ std::string File::read (const std::string& name)
 bool File::read (const std::string& name, std::string& contents)
 {
   contents = "";
-
-  std::ifstream in (name.c_str ());
-  if (in.good ())
-  {
-    std::string line;
-    line.reserve (1024);
-    while (getline (in, line))
-      contents += line + "\n";
-
-    in.close ();
-    return true;
-  }
-
-  return false;
+  File(name).read(contents);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::read (const std::string& name, std::vector <std::string>& contents)
 {
-  contents.clear ();
-
-  std::ifstream in (name.c_str ());
-  if (in.good ())
-  {
-    std::string line;
-    line.reserve (1024);
-    while (getline (in, line))
-      contents.push_back (line);
-
-    in.close ();
-    return true;
-  }
-
-  return false;
+  contents.clear();
+  File(name).read(contents);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::write (const std::string& name, const std::string& contents)
 {
-  std::ofstream out (expand (name).c_str (),
-                     std::ios_base::out | std::ios_base::trunc);
-  if (out.good ())
-  {
-    out << contents;
-    out.close ();
-    return true;
-  }
-
-  return false;
+  File(name).write(contents);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -722,38 +694,15 @@ bool File::write (
   const std::vector <std::string>& lines,
   bool addNewlines /* = true */)
 {
-  std::ofstream out (expand (name).c_str (),
-                     std::ios_base::out | std::ios_base::trunc);
-  if (out.good ())
-  {
-    for (auto& line : lines)
-    {
-      out << line;
-
-      if (addNewlines)
-        out << "\n";
-    }
-
-    out.close ();
-    return true;
-  }
-
-  return false;
+  File(name).write(lines, addNewlines);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::append (const std::string& name, const std::string& contents)
 {
-  std::ofstream out (expand (name).c_str (),
-                     std::ios_base::out | std::ios_base::app);
-  if (out.good ())
-  {
-    out << contents;
-    out.close ();
-    return true;
-  }
-
-  return false;
+  File(name).append(contents);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -762,29 +711,14 @@ bool File::append (
   const std::vector <std::string>& lines,
   bool addNewlines /* = true */)
 {
-  std::ofstream out (expand (name).c_str (),
-                     std::ios_base::out | std::ios_base::app);
-  if (out.good ())
-  {
-    for (auto& line : lines)
-    {
-      out << line;
-
-      if (addNewlines)
-        out << "\n";
-    }
-
-    out.close ();
-    return true;
-  }
-
-  return false;
+  File(name).append(lines, addNewlines);
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::remove (const std::string& name)
 {
-  return unlink (expand (name).c_str ()) == 0 ? true : false;
+  return DeleteFileW(nowide::widen(name).c_str()) == TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -835,156 +769,141 @@ Directory& Directory::operator= (const Directory& other)
 ////////////////////////////////////////////////////////////////////////////////
 bool Directory::create (int mode /* = 0755 */)
 {
-  return mkdir (_data.c_str (), mode) == 0 ? true : false;
+  std::vector<Directory> parents;
+  Directory parent_dir(parent());
+  while (parent_dir._data != "" && !parent_dir.exists()) {
+    parents.push_back(parent_dir);
+    parent_dir = Directory(parent_dir.parent());
+  }
+
+  std::vector<Directory>::const_reverse_iterator it = parents.rbegin();
+  std::vector<Directory>::const_reverse_iterator end = parents.rend();
+
+  for (; it != end; ++it) {
+    if (!CreateDirectoryW(nowide::widen(it->_data).c_str(), nullptr)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool Directory::remove () const
 {
-  return remove_directory (_data);
+  return Directory::remove_directory(nowide::widen(_data).c_str());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool Directory::remove_directory (const std::string& dir) const
+bool Directory::remove_directory (const wchar_t *dir) const
 {
-  DIR* dp = opendir (dir.c_str ());
-  if (dp != NULL)
-  {
-    struct dirent* de;
-    while ((de = readdir (dp)) != NULL)
-    {
-      if (!strcmp (de->d_name, ".") ||
-          !strcmp (de->d_name, ".."))
-        continue;
-
-#if defined (SOLARIS) || defined (HAIKU)
-      struct stat s;
-      lstat ((dir + "/" + de->d_name).c_str (), &s);
-      if (S_ISDIR (s.st_mode))
-        remove_directory (dir + "/" + de->d_name);
-      else
-        unlink ((dir + "/" + de->d_name).c_str ());
-#else
-      if (de->d_type == DT_UNKNOWN)
-      {
-        struct stat s;
-        lstat ((dir + "/" + de->d_name).c_str (), &s);
-        if (S_ISDIR (s.st_mode))
-          de->d_type = DT_DIR;
-      }
-      if (de->d_type == DT_DIR)
-        remove_directory (dir + "/" + de->d_name);
-      else
-        unlink ((dir + "/" + de->d_name).c_str ());
-#endif
-    }
-
-    closedir (dp);
+  WIN32_FIND_DATAW findData;
+  FindHandle findHandle(FindFirstFileW(dir, &findData));
+  if (!findHandle.valid()) {
+    return false;
   }
 
-  return rmdir (dir.c_str ()) ? false : true;
+  do
+  {
+    if (Path::isDots(findData.cFileName)) {
+      continue;
+    }
+
+    if ((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+      wchar_t next_dir[MAX_PATH];
+      if (PathCombineW(next_dir, dir, findData.cFileName) == nullptr) {
+        return false;
+      }
+
+      if (!Directory::remove_directory(next_dir)) {
+        return false;
+      }
+    }
+    else {
+      if (!DeleteFileW(findData.cFileName)) {
+        return false;
+      }
+    }
+  } while (FindNextFileW(findHandle.get(), &findData));
+
+  return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 std::vector <std::string> Directory::list ()
 {
   std::vector <std::string> files;
-  list (_data, files, false);
+  Directory::listRecursive(files, nowide::widen(_data).c_str(), L"");
   return files;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-std::vector <std::string> Directory::listRecursive ()
+void Directory::listRecursive(std::vector<std::string>& result, const wchar_t *full_dir, const wchar_t *dir)
 {
   std::vector <std::string> files;
-  list (_data, files, true);
-  return files;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-std::string Directory::cwd ()
-{
-#ifdef HAVE_GET_CURRENT_DIR_NAME
-  char *buf = get_current_dir_name ();
-  if (buf == NULL)
-    throw std::bad_alloc ();
-  std::string result (buf);
-  free (buf);
-  return result;
-#else
-  char buf[PATH_MAX];
-  getcwd (buf, PATH_MAX - 1);
-  return std::string (buf);
-#endif
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool Directory::up ()
-{
-  if (_data == "/")
-    return false;
-
-  auto slash = _data.rfind ('/');
-  if (slash == 0)
-  {
-    _data = "/";  // Root dir should retain the slash.
-    return true;
-  }
-  else if (slash != std::string::npos)
-  {
-    _data = _data.substr (0, slash);
-    return true;
+  WIN32_FIND_DATAW findData;
+  FindHandle findHandle(FindFirstFileW(full_dir, &findData));
+  if (!findHandle.valid()) {
+    return;
   }
 
-  return false;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-bool Directory::cd () const
-{
-  return chdir (_data.c_str ()) == 0 ? true : false;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-void Directory::list (
-  const std::string& base,
-  std::vector <std::string>& results,
-  bool recursive)
-{
-  DIR* dp = opendir (base.c_str ());
-  if (dp != NULL)
+  do
   {
-    struct dirent* de;
-    while ((de = readdir (dp)) != NULL)
-    {
-      if (!strcmp (de->d_name, ".") ||
-          !strcmp (de->d_name, ".."))
-        continue;
-
-#if defined (SOLARIS) || defined (HAIKU)
-      struct stat s;
-      stat ((base + "/" + de->d_name).c_str (), &s);
-      if (recursive && S_ISDIR (s.st_mode))
-        list (base + "/" + de->d_name, results, recursive);
-      else
-        results.push_back (base + "/" + de->d_name);
-#else
-      if (recursive && de->d_type == DT_UNKNOWN)
-      {
-        struct stat s;
-        lstat ((base + "/" + de->d_name).c_str (), &s);
-        if (S_ISDIR (s.st_mode))
-          de->d_type = DT_DIR;
-      }
-      if (recursive && de->d_type == DT_DIR)
-        list (base + "/" + de->d_name, results, recursive);
-      else
-        results.push_back (base + "/" + de->d_name);
-#endif
+    if (Path::isDots(findData.cFileName)) {
+      continue;
     }
 
-    closedir (dp);
+    if ((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+      wchar_t next_full_dir[MAX_PATH];
+      wchar_t next_dir[MAX_PATH];
+      if (PathCombineW(next_full_dir, full_dir, findData.cFileName) == nullptr ||
+        PathCombineW(next_dir, dir, findData.cFileName) == nullptr)
+      {
+        continue;
+      }
+
+      result.push_back(nowide::narrow(next_dir));
+      Directory::listRecursive(result, next_full_dir, next_dir);
+}
+    else {
+      wchar_t filename[MAX_PATH];
+      if (PathCombineW(filename, dir, findData.cFileName) == nullptr) {
+        continue;
+      }
+
+      result.push_back(nowide::narrow(filename));
+    }
+  } while (FindNextFileW(findHandle.get(), &findData));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+std::string Directory::cwd()
+{
+  wchar_t result[MAX_PATH];
+  if (GetCurrentDirectoryW(MAX_PATH, result) == 0) {
+    THROW_WIN_ERROR("Failed to get current directory.");
   }
+
+  return nowide::narrow(result);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Directory::up()
+{
+  auto parent_str = nowide::widen(_data);
+  wchar_t *parent_buf = const_cast<wchar_t*>(parent_str.c_str());
+  if (!PathRemoveFileSpecW(parent_buf)) {
+    return false;
+  }
+
+  _data = nowide::narrow(parent_buf);
+  return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+bool Directory::cd() const
+{
+  return SetCurrentDirectoryW(nowide::widen(_data).c_str()) == TRUE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

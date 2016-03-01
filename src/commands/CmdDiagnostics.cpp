@@ -202,7 +202,7 @@ int CmdDiagnostics::execute (std::string& output)
   // Config: .taskrc found, readable, writable
   out << bold.colorize (STRING_CMD_DIAG_CONFIG)
       << "\n"
-      << "       File: " << context.config._original_file.to_string() << " "
+      << "       File: " << context.config._original_file._data << " "
       << (context.config._original_file.exists ()
            ? STRING_CMD_DIAG_FOUND
            : STRING_CMD_DIAG_MISSING)
@@ -214,7 +214,7 @@ int CmdDiagnostics::execute (std::string& output)
 
   // Config: data.location found, readable, writable
   File location (context.config.get ("data.location"));
-  out << "       Data: " << location.to_string() << " "
+  out << "       Data: " << location._data << " "
       << (location.exists ()
            ? STRING_CMD_DIAG_FOUND
            : STRING_CMD_DIAG_MISSING)
