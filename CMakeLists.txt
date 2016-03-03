@@ -28,9 +28,9 @@ include (CheckCXXCompilerFlag)
 #       Relying on -std=c++0x or even -std=gnu++0x is highly volatile.
 
 if (MSVC)
-  if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 17)
+  if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 18)
     message (FATAL_ERROR "Minimum supported compiler is MSVC11 for C++11 support. If you have a good reason for using an outdated compiler, please let us know at support@taskwarrior.org.")
-  endif (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 17)
+  endif (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 18)
 else (MSVC)
   CHECK_CXX_COMPILER_FLAG("-std=c++11" _HAS_CXX11)
   CHECK_CXX_COMPILER_FLAG("-std=c++0x" _HAS_CXX0X)

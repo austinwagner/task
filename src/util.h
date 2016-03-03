@@ -138,23 +138,39 @@ time_t filetime_to_timet(const FILETIME& ft);
 
 bool supports_ansi_codes();
 
+class WindowsError : public std::runtime_error
+{
+public:
+  explicit WindowsError(const std::string& msg) : std::runtime_error(msg) {}
+};
+
 #define WIN_TRY(f) if (!(f)) { \
   std::ostringstream oss; \
   oss << getErrorString(GetLastError()) << " (" << __FILE__ << ":" << __LINE__ << ")"; \
-  throw oss.str(); \
+  throw WindowsError(oss.str()); \
 }
 
 #define THROW_WIN_ERROR(s) { \
   std::ostringstream oss; \
   oss << (s) << " " << getErrorString(GetLastError()); \
-  throw oss.str(); \
+  throw WindowsError(oss.str()); \
 }
 
 #define THROW_WIN_ERROR_FMT(s, ...) { \
   std::ostringstream oss; \
   oss << format((s), __VA_ARGS__) << " " << getErrorString(GetLastError()); \
-  throw oss.str(); \
+  throw WindowsError(oss.str()); \
 }
+
+#if _MSC_VER < 1900
+inline int snprintf(char * dest, size_t len, const char * format, ...) {
+  va_list args;
+  va_start(args, format);
+  int result = vsprintf_s(dest, len, format, args);
+  va_end(args);
+  return result;
+}
+#endif
 
 #endif
 

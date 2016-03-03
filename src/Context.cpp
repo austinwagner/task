@@ -588,7 +588,7 @@ bool Context::verbose (const std::string& token)
           v != "recur")       //
       {
         // This list emulates rc.verbose=off in version 1.9.4.
-        verbosity = {"blank", "label", "new-id", "edit"};
+        verbosity = std::set<std::string>{"blank", "label", "new-id", "edit"};
       }
     }
 
@@ -802,7 +802,7 @@ void Context::updateVerbosity ()
   if (command != "" &&
       command[0] == '_')
   {
-    verbosity = {"nothing"};
+    verbosity = std::set<std::string>{"nothing"};
   }
 }
 
