@@ -228,6 +228,12 @@ std::string Path::expand (const std::string& in)
     result_str = nowide::widen(in);
   }
 
+  for (auto& c : result_str) {
+    if (c == L'/') {
+      c = '\\';
+    }
+  }
+
   wchar_t result[MAX_PATH];
   PathCanonicalizeW(result, result_str.c_str());
 
@@ -329,22 +335,32 @@ bool File::remove () const
 ////////////////////////////////////////////////////////////////////////////////
 bool File::open ()
 {
-  return open (false);
+  return open (FileOpenFlags::Create);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool File::open (bool lock)
+bool File::open (int flags)
 {
   if (_data.empty() || _file.valid()) {
     return false;
   }
+
+  DWORD creationDisposition;
+  if ((flags & FileOpenFlags::Create) == FileOpenFlags::Create) {
+    creationDisposition = OPEN_ALWAYS;
+  }
+  else {
+    creationDisposition = OPEN_EXISTING;
+  }
+
+  bool lock = (flags & FileOpenFlags::Lock) == FileOpenFlags::Lock;
 
   _file.reset(CreateFileW(
     nowide::widen(_data).c_str(),
     GENERIC_READ | GENERIC_WRITE,
     FILE_SHARE_READ | (lock ? 0u : FILE_SHARE_WRITE),
     nullptr,
-    OPEN_ALWAYS,
+    creationDisposition,
     FILE_ATTRIBUTE_NORMAL,
     nullptr
     ));
@@ -359,7 +375,7 @@ bool File::open (bool lock)
 ////////////////////////////////////////////////////////////////////////////////
 bool File::openAndLock ()
 {
-  return open (true);
+  return open (FileOpenFlags::Lock | FileOpenFlags::Create);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -381,7 +397,7 @@ bool File::lock ()
   }
 
   close();
-  return open(true);
+  return open(FileOpenFlags::Lock);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -392,7 +408,7 @@ void File::unlock ()
   }
 
   close();
-  open(false);
+  open(FileOpenFlags::None);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -401,7 +417,7 @@ void File::read (std::string& contents)
 {
   contents = "";
   if (!_file.valid()) {
-    open();
+    open(FileOpenFlags::None);
   }
 
   contents.reserve(size());
@@ -430,7 +446,7 @@ void File::read (std::vector <std::string>& contents)
   contents.clear();
 
   if (!_file.valid()) {
-    open();
+    open(FileOpenFlags::None);
   }
 
   char buffer[512];
@@ -469,7 +485,7 @@ void File::read (std::vector <std::string>& contents)
 void File::write (const std::string& line)
 {
   if (!_file.valid()) {
-    open();
+    open(FileOpenFlags::Create);
   }
 
   if (_file.valid()) {
@@ -492,7 +508,7 @@ void File::write (const std::vector <std::string>& lines)
 void File::write(const std::vector <std::string>& lines, bool add_newlines)
 {
   if (!_file.valid()) {
-    open();
+    open(FileOpenFlags::Create);
   }
 
   if (_file.valid()) {
@@ -512,7 +528,7 @@ void File::write(const std::vector <std::string>& lines, bool add_newlines)
 void File::append (const std::string& line)
 {
   if (!_file.valid()) {
-    open();
+    open(FileOpenFlags::Create);
   }
 
   if (_file.valid()) {
@@ -539,7 +555,7 @@ void File::append (const std::vector <std::string>& lines)
 // Opens if necessary.
 void File::append(const std::vector <std::string>& lines, bool add_newlines) {
   if (!_file.valid()) {
-    open();
+    open(FileOpenFlags::Create);
   }
 
   if (_file.valid()) {
@@ -561,7 +577,7 @@ void File::append(const std::vector <std::string>& lines, bool add_newlines) {
 void File::truncate ()
 {
   if (!_file.valid()) {
-    open();
+    open(FileOpenFlags::None);
   }
 
   if (_file.valid()) {
@@ -614,10 +630,10 @@ SafeHandle File::open_for_metadata(const char *path) {
 size_t File::size () const
 {
   SafeHandle handle = File::open_for_metadata(_data.c_str());
-  LARGE_INTEGER size;
-  WIN_TRY(GetFileSizeEx(handle.get(), &size));
+  BY_HANDLE_FILE_INFORMATION fileInfo;
+  WIN_TRY(GetFileInformationByHandle(handle.get(), &fileInfo));
 
-  return numeric_cast<size_t>(size.QuadPart);
+  return numeric_cast<size_t>((fileInfo.nFileSizeHigh << sizeof(DWORD)) + fileInfo.nFileSizeLow);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -669,7 +685,12 @@ std::string File::read (const std::string& name)
 bool File::read (const std::string& name, std::string& contents)
 {
   contents = "";
-  File(name).read(contents);
+  try {
+    File(name).read(contents);
+  }
+  catch (WindowsError&) {
+    return false;
+  }
   return true;
 }
 
@@ -677,14 +698,24 @@ bool File::read (const std::string& name, std::string& contents)
 bool File::read (const std::string& name, std::vector <std::string>& contents)
 {
   contents.clear();
-  File(name).read(contents);
+  try {
+    File(name).read(contents);
+  }
+  catch (WindowsError&) {
+    return false;
+  }
   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::write (const std::string& name, const std::string& contents)
 {
-  File(name).write(contents);
+  try {
+    File(name).write(contents);
+  }
+  catch (WindowsError&) {
+    return false;
+  }
   return true;
 }
 
@@ -694,14 +725,24 @@ bool File::write (
   const std::vector <std::string>& lines,
   bool addNewlines /* = true */)
 {
-  File(name).write(lines, addNewlines);
+  try {
+    File(name).write(lines, addNewlines);
+  }
+  catch (WindowsError&) {
+    return false;
+  }
   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 bool File::append (const std::string& name, const std::string& contents)
 {
-  File(name).append(contents);
+  try {
+    File(name).append(contents);
+  }
+  catch (WindowsError&) {
+    return false;
+  }
   return true;
 }
 
@@ -711,7 +752,12 @@ bool File::append (
   const std::vector <std::string>& lines,
   bool addNewlines /* = true */)
 {
-  File(name).append(lines, addNewlines);
+  try {
+    File(name).write(lines, addNewlines);
+  }
+  catch (WindowsError&) {
+    return false;
+  }
   return true;
 }
 

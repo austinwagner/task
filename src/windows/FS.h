@@ -35,6 +35,16 @@
 
 typedef int mode_t;
 
+namespace FSHelper {
+  namespace FileOpenFlags {
+    enum FileOpenFlags {
+      None = 0,
+      Lock = 1 << 0,
+      Create = 1 << 1
+    };
+  }
+}
+
 class Path
 {
 public:
@@ -126,7 +136,7 @@ protected:
 private:
   void append (const std::vector <std::string>&, bool);
   void write (const std::vector <std::string>&, bool);
-  bool open (bool);
+  bool open (int);
   
   SafeHandle _file;
   bool  _locked;
