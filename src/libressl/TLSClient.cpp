@@ -32,34 +32,89 @@
 #include <stdint.h>
 #include <string.h>
 
-#ifdef WINDOWS
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#define SHUT_RDWR SD_BOTH
-#else
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#endif
-
-#if (defined OPENBSD || defined SOLARIS || defined NETBSD)
-#include <errno.h>
-#elseif !defined(WINDOWS)
-#include <sys/errno.h>
-#endif
-
-#include <sys/types.h>
 #include <TLSClient.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/x509.h>
-#include <openssl/bio.h>
-#include <text.h>
-#include <i18n.h>
 #include <nowide/iostream.hpp>
-#include <nowide/convert.hpp>
+#include <sstream>
 
 #define MAX_BUF 16384
+
+TLSConfig::TLSConfig() :
+  _conf(tls_config_new())
+{
+}
+
+TLSConfig::~TLSConfig()
+{
+  tls_config_free(_conf);
+}
+
+void TLSConfig::setKeyFile(const std::string& file)
+{
+  if (tls_config_set_key_file(_conf, file.c_str()) < 0)
+  {
+    throw std::runtime_error("Failed to set key file.");
+  }
+}
+
+void TLSConfig::setCaFile(const std::string& file)
+{
+  if (tls_config_set_ca_file(_conf, file.c_str()) < 0)
+  {
+    throw std::runtime_error("Failed to set CA file.");
+  }
+}
+
+void TLSConfig::setCertFile(const std::string& file)
+{
+  if (tls_config_set_cert_file(_conf, file.c_str()) < 0)
+  {
+    throw std::runtime_error("Failed to set certificate file.");
+  }
+}
+
+void TLSConfig::setCiphers(const std::string& ciphers)
+{
+  if (tls_config_set_ciphers(_conf, ciphers.c_str()) < 0)
+  {
+    throw std::runtime_error("Failed to set ciphers.");
+  }
+}
+
+void TLSConfig::configure(tls* context)
+{
+  if (tls_configure(context, _conf) < 0)
+  {
+    throw std::runtime_error("Failed to configure TLS context.");
+  }
+}
+
+void TLSConfig::verify()
+{
+  tls_config_verify(_conf);
+}
+
+void TLSConfig::noVerifyCert()
+{
+  tls_config_insecure_noverifycert(_conf);
+}
+
+void TLSConfig::noVerifyHost()
+{
+  tls_config_insecure_noverifyname(_conf);
+}
+
+TLSException::TLSException(tls* context)
+{
+  std::ostringstream oss;
+  oss << "TLS error: " << tls_error(context);
+  _what = oss.str();
+}
+
+const char * TLSException::what() const
+{
+  return _what.c_str();
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 TLSClient::TLSClient ()
@@ -68,8 +123,7 @@ TLSClient::TLSClient ()
 , _key ("")
 , _host ("")
 , _port ("")
-, _context (nullptr)
-, _conn(nullptr)
+, _context (tls_client())
 , _limit (0)
 , _debug (false)
 , _trust(strict)
@@ -79,8 +133,7 @@ TLSClient::TLSClient ()
 ////////////////////////////////////////////////////////////////////////////////
 TLSClient::~TLSClient ()
 {
-  if (_conn) BIO_free_all(_conn);
-  if (_context) SSL_CTX_free(_context);
+  if (_context) tls_free(_context);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -102,6 +155,25 @@ void TLSClient::debug (int level)
 void TLSClient::trust (const enum trust_level value)
 {
   _trust = value;
+
+  if (_trust == allow_all)
+  {
+    _conf.noVerifyCert();
+    _conf.noVerifyCert();
+    _conf.configure(_context);
+  }
+  else if (_trust == ignore_hostname)
+  {
+    _conf.verify();
+    _conf.noVerifyHost();
+  }
+  else
+  {
+    _conf.verify();
+  }
+
+  _conf.configure(_context);
+
   if (_debug)
   {
     if (_trust == allow_all)
@@ -129,45 +201,29 @@ void TLSClient::init (
   _cert = cert;
   _key  = key;
 
-  SSL_load_error_strings();
-  ERR_load_BIO_strings();
-  OpenSSL_add_all_algorithms();
+  tls_init();
+  _conf.setKeyFile(_key);
+  _conf.setCaFile(_ca);
+  _conf.setCertFile(_cert);
+  
+  if (!_ciphers.empty()) 
+  {
+    _conf.setCiphers(_ciphers);
+  }
 
-  _context = SSL_CTX_new(TLSv1_2_client_method());
-  // TODO: Use trust level
-
-  SSL_CTX_use_PrivateKey_file(_context, _key.c_str(), SSL_FILETYPE_PEM);
-  SSL_CTX_use_certificate_file(_context, _cert.c_str(), SSL_FILETYPE_PEM);
-  SSL_CTX_load_verify_locations(_context, _ca.c_str(), nullptr);
+  _conf.configure(_context);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void TLSClient::connect (const std::string& host, const std::string& port)
 {
-  _conn = BIO_new_ssl_connect(_context);
-  SSL * ssl;
-  BIO_get_ssl(_conn, &ssl);
-  SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-  BIO_set_conn_hostname(_conn, (host + ":" + port).c_str());
-
-  if (BIO_do_connect(_conn) <= 0)
-  {
-    // TODO: Improve error message
-    throw std::runtime_error("Connection failed");
-  }
-
-  if (SSL_get_verify_result(ssl) != X509_V_OK)
-  {
-    // TODO: Improve error message
-    throw std::runtime_error("Certificate validation failed");
-  }
+  tls_connect(_context, host.c_str(), port.c_str());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 void TLSClient::bye ()
 {
-  BIO_free_all(_conn);
-  _conn = nullptr;
+  tls_close(_context);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -182,18 +238,20 @@ void TLSClient::send (const std::string& data)
   packet[2] = l >>8;
   packet[3] = l;
 
-  while (true)
-  {
-    if (BIO_write(_conn, static_cast<const void*>(packet.c_str()), packet.length()))
-    {
-      break;
+  const char * buffer = packet.data();
+
+  while (l > 0) {
+    ssize_t ret = tls_write(_context, buffer, l);
+    if (ret == TLS_WANT_POLLIN || ret == TLS_WANT_POLLOUT) {
+      continue;
     }
 
-    if (!BIO_should_retry(_conn))
-    {
-      // TODO: Improve error message
-      throw std::runtime_error("Failed to send data");
+    if (ret < 0) {
+      throw TLSException(_context);
     }
+
+    buffer += ret;
+    l -= ret;
   }
 }
 
@@ -201,17 +259,20 @@ void TLSClient::send (const std::string& data)
 void TLSClient::recv (std::string& data)
 {
   data = "";          // No appending of data.
-  int received = 0;
+  ssize_t received = 0;
 
   // Get the encoded length.
   unsigned char header[4] = {0};
   do
   {
-    received = BIO_read(_conn, header, 4);
-  }
-  while (received > 0 && BIO_should_retry(_conn));
+    received = tls_read(_context, header + received, 4 - received);
+    if (received < 0 && received != TLS_WANT_POLLIN && received != TLS_WANT_POLLOUT)
+    {
+      throw TLSException(_context);
+    }
+  } while ((header + received) < (header + 4));
 
-  int total = received;
+  int total = 4;
 
   // Decode the length.
   unsigned long expected = (header[0]<<24) |
@@ -233,24 +294,13 @@ void TLSClient::recv (std::string& data)
   {
     do
     {
-      received = BIO_read(_conn, buffer, MAX_BUF - 1);
+      received = tls_read(_context, buffer, MAX_BUF - 1);
+      if (received < 0 && received != TLS_WANT_POLLIN && received != TLS_WANT_POLLOUT)
+      {
+        throw TLSException(_context);
+      }
     }
-    while (received > 0 && BIO_should_retry(_conn));
-
-    // TODO: Improve errors
-    // Other end closed the connection.
-    if (received == 0)
-    {
-      if (_debug)
-        nowide::cout << "c: INFO Peer has closed the TLS connection\n";
-      break;
-    }
-
-    // Something happened.
-    if (received < 0)
-    {
-      throw std::runtime_error("Failed to read from host");
-    }
+    while (received < 0);
 
     buffer [received] = '\0';
     data += buffer;
@@ -260,7 +310,7 @@ void TLSClient::recv (std::string& data)
     if (_limit && total > _limit)
       break;
   }
-  while (received > 0 && total < (int) expected);
+  while (received > 0 && total < static_cast<int>(expected));
 
   if (_debug)
     nowide::cout << "c: INFO Receiving 'XXXX"
@@ -269,18 +319,13 @@ void TLSClient::recv (std::string& data)
               << std::endl;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-#ifdef WINDOWS
 namespace {
   struct initialize {
-      initialize() {
-        WSADATA wsa_data;
-        if (WSAStartup(MAKEWORD(2, 0), &wsa_data) != 0) {
-          // Purposely avoiding nowide here
-          fprintf(stderr, "FATAL: WSAStartup failed with code %d\n", WSAGetLastError());
-          exit(100);
-        }
+    initialize() {
+      if (tls_init() < 0)
+      {
+        throw std::runtime_error("Failed to initialize TLS.");
       }
+    }
   } inst;
 }
-#endif

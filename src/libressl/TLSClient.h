@@ -27,9 +27,27 @@
 #define INCLUDED_TLSCLIENT
 
 #include <string>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/bio.h>
+
+typedef ptrdiff_t ssize_t;
+#include <tls.h>
+
+class TLSConfig
+{
+public:
+  TLSConfig();
+  ~TLSConfig();
+  void setKeyFile(const std::string& file);
+  void setCaFile(const std::string& file);
+  void setCertFile(const std::string& file);
+  void setCiphers(const std::string& ciphers);
+  void configure(tls* context);
+  void verify();
+  void noVerifyCert();
+  void noVerifyHost();
+
+private:
+  tls_config * _conf;
+};
 
 class TLSClient
 {
@@ -56,11 +74,21 @@ private:
   std::string                      _ciphers;
   std::string                      _host;
   std::string                      _port;
-  SSL_CTX *                        _context;
-  BIO *                            _conn;
+  tls *                            _context;
   int                              _limit;
   bool                             _debug;
   enum trust_level                 _trust;
+  TLSConfig                        _conf;
+};
+
+class TLSException : public std::exception
+{
+public:
+  explicit TLSException(tls*);
+
+  const char * what() const;
+
+  std::string _what;
 };
 
 #endif

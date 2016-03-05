@@ -53,9 +53,9 @@ endif (WINDOWS)
 if (HAVE_LIBGNUTLS)
   set(task_SRCS ${task_SRCS}
     gnutls/TLSClient.cpp gnutls/TLSClient.h)
-elseif (HAVE_LIBOPENSSL)
+elseif (HAVE_LIBLIBRESSL)
   set(task_SRCS ${task_SRCS}
-    openssl/TLSClient.cpp openssl/TLSClient.h)
+    libressl/TLSClient.cpp libressl/TLSClient.h)
 endif (HAVE_LIBGNUTLS)
 
 add_library (task STATIC ${task_SRCS})
