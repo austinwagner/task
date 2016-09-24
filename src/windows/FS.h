@@ -32,6 +32,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <util.h>
+#include <array>
 
 typedef int mode_t;
 
@@ -137,6 +138,16 @@ private:
   void append (const std::vector <std::string>&, bool);
   void write (const std::vector <std::string>&, bool);
   bool open (int);
+  DWORD put (const std::string&);
+  BY_HANDLE_FILE_INFORMATION file_info() const;
+  int64_t File::set_pointer(int64_t, DWORD);
+
+  template<std::size_t SIZE>
+  DWORD get(std::array<char, SIZE> buffer) {
+	  DWORD bytesRead;
+	  WIN_TRY(ReadFile(_file.get(), buffer.data(), buffer.size(), &bytesRead, nullptr));
+	  return bytesRead;
+  }
   
   SafeHandle _file;
   bool  _locked;

@@ -41,6 +41,7 @@
 #include <Shlwapi.h>
 #include <ShlObj.h>
 #include <src/numeric_cast.hpp>
+#include <array>
 
 using namespace FSHelper;
 
@@ -358,14 +359,13 @@ bool File::open (int flags)
   bool lock = (flags & FileOpenFlags::Lock) == FileOpenFlags::Lock;
 
   _file.reset(CreateFileW(
-    nowide::widen(_data).c_str(),
-    GENERIC_READ | GENERIC_WRITE,
-    FILE_SHARE_READ | (lock ? 0u : FILE_SHARE_WRITE),
-    nullptr,
-    creationDisposition,
-    FILE_ATTRIBUTE_NORMAL,
-    nullptr
-    ));
+    nowide::widen(_data).c_str(),                      // lpFileName
+    GENERIC_READ | GENERIC_WRITE,                      // dwDesiredAccess
+    FILE_SHARE_READ | (lock ? 0u : FILE_SHARE_WRITE),  // dwShareMode
+    nullptr,                                           // lpSecurityAttributes
+    creationDisposition,                               // dwCreationDisposition
+    FILE_ATTRIBUTE_NORMAL,                             // dwFlagsAndAttributes
+    nullptr));                                         // hTemplateFile
 
   if (_file.valid()) {
     _locked = lock;
@@ -424,11 +424,11 @@ void File::read (std::string& contents)
 
   contents.reserve(size());
 
-  char buffer[512];
+  std::array<char, 512> buffer;
   DWORD read = 1;
 
   while (read > 0) {
-    WIN_TRY(ReadFile(_file.get(), buffer, sizeof(buffer), &read, nullptr));
+    read = get(buffer);
 
     for (DWORD i = 0; i < read; i++) {
       char c = buffer[i];
@@ -451,12 +451,12 @@ void File::read (std::vector <std::string>& contents)
     open(FileOpenFlags::None);
   }
 
-  char buffer[512];
+  std::array<char, 512> buffer;
   DWORD read = 1;
   std::string line;
 
   while (read > 0) {
-    WIN_TRY(ReadFile(_file.get(), buffer, sizeof(buffer), &read, nullptr));
+    read = get(buffer);
 
     for (DWORD i = 0; i < read; i++) {
       char c = buffer[i];
@@ -491,10 +491,8 @@ void File::write (const std::string& line)
   }
 
   if (_file.valid()) {
-    DWORD line_size = numeric_cast<DWORD>(line.size());
-
-    WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
-    WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr));
+	put(line);
+	put("\n");
   }
 }
 
@@ -515,14 +513,34 @@ void File::write(const std::vector <std::string>& lines, bool add_newlines)
 
   if (_file.valid()) {
     for (auto& line : lines) {
-      DWORD line_size = numeric_cast<DWORD>(line.size());
-
-      WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
+      put(line);
       if (add_newlines) {
-        WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr));
+        put("\n");
       }
     }
   }
+}
+////////////////////////////////////////////////////////////////////////////////
+// Internal WriteFile wrapper. Does not open file.
+DWORD File::put(const std::string& str)
+{
+	DWORD size = numeric_cast<DWORD>(str.size());
+	DWORD bytesWritten;
+	WIN_TRY(WriteFile(_file.get(), str.c_str(), size, &bytesWritten, nullptr));
+	return bytesWritten;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Internal SetFilePointerEx wrapper.
+int64_t File::set_pointer(int64_t offset, DWORD moveMethod) 	
+{
+  LARGE_INTEGER offsetLargeInt;
+  offsetLargeInt.QuadPart = offset;
+  
+  LARGE_INTEGER newOffset;
+  WIN_TRY(SetFilePointerEx(_file.get(), offsetLargeInt, &newOffset, moveMethod));
+
+  return newOffset.QuadPart;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -534,15 +552,10 @@ void File::append (const std::string& line)
   }
 
   if (_file.valid()) {
-    DWORD line_size = numeric_cast<DWORD>(line.size());
+	set_pointer(0, FILE_END);
 
-    LARGE_INTEGER offset;
-    offset.QuadPart = 0;
-
-    WIN_TRY(SetFilePointerEx(_file.get(), offset, nullptr, FILE_END));
-
-    WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr));
-    WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr))
+	put(line);
+	put("\n");
   }
 }
 
@@ -561,21 +574,18 @@ void File::append(const std::vector <std::string>& lines, bool add_newlines) {
   }
 
   if (_file.valid()) {
+    set_pointer(0, FILE_END);
     for (auto& line : lines) {
-      DWORD line_size = numeric_cast<DWORD>(line.size());
-
-      WIN_TRY(SetFilePointer(_file.get(), 0, nullptr, FILE_END));
-
-      WIN_TRY(WriteFile(_file.get(), line.c_str(), line_size, nullptr, nullptr))
-
-        if (add_newlines) {
-          WIN_TRY(WriteFile(_file.get(), "\n", 1, nullptr, nullptr))
-        }
+	  put(line);
+	  if (add_newlines) {
+		put("\n");
+	  }
     }
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Opens if necessary.
 void File::truncate ()
 {
   if (!_file.valid()) {
@@ -583,27 +593,13 @@ void File::truncate ()
   }
 
   if (_file.valid()) {
-    WIN_TRY(SetFilePointer(_file.get(), 0, nullptr, FILE_END));
+    set_pointer(0, FILE_END);
     WIN_TRY(SetEndOfFile(_file.get()));
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//  S_IFMT          0170000  type of file
-//         S_IFIFO  0010000  named pipe (fifo)
-//         S_IFCHR  0020000  character special
-//         S_IFDIR  0040000  directory
-//         S_IFBLK  0060000  block special
-//         S_IFREG  0100000  regular
-//         S_IFLNK  0120000  symbolic link
-//         S_IFSOCK 0140000  socket
-//         S_IFWHT  0160000  whiteout
-//  S_ISUID         0004000  set user id on execution
-//  S_ISGID         0002000  set group id on execution
-//  S_ISVTX         0001000  save swapped text even after use
-//  S_IRUSR         0000400  read permission, owner
-//  S_IWUSR         0000200  write permission, owner
-//  S_IXUSR         0000100  execute/search permission, owner
+// Doesn't really make sense on Windows.
 mode_t File::mode ()
 {
   return 0;
@@ -613,13 +609,13 @@ mode_t File::mode ()
 SafeHandle File::open_for_metadata(const char *path) {
   SafeHandle h(
     CreateFileW(
-      nowide::widen(path).c_str(),
-      0,
-      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-      nullptr,
-      OPEN_EXISTING,
-      0,
-      nullptr));
+      nowide::widen(path).c_str(),                               // lpFileName
+      0,                                                         // dwDesiredAccess
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,    // dwShareMode
+      nullptr,                                                   // lpSecurityAttributes
+      OPEN_EXISTING,                                             // dwCreationDisposition
+      0,                                                         // dwFlagsAndAttributes
+      nullptr));                                                 // hTemplateFile
 
   if (!h.valid()) {
     THROW_WIN_ERROR_FMT("Error opening \"{1}\" for reading metadata.", path);
@@ -629,42 +625,39 @@ SafeHandle File::open_for_metadata(const char *path) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-size_t File::size () const
+BY_HANDLE_FILE_INFORMATION File::file_info() const
 {
   SafeHandle handle = File::open_for_metadata(_data.c_str());
   BY_HANDLE_FILE_INFORMATION fileInfo;
   WIN_TRY(GetFileInformationByHandle(handle.get(), &fileInfo));
+  return fileInfo;
+}
 
+////////////////////////////////////////////////////////////////////////////////
+size_t File::size () const
+{
+  auto fileInfo = file_info();
   return numeric_cast<size_t>((fileInfo.nFileSizeHigh << sizeof(DWORD)) + fileInfo.nFileSizeLow);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 time_t File::mtime () const
 {
-  SafeHandle handle = File::open_for_metadata(_data.c_str());
-  BY_HANDLE_FILE_INFORMATION fileInfo;
-  WIN_TRY(GetFileInformationByHandle(handle.get(), &fileInfo));
-
+  auto fileInfo = file_info();
   return filetime_to_timet(fileInfo.ftLastWriteTime);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 time_t File::ctime () const
 {
-  SafeHandle handle = File::open_for_metadata(_data.c_str());
-  BY_HANDLE_FILE_INFORMATION fileInfo;
-  WIN_TRY(GetFileInformationByHandle(handle.get(), &fileInfo));
-
+  auto fileInfo = file_info();
   return filetime_to_timet(fileInfo.ftLastAccessTime);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 time_t File::btime () const
 {
-  SafeHandle handle = File::open_for_metadata(_data.c_str());
-  BY_HANDLE_FILE_INFORMATION fileInfo;
-  WIN_TRY(GetFileInformationByHandle(handle.get(), &fileInfo));
-
+  auto fileInfo = file_info();
   return filetime_to_timet(fileInfo.ftCreationTime);
 }
 
