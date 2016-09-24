@@ -71,108 +71,116 @@ const std::vector <std::string> extractParents (
 #endif
 
 #ifdef WINDOWS
-std::string getErrorString(DWORD errCode);
+  std::string getErrorString (DWORD errCode);
 
-int setenv(const char *name, const char* value, int overwrite);
-int unsetenv(const char *name);
+  int setenv (const char *name, const char *value, int overwrite);
+  int unsetenv (const char *name);
 
-struct CloseHandleCloser {
-    void operator()(HANDLE handle) { CloseHandle(handle); }
-};
+  struct CloseHandleCloser {
+    void operator() (HANDLE handle) {
+      CloseHandle (handle);
+    }
+  };
 
-struct FindCloseCloser {
-    void operator()(HANDLE handle) { FindClose(handle); }
-};
+  struct FindCloseCloser {
+    void operator() (HANDLE handle) {
+      FindClose (handle);
+    }
+  };
 
-template <typename Closer>
-class SafeHandleBase
-{
-private:
-  HANDLE _handle;
-  Closer _closer;
-  HANDLE _nullValue;
+  template <typename Closer> class SafeHandleBase {
+  private:
+    HANDLE _handle;
+    Closer _closer;
+    HANDLE _nullValue;
 
-public:
-  SafeHandleBase(HANDLE nullValue) : _handle(nullValue), _nullValue(nullValue) { }
-  SafeHandleBase(HANDLE nullValue, HANDLE handle) : _handle(handle), _nullValue(nullValue) { }
+  public:
+    SafeHandleBase (HANDLE nullValue) : _handle (nullValue), _nullValue (nullValue) {}
+    SafeHandleBase (HANDLE nullValue, HANDLE handle) : _handle (handle), _nullValue (nullValue) {}
 
-  void reset() {
-    reset(_nullValue);
-  }
-
-  void reset(HANDLE handle) {
-    if (_handle != _nullValue) {
-      _closer(_handle);
+    void reset () {
+      reset (_nullValue);
     }
 
-    _handle = handle;
-  }
-  virtual ~SafeHandleBase() { _closer(_handle); }
-  HANDLE get() { return _handle; }
-  HANDLE* ptr() { return &_handle; }
-  bool valid() { return _handle != _nullValue; }
-};
+    void reset (HANDLE handle) {
+      if (_handle != _nullValue) {
+        _closer (_handle);
+      }
 
-class SafeHandle : public SafeHandleBase<CloseHandleCloser>
-{
-public:
-  SafeHandle() : SafeHandleBase(INVALID_HANDLE_VALUE) {}
-  explicit SafeHandle(HANDLE handle) : SafeHandleBase(INVALID_HANDLE_VALUE, handle) {}
-};
+      _handle = handle;
+    }
+    virtual ~SafeHandleBase () {
+      _closer (_handle);
+    }
+    HANDLE get () {
+      return _handle;
+    }
+    HANDLE *ptr () {
+      return &_handle;
+    }
+    bool valid () {
+      return _handle != _nullValue;
+    }
+  };
 
-class SafeHandle2 : public SafeHandleBase<CloseHandleCloser>
-{
-public:
-  SafeHandle2() : SafeHandleBase(NULL) {}
-  explicit SafeHandle2(HANDLE handle) : SafeHandleBase(NULL, handle) {}
-};
+  class SafeHandle : public SafeHandleBase<CloseHandleCloser> {
+  public:
+    SafeHandle () : SafeHandleBase (INVALID_HANDLE_VALUE) {}
+    explicit SafeHandle (HANDLE handle) : SafeHandleBase (INVALID_HANDLE_VALUE, handle) {}
+  };
 
-class FindHandle : public SafeHandleBase<FindCloseCloser>
-{
-public:
-  FindHandle() : SafeHandleBase(INVALID_HANDLE_VALUE) {}
-  explicit FindHandle(HANDLE handle) : SafeHandleBase(INVALID_HANDLE_VALUE, handle) {}
-};
+  class SafeHandle2 : public SafeHandleBase<CloseHandleCloser> {
+  public:
+    SafeHandle2 () : SafeHandleBase (NULL) {}
+    explicit SafeHandle2 (HANDLE handle) : SafeHandleBase (NULL, handle) {}
+  };
 
-time_t filetime_to_timet(const FILETIME& ft);
+  class FindHandle : public SafeHandleBase<FindCloseCloser> {
+  public:
+    FindHandle () : SafeHandleBase (INVALID_HANDLE_VALUE) {}
+    explicit FindHandle (HANDLE handle) : SafeHandleBase (INVALID_HANDLE_VALUE, handle) {}
+  };
 
-bool supports_ansi_codes();
+  time_t filetime_to_timet (const FILETIME &ft);
 
-class WindowsError : public std::runtime_error
-{
-public:
-  explicit WindowsError(const std::string& msg) : std::runtime_error(msg) {}
-};
+  bool supports_ansi_codes ();
 
-#define WIN_TRY(f) if (!(f)) { \
-  std::ostringstream oss; \
-  oss << getErrorString(GetLastError()) << " (" << __FILE__ << ":" << __LINE__ << ")"; \
-  throw WindowsError(oss.str()); \
-}
+  class WindowsError : public std::runtime_error {
+  public:
+    explicit WindowsError (const std::string &msg) : std::runtime_error (msg) {}
+  };
 
-#define THROW_WIN_ERROR(s) { \
-  std::ostringstream oss; \
-  oss << (s) << " " << getErrorString(GetLastError()); \
-  throw WindowsError(oss.str()); \
-}
+#define WIN_TRY(f) do {                                                                                                \
+    if (!(f)) {                                                                                                        \
+      std::ostringstream oss;                                                                                          \
+      oss << getErrorString (GetLastError ()) << " (" << __FILE__ << ":" << __LINE__ << ")";                           \
+      throw WindowsError (oss.str ());                                                                                 \
+    }                                                                                                                  \
+  } while (0)
 
-#define THROW_WIN_ERROR_FMT(s, ...) { \
-  std::ostringstream oss; \
-  oss << format((s), __VA_ARGS__) << " " << getErrorString(GetLastError()); \
-  throw WindowsError(oss.str()); \
-}
+#define THROW_WIN_ERROR(s) do {                                                                                        \
+    std::ostringstream oss;                                                                                            \
+    oss << (s) << " " << getErrorString (GetLastError ());                                                             \
+    throw WindowsError (oss.str ());                                                                                   \
+  } while (0)
+
+#define THROW_WIN_ERROR_FMT(s, ...) do {                                                                               \
+    std::ostringstream oss;                                                                                            \
+    oss << format ((s), __VA_ARGS__) << " " << getErrorString (GetLastError ());                                       \
+    throw WindowsError (oss.str ());                                                                                   \
+  } while (0)
 
 #if _MSC_VER < 1900
-inline int snprintf(char * dest, size_t len, const char * format, ...) {
-  va_list args;
-  va_start(args, format);
-  int result = vsprintf_s(dest, len, format, args);
-  va_end(args);
-  return result;
-}
+  inline int snprintf (char *dest, size_t len, const char *format, ...) {
+    va_list args;
+    va_start (args, format);
+    int result = vsprintf_s (dest, len, format, args);
+    va_end (args);
+    return result;
+  }
 #endif
 
 #endif
 
 #endif
-////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////

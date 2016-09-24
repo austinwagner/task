@@ -31,23 +31,18 @@
 #include <Windows.h>
 
 ////////////////////////////////////////////////////////////////////////////////
-int Context::getWidth ()
-{
+int Context::getWidth () {
   // Determine window size.
   int width = config.getInteger ("defaultwidth");
 
   // A zero width value means 'infinity', which is approximated here by 2^16.
-  if (width == 0)
-    return 65536;
+  if (width == 0) return 65536;
 
-  if (config.getBoolean ("detection"))
-  {
-    if (terminal_width == 0 &&
-        terminal_height == 0)
-    {
+  if (config.getBoolean ("detection")) {
+    if (terminal_width == 0 && terminal_height == 0) {
       CONSOLE_SCREEN_BUFFER_INFO csbi;
-      GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-      terminal_width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+      GetConsoleScreenBufferInfo (GetStdHandle (STD_OUTPUT_HANDLE), &csbi);
+      terminal_width  = csbi.srWindow.Right - csbi.srWindow.Left + 1;
       terminal_height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
     }
 
@@ -56,31 +51,25 @@ int Context::getWidth ()
     // Ncurses does this, and perhaps we need to as well, to avoid a problem on
     // Cygwin where the display goes right up to the terminal width, and causes
     // an odd color wrapping problem.
-    if (config.getBoolean ("avoidlastcolumn"))
-      --width;
+    if (config.getBoolean ("avoidlastcolumn")) --width;
   }
 
   return width;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-int Context::getHeight ()
-{
+int Context::getHeight () {
   // Determine window size.
   int height = config.getInteger ("defaultheight");
 
   // A zero height value means 'infinity', which is approximated here by 2^16.
-  if (height == 0)
-    return 65536;
+  if (height == 0) return 65536;
 
-  if (config.getBoolean ("detection"))
-  {
-    if (terminal_width == 0 &&
-        terminal_height == 0)
-    {
+  if (config.getBoolean ("detection")) {
+    if (terminal_width == 0 && terminal_height == 0) {
       CONSOLE_SCREEN_BUFFER_INFO csbi;
-      GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-      terminal_width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+      GetConsoleScreenBufferInfo (GetStdHandle (STD_OUTPUT_HANDLE), &csbi);
+      terminal_width  = csbi.srWindow.Right - csbi.srWindow.Left + 1;
       terminal_height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
     }
 

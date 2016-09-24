@@ -38,25 +38,20 @@ typedef int mode_t;
 
 namespace FSHelper {
   namespace FileOpenFlags {
-    enum FileOpenFlags {
-      None = 0,
-      Lock = 1 << 0,
-      Create = 1 << 1
-    };
+    enum FileOpenFlags { None = 0, Lock = 1 << 0, Create = 1 << 1 };
   }
 }
 
-class Path
-{
+class Path {
 public:
   Path ();
-  Path (const Path&);
-  Path (const std::string&);
+  Path (const Path &);
+  Path (const std::string &);
   virtual ~Path ();
 
-  Path& operator= (const Path&);
-  bool operator== (const Path&);
-  Path& operator+= (const std::string&);
+  Path &operator= (const Path &);
+  bool operator== (const Path &);
+  Path &operator+= (const std::string &);
   operator std::string () const;
 
   std::string name () const;
@@ -69,30 +64,29 @@ public:
   bool readable () const;
   bool writable () const;
   bool executable () const;
-  bool rename (const std::string&);
+  bool rename (const std::string &);
 
   // Statics
-  static std::string expand (const std::string&);
-  static std::vector<std::string> glob (const std::string&);
- 
+  static std::string expand (const std::string &);
+  static std::vector<std::string> glob (const std::string &);
+
 protected:
-  static bool isDots(const wchar_t *);
+  static bool isDots (const wchar_t *);
 
 public:
   std::string _original;
   std::string _data;
 };
 
-class File : public Path
-{
+class File : public Path {
 public:
   File ();
-  File (const Path&);
-  File (const File&);
-  File (const std::string&);
+  File (const Path &);
+  File (const File &);
+  File (const std::string &);
   virtual ~File ();
 
-  File& operator= (const File&);
+  File &operator= (const File &);
 
   virtual bool create (int mode = 0640);
   virtual bool remove () const;
@@ -104,14 +98,14 @@ public:
   bool lock ();
   void unlock ();
 
-  void read (std::string&);
-  void read (std::vector <std::string>&);
+  void read (std::string &);
+  void read (std::vector<std::string> &);
 
-  void write (const std::string&);
-  void write (const std::vector <std::string>&);
+  void write (const std::string &);
+  void write (const std::vector<std::string> &);
 
-  void append (const std::string&);
-  void append (const std::vector <std::string>&);
+  void append (const std::string &);
+  void append (const std::vector<std::string> &);
 
   void truncate ();
 
@@ -121,67 +115,64 @@ public:
   virtual time_t ctime () const;
   virtual time_t btime () const;
 
-  static bool create (const std::string&, int mode = 0640);
-  static std::string read (const std::string&);
-  static bool read (const std::string&, std::string&);
-  static bool read (const std::string&, std::vector <std::string>&);
-  static bool write (const std::string&, const std::string&);
-  static bool write (const std::string&, const std::vector <std::string>&, bool addNewlines = true);
-  static bool append (const std::string&, const std::string&);
-  static bool append (const std::string&, const std::vector <std::string>&, bool addNewlines = true);
-  static bool remove (const std::string&);
+  static bool create (const std::string &, int mode = 0640);
+  static std::string read (const std::string &);
+  static bool read (const std::string &, std::string &);
+  static bool read (const std::string &, std::vector<std::string> &);
+  static bool write (const std::string &, const std::string &);
+  static bool write (const std::string &, const std::vector<std::string> &, bool addNewlines = true);
+  static bool append (const std::string &, const std::string &);
+  static bool append (const std::string &, const std::vector<std::string> &, bool addNewlines = true);
+  static bool remove (const std::string &);
 
 protected:
-  static SafeHandle open_for_metadata (const char*);
+  static SafeHandle open_for_metadata (const char *);
 
 private:
-  void append (const std::vector <std::string>&, bool);
-  void write (const std::vector <std::string>&, bool);
+  void append (const std::vector<std::string> &, bool);
+  void write (const std::vector<std::string> &, bool);
   bool open (int);
-  DWORD put (const std::string&);
-  BY_HANDLE_FILE_INFORMATION file_info() const;
-  int64_t File::set_pointer(int64_t, DWORD);
+  DWORD put (const std::string &);
+  BY_HANDLE_FILE_INFORMATION file_info () const;
+  int64_t File::set_pointer (int64_t, DWORD);
 
-  template<std::size_t SIZE>
-  DWORD get(std::array<char, SIZE> buffer) {
-	  DWORD bytesRead;
-	  WIN_TRY(ReadFile(_file.get(), buffer.data(), buffer.size(), &bytesRead, nullptr));
-	  return bytesRead;
+  template <std::size_t SIZE> DWORD get (std::array<char, SIZE> buffer) {
+    DWORD bytesRead;
+    WIN_TRY (ReadFile (_file.get (), buffer.data (), buffer.size (), &bytesRead, nullptr));
+    return bytesRead;
   }
-  
+
   SafeHandle _file;
-  bool  _locked;
+  bool _locked;
 };
 
-class Directory : public File
-{
+class Directory : public File {
 public:
   Directory ();
-  Directory (const Directory&);
-  Directory (const File&);
-  Directory (const Path&);
-  Directory (const std::string&);
+  Directory (const Directory &);
+  Directory (const File &);
+  Directory (const Path &);
+  Directory (const std::string &);
   virtual ~Directory ();
 
-  Directory& operator= (const Directory&);
+  Directory &operator= (const Directory &);
 
   virtual bool create (int mode = 0755);
   virtual bool remove () const;
 
-  std::vector <std::string> list ();
-  std::vector <std::string> listRecursive ();
+  std::vector<std::string> list ();
+  std::vector<std::string> listRecursive ();
 
   static std::string cwd ();
   bool up ();
   bool cd () const;
 
 private:
-  void listRecursive(std::vector<std::string>&, const wchar_t *, const wchar_t *);
-  bool remove_directory (const wchar_t*) const;
+  void listRecursive (std::vector<std::string> &, const wchar_t *, const wchar_t *);
+  bool remove_directory (const wchar_t *) const;
 };
 
-std::ostream& operator<< (std::ostream&, const Path&);
+std::ostream &operator<< (std::ostream &, const Path &);
 
 #endif
 ////////////////////////////////////////////////////////////////////////////////
-

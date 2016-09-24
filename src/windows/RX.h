@@ -31,19 +31,18 @@
 #include <vector>
 #include <regex>
 
-class RX
-{
+class RX {
 public:
   RX ();
-  RX (const std::string&, bool caseSensitive = true);
-  RX (const RX&);
-  RX& operator= (const RX&);
-  bool operator== (const RX&) const;
+  RX (const std::string &, bool caseSensitive = true);
+  RX (const RX &);
+  RX &operator= (const RX &);
+  bool operator== (const RX &) const;
   ~RX ();
 
-  bool match (const std::string&);
-  bool match (std::vector<std::string>&, const std::string&);
-  bool match (std::vector <int>&, std::vector <int>&, const std::string&);
+  bool match (const std::string &);
+  bool match (std::vector<std::string> &, const std::string &);
+  bool match (std::vector<int> &, std::vector<int> &, const std::string &);
 
 private:
   void compile ();
@@ -56,4 +55,3 @@ private:
 };
 
 #endif
-

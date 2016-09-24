@@ -31,37 +31,20 @@
 #include <numeric_cast.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
-RX::RX ()
-: _compiled (false)
-, _pattern ("")
-, _case_sensitive (true)
-{
-}
+RX::RX () : _compiled (false), _pattern (""), _case_sensitive (true) {}
 
 ////////////////////////////////////////////////////////////////////////////////
-RX::RX (
-  const std::string& pattern,
-  bool case_sensitive /* = true */)
-: _compiled (false)
-, _pattern (pattern)
-, _case_sensitive (case_sensitive)
-{
+RX::RX (const std::string &pattern, bool case_sensitive /* = true */)
+    : _compiled (false), _pattern (pattern), _case_sensitive (case_sensitive) {
   compile ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-RX::RX (const RX& other)
-: _compiled (false)
-, _pattern (other._pattern)
-, _case_sensitive (other._case_sensitive)
-{
-}
+RX::RX (const RX &other) : _compiled (false), _pattern (other._pattern), _case_sensitive (other._case_sensitive) {}
 
 ////////////////////////////////////////////////////////////////////////////////
-RX& RX::operator= (const RX& other)
-{
-  if (this != &other)
-  {
+RX &RX::operator= (const RX &other) {
+  if (this != &other) {
     _compiled       = false;
     _pattern        = other._pattern;
     _case_sensitive = other._case_sensitive;
@@ -71,76 +54,59 @@ RX& RX::operator= (const RX& other)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool RX::operator== (const RX& other) const
-{
-  return _pattern        == other._pattern &&
-         _case_sensitive == other._case_sensitive;
+bool RX::operator== (const RX &other) const {
+  return _pattern == other._pattern && _case_sensitive == other._case_sensitive;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-RX::~RX ()
-{
-}
+RX::~RX () {}
 
 ////////////////////////////////////////////////////////////////////////////////
-void RX::compile ()
-{
-  if (!_compiled)
-  {
+void RX::compile () {
+  if (!_compiled) {
     std::regex_constants::syntax_option_type opts = std::regex_constants::egrep;
     if (!_case_sensitive) {
       opts |= std::regex_constants::icase;
     }
 
-    _regex = std::regex(_pattern, opts);
+    _regex    = std::regex (_pattern, opts);
     _compiled = true;
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool RX::match (const std::string& in)
-{
-  if (!_compiled)
-    compile ();
+bool RX::match (const std::string &in) {
+  if (!_compiled) compile ();
 
-  return std::regex_match(in, _regex);
+  return std::regex_match (in, _regex);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool RX::match (
-  std::vector<std::string>& matches,
-  const std::string& in)
-{
-  if (!_compiled)
-    compile ();
+bool RX::match (std::vector<std::string> &matches, const std::string &in) {
+  if (!_compiled) compile ();
 
-  std::string::const_iterator it = in.begin();
+  std::string::const_iterator it = in.begin ();
   std::smatch raw_matches;
-  while (std::regex_search(it, in.end(), raw_matches, _regex)) {
-    matches.push_back(raw_matches[0].str());
+  while (std::regex_search (it, in.end (), raw_matches, _regex)) {
+    matches.push_back (raw_matches[0].str ());
   }
 
-  return !matches.empty();
+  return !matches.empty ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-bool RX::match (
-  std::vector <int>& start,
-  std::vector <int>& end,
-  const std::string& in)
-{
-  if (!_compiled)
-    compile ();
+bool RX::match (std::vector<int> &start, std::vector<int> &end, const std::string &in) {
+  if (!_compiled) compile ();
 
-  std::string::const_iterator it = in.begin();
+  std::string::const_iterator it = in.begin ();
   std::smatch matches;
-  while (std::regex_search(it, in.end(), matches, _regex)) {
-    start.push_back(numeric_cast<int>(std::distance(matches[0].first, in.begin())));
-    end.push_back(numeric_cast<int>(std::distance(matches[0].second, in.begin()) - 1));
+  while (std::regex_search (it, in.end (), matches, _regex)) {
+    start.push_back (numeric_cast<int> (std::distance (matches[0].first, in.begin ())));
+    end.push_back (numeric_cast<int> (std::distance (matches[0].second, in.begin ()) - 1));
     it = matches[0].second;
   }
 
-  return !start.empty();
+  return !start.empty ();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
