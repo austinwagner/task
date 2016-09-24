@@ -30,7 +30,10 @@
 #include <string>
 #include <Command.h>
 #include <Msg.h>
+
+#ifdef HAVE_TLS_LIBRARY
 #include <TLSClient.h>
+#endif
 
 class CmdSync : public Command
 {
